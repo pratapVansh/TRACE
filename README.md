@@ -4,7 +4,7 @@
 
 > An AI-powered Industrial Knowledge Intelligence Platform that turns scattered, unstructured industrial documents into a single, searchable **Industrial Knowledge Brain**.
 
-[![Status](https://img.shields.io/badge/status-architecture--planning-blue)]()
+[![Status](https://img.shields.io/badge/status-milestone--1-green)]()
 [![Problem Statement](https://img.shields.io/badge/problem--statement-8-orange)]()
 [![License](https://img.shields.io/badge/license-proprietary-lightgrey)]()
 
@@ -239,15 +239,72 @@ flowchart LR
 
 | Phase | Name | Key Outcomes |
 | --- | --- | --- |
-| **Phase 0** | Architecture & Planning | Problem statement, requirements, system design (current phase) |
-| **Phase 1** | Foundations | Project scaffolding, data models, auth, PostgreSQL schema |
+| **Phase 0** | Architecture & Planning | Problem statement, requirements, system design ✅ |
+| **Phase 1** | Foundations | Project scaffolding, health endpoint, DB connection ✅ (Milestone 1) |
 | **Phase 2** | Ingestion & OCR | Document upload, OCR, parsing, document intelligence pipeline |
 | **Phase 3** | RAG & Search | Embeddings, FAISS index, retrieval, grounded answering |
 | **Phase 4** | Knowledge Graph | Neo4j entity/relationship extraction, asset linking |
 | **Phase 5** | Agentic Copilot | LangGraph orchestration, multi-step reasoning, citations |
 | **Phase 6** | Hardening & Scale | Performance, security, observability, evaluation |
 
-> **Current status:** Phase 0 — only architecture documentation is being produced.
+> **Current status:** Milestone 1 complete — local dev environment (Next.js + FastAPI + PostgreSQL config). Authentication and AI features are next.
+
+---
+
+## Local Development (Milestone 1)
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.11+
+- PostgreSQL 15+ (local install)
+
+### 1. Environment
+
+```bash
+cp .env.example .env
+cp frontend/.env.local.example frontend/.env.local
+```
+
+Edit `.env` if your PostgreSQL credentials differ from the defaults (`trace` / `trace`).
+
+### 2. PostgreSQL
+
+Create the database (as postgres superuser):
+
+```bash
+psql -U postgres -f scripts/init-db.sql
+```
+
+Verify connection:
+
+```bash
+cd backend
+.venv\Scripts\python scripts\verify_db.py   # Windows
+# source .venv/bin/activate && python scripts/verify_db.py   # macOS/Linux
+```
+
+### 3. Backend
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Health check: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+
+### 4. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) — you should see **TRACE** with **Backend Status: 🟢 Online**.
 
 ---
 
@@ -255,8 +312,24 @@ flowchart LR
 
 | Document | Description |
 | --- | --- |
+| [`docs/00_OFFICIAL_PROBLEM_STATEMENT.md`](docs/00_OFFICIAL_PROBLEM_STATEMENT.md) | Official Problem Statement 8 brief |
 | [`docs/01_PROBLEM_STATEMENT.md`](docs/01_PROBLEM_STATEMENT.md) | The problem, context, challenges, and expected solution |
 | [`docs/02_PRODUCT_REQUIREMENTS.md`](docs/02_PRODUCT_REQUIREMENTS.md) | Product vision, requirements, metrics, and user stories |
+| [`docs/03_SYSTEM_ARCHITECTURE.md`](docs/03_SYSTEM_ARCHITECTURE.md) | High-level system architecture |
+| [`docs/04_DATABASE_ARCHITECTURE.md`](docs/04_DATABASE_ARCHITECTURE.md) | PostgreSQL schema design |
+| [`docs/05_FRONTEND_ARCHITECTURE.md`](docs/05_FRONTEND_ARCHITECTURE.md) | Next.js frontend architecture |
+| [`docs/06_BACKEND_ARCHITECTURE.md`](docs/06_BACKEND_ARCHITECTURE.md) | FastAPI backend architecture |
+| [`docs/07_UI_UX_DESIGN.md`](docs/07_UI_UX_DESIGN.md) | UI/UX design system |
+| [`docs/08_AI_ARCHITECTURE.md`](docs/08_AI_ARCHITECTURE.md) | AI layer architecture |
+| [`docs/09_AGENT_ARCHITECTURE.md`](docs/09_AGENT_ARCHITECTURE.md) | Agent designs |
+| [`docs/10_RAG_PIPELINE.md`](docs/10_RAG_PIPELINE.md) | RAG pipeline design |
+| [`docs/11_KNOWLEDGE_GRAPH.md`](docs/11_KNOWLEDGE_GRAPH.md) | Neo4j knowledge graph design |
+| [`docs/12_DOCUMENT_PIPELINE.md`](docs/12_DOCUMENT_PIPELINE.md) | Document ingestion pipeline |
+| [`docs/13_API_SPECIFICATION.md`](docs/13_API_SPECIFICATION.md) | REST API specification |
+| [`docs/14_IMPLEMENTATION_ROADMAP.md`](docs/14_IMPLEMENTATION_ROADMAP.md) | 20-day implementation plan |
+| [`docs/15_AI_DEVELOPMENT_RULES.md`](docs/15_AI_DEVELOPMENT_RULES.md) | AI engineering rules |
+| [`docs/16_TESTING_STRATEGY.md`](docs/16_TESTING_STRATEGY.md) | Testing strategy |
+| [`docs/17_PRESENTATION_GUIDE.md`](docs/17_PRESENTATION_GUIDE.md) | Demo and presentation guide |
 
 ---
 
