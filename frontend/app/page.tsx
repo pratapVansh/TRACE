@@ -1,22 +1,22 @@
-import { BackendStatus } from "@/components/common/backend-status";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center bg-background px-6 py-16">
-      <main className="flex w-full max-w-lg flex-col items-center gap-8 text-center">
-        <div className="space-y-3">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
-            TRACE
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Industrial Knowledge Intelligence Platform
-          </p>
-        </div>
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-        <div className="w-full">
-          <BackendStatus />
-        </div>
-      </main>
-    </div>
-  );
+import { AuthLoadingScreen } from "@/components/auth/auth-loading-screen";
+import { useAuth } from "@/hooks/use-auth";
+import { AUTH_ROUTES } from "@/lib/auth/routes";
+
+export default function HomePage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) return;
+    router.replace(
+      isAuthenticated ? AUTH_ROUTES.dashboard : AUTH_ROUTES.login,
+    );
+  }, [isAuthenticated, isLoading, router]);
+
+  return <AuthLoadingScreen label="Loading TRACE workspace…" />;
 }

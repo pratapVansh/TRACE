@@ -1,26 +1,50 @@
-import { fetchHealth } from "@/lib/api/health";
+"use client";
 
-export async function BackendStatus() {
-  const health = await fetchHealth();
+import { useEffect, useState } from "react";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { fetchHealth } from "@/lib/api/health";
+import type { HealthResponse } from "@/types/api";
+
+export function BackendStatus() {
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    void fetchHealth()
+      .then(setHealth)
+      .finally(() => setIsLoading(false));
+  }, []);
+
   const isOnline = health?.status === "ok";
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4 rounded-xl border border-border bg-[var(--surface-secondary)] p-5">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-7 w-24" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <p className="text-sm font-medium text-muted-foreground">Backend Status</p>
-      <p className="mt-2 text-lg font-semibold text-foreground">
-        {isOnline ? (
-          <>
-            <span aria-hidden="true">🟢</span> Online
-          </>
-        ) : (
-          <>
-            <span aria-hidden="true">🔴</span> Offline
-          </>
-        )}
+    <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs tracking-wide text-muted-foreground uppercase">
+          Backend connectivity
+        </p>
+        <Badge variant={isOnline ? "success" : "warning"}>
+          {isOnline ? "Online" : "Offline"}
+        </Badge>
+      </div>
+      <p className="mt-4 text-2xl font-semibold text-white">
+        {isOnline ? "Systems operational" : "Connection unavailable"}
       </p>
-      {health?.service && (
-        <p className="mt-1 text-sm text-muted-foreground">{health.service}</p>
-      )}
+      {health?.service ? (
+        <p className="mt-2 text-sm text-muted-foreground">{health.service}</p>
+      ) : null}
     </div>
   );
 }

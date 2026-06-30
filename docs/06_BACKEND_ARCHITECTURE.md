@@ -27,14 +27,21 @@ The backend is a **FastAPI** application acting as the gateway and orchestration
 between the frontend, the AI layer, and the data stores. It is **async-first**, layered, and
 dependency-injected, exposing a typed REST API with streaming (SSE) for Copilot responses.
 
+> **Implementation status (Milestones 1–2):** Health check, JWT authentication (register,
+> login, refresh with rotation, logout, `/auth/me`), User/Role/RefreshToken models,
+> repositories, `AuthService`, and `core/security/` package are **implemented**. Document,
+> search, chat, asset, graph, compliance, and admin routes remain **planned**.
+
 | Property | Value |
 | --- | --- |
 | Framework | FastAPI (ASGI) |
 | Concurrency | async/await throughout |
 | Validation | Pydantic models |
-| Persistence | PostgreSQL via async ORM/driver |
-| AI integration | LangGraph / LangChain in service layer |
-| Streaming | Server-Sent Events for chat |
+| Persistence | PostgreSQL via SQLAlchemy 2 async |
+| API prefix | `/api` (versioned `/api/v1` planned) |
+| Auth | JWT access + refresh tokens, bcrypt passwords |
+| AI integration | LangGraph / LangChain in service layer *(planned)* |
+| Streaming | Server-Sent Events for chat *(planned)* |
 
 ---
 
@@ -63,6 +70,54 @@ flowchart TB
 ---
 
 ## 3. Folder Structure
+
+### Implemented (Milestones 1–2)
+
+```text
+backend/
+├── app/
+│   ├── main.py                  # App factory, CORS, router registration (/api)
+│   ├── core/
+│   │   ├── config.py            # Settings (pydantic-settings)
+│   │   ├── security/            # JWT + password package
+│   │   │   ├── jwt.py           # create/decode access & refresh tokens
+│   │   │   ├── passwords.py     # bcrypt hash/verify
+│   │   │   ├── exceptions.py
+│   │   │   └── types.py
+│   │   ├── logging.py
+│   │   └── dependencies.py
+│   ├── api/
+│   │   ├── routes/
+│   │   │   ├── health.py        # GET /api/health
+│   │   │   └── auth.py          # POST register/login/refresh/logout, GET me
+│   │   └── deps.py              # get_auth_service, get_current_user
+│   ├── services/
+│   │   ├── auth_service.py      # register, login, refresh, logout, get user
+│   │   └── exceptions.py
+│   ├── repositories/
+│   │   ├── user_repository.py
+│   │   ├── role_repository.py
+│   │   └── refresh_token_repository.py
+│   ├── models/
+│   │   ├── user.py
+│   │   ├── role.py
+│   │   ├── refresh_token.py
+│   │   └── mixins.py
+│   ├── schemas/
+│   │   ├── health.py
+│   │   └── auth.py
+│   ├── db/
+│   │   ├── base.py
+│   │   └── session.py
+│   └── middleware/              # (placeholder)
+├── alembic/versions/
+│   ├── 001_initial.py
+│   └── 002_auth_foundation.py
+├── scripts/verify_db.py
+└── tests/
+```
+
+### Planned (full product)
 
 ```text
 backend/
@@ -112,6 +167,19 @@ backend/
 
 ## 4. Routes
 
+### Implemented endpoints (`/api` prefix)
+
+| Route | Method | Purpose | Auth | Status |
+| --- | --- | --- | --- | --- |
+| `/health` | GET | Liveness check | Public | ✅ |
+| `/auth/register` | POST | Create user (default Viewer role) | Public | ✅ |
+| `/auth/login` | POST | Authenticate, issue tokens | Public | ✅ |
+| `/auth/refresh` | POST | Rotate refresh token, issue new pair | Public (refresh) | ✅ |
+| `/auth/logout` | POST | Revoke refresh token | User | ✅ |
+| `/auth/me` | GET | Current user profile | User | ✅ |
+
+### Planned endpoints
+
 ```mermaid
 flowchart LR
     subgraph Public
@@ -131,9 +199,6 @@ flowchart LR
 
 | Route | Method | Purpose | Auth |
 | --- | --- | --- | --- |
-| `/auth/login` | POST | Authenticate, issue tokens | Public |
-| `/auth/refresh` | POST | Refresh access token | Public (refresh) |
-| `/auth/logout` | POST | Invalidate session | User |
 | `/documents` | GET/POST | List / upload documents | User |
 | `/documents/{id}` | GET/DELETE | Get / delete document | User |
 | `/documents/{id}/status` | GET | Ingestion job status | User |
@@ -172,15 +237,25 @@ sequenceDiagram
 
 ## 5. Services
 
-| Service | Responsibility |
+| Service | Responsibility | Status |
+| --- | --- | --- |
+| `AuthService` | Register, login, refresh (rotation), logout, current user | ✅ Implemented |
+| `IngestionService` | Orchestrate OCR → parse → extract → chunk → embed → index; create jobs | Planned |
+| `RetrievalService` | Hybrid retrieval (FAISS vectors + Neo4j graph + metadata filters) | Planned |
+| `AgentService` | Execute LangGraph reasoning, stream tokens, attach citations | Planned |
+| `GraphService` | Read/write Neo4j relationships, asset neighborhoods | Planned |
+| `AssetService` | Asset CRUD, aggregated history | Planned |
+| `ComplianceService` | Compliance items, status, evidence linking | Planned |
+
+### AuthService (implemented)
+
+| Method | Description |
 | --- | --- |
-| `IngestionService` | Orchestrate OCR → parse → extract → chunk → embed → index; create jobs |
-| `RetrievalService` | Hybrid retrieval (FAISS vectors + Neo4j graph + metadata filters) |
-| `AgentService` | Execute LangGraph reasoning, stream tokens, attach citations |
-| `GraphService` | Read/write Neo4j relationships, asset neighborhoods |
-| `AssetService` | Asset CRUD, aggregated history |
-| `ComplianceService` | Compliance items, status, evidence linking |
-| `AuthService` | Login, tokens, password hashing, RBAC |
+| `register_user` | Hash password, assign default Viewer role, persist user |
+| `login_user` | Verify credentials, issue access + refresh JWTs, store refresh token hash |
+| `refresh_tokens` | Validate refresh token, rotate (revoke old, issue new pair) |
+| `get_current_user` | Load user + role for `/auth/me` |
+| `logout_user` | Revoke refresh token |
 
 ```mermaid
 flowchart TB
@@ -200,9 +275,18 @@ flowchart TB
 The repository layer abstracts all database access behind typed interfaces, keeping services
 storage-agnostic and testable.
 
+### Implemented repositories
+
+| Repository | Key Operations | Status |
+| --- | --- | --- |
+| `UserRepository` | get_by_email, create, get_by_id | ✅ |
+| `RoleRepository` | get_by_name, list_all | ✅ |
+| `RefreshTokenRepository` | create, get_by_hash, revoke, revoke_all_for_user | ✅ |
+
+### Planned repositories
+
 | Repository | Key Operations |
 | --- | --- |
-| `UserRepository` | get_by_email, create, assign_role, update_last_login |
 | `DocumentRepository` | create, list, get, soft_delete, add_version, set_latest |
 | `ChunkRepository` | bulk_insert, get_by_ids, list_for_document |
 | `AssetRepository` | get_by_tag, list, link_document, get_history |
@@ -227,28 +311,51 @@ flowchart LR
 
 ## 7. Authentication
 
+> **Implemented (Milestone 2):** Full JWT authentication with refresh token rotation,
+> bcrypt password hashing, role-based access via FastAPI dependencies, and seeded roles
+> (Admin, Engineer, Operator, Viewer).
+
 ```mermaid
 sequenceDiagram
     participant FE as Frontend
     participant API as FastAPI
-    FE->>API: POST /auth/login
-    API->>API: Verify password hash
-    API-->>FE: access (short) + refresh (long) JWT
-    FE->>API: Request + access token
-    API->>API: Validate JWT + RBAC scope
+    FE->>API: POST /api/auth/login
+    API->>API: Verify bcrypt hash
+    API->>API: Store refresh token hash in DB
+    API-->>FE: access + refresh JWT
+    FE->>API: Request + Bearer access token
+    API->>API: decode_access_token + get_current_user
     API-->>FE: Authorized response
-    FE->>API: POST /auth/refresh (on expiry)
-    API-->>FE: New access token
+    FE->>API: POST /api/auth/refresh (on expiry)
+    API->>API: Revoke old refresh, issue rotated pair
+    API-->>FE: New access + refresh tokens
 ```
 
-| Aspect | Approach |
+| Aspect | Planned | **Implemented** |
+| --- | --- | --- |
+| Mechanism | JWT access + refresh tokens | ✅ HS256 JWTs via `python-jose` |
+| Hashing | Strong password hashing (bcrypt/argon2) | ✅ bcrypt via `passlib` |
+| RBAC | Role-scoped dependencies on routes | ✅ `get_current_user()` + role on User |
+| Refresh rotation | Rotating refresh tokens | ✅ Old token revoked on refresh |
+| Token transport | httpOnly cookies | Bearer header (frontend localStorage) |
+| Default roles | admin, engineer, operator, inspector, compliance_officer | Admin, Engineer, Operator, Viewer (seeded) |
+| Protected routes | All domain APIs | `/auth/me`, `/auth/logout` require Bearer token |
+
+### Dependencies (`app/api/deps.py`)
+
+| Dependency | Purpose |
 | --- | --- |
-| Mechanism | JWT access + refresh tokens |
-| Hashing | Strong password hashing (bcrypt/argon2) |
-| RBAC | Role-scoped dependencies on routes |
-| Token transport | httpOnly cookies (set by frontend) |
-| Scope enforcement | FastAPI dependency injects current user + roles |
-| Expiry | Short-lived access, rotating refresh |
+| `get_auth_service()` | Inject `AuthService` with repositories + DB session |
+| `get_current_user()` | HTTPBearer → decode JWT → load user → return `UserMeResponse` |
+
+### Security package (`app/core/security/`)
+
+| Module | Exports |
+| --- | --- |
+| `passwords.py` | `hash_password()`, `verify_password()` |
+| `jwt.py` | `create_access_token`, `create_refresh_token`, `decode_access_token`, `decode_refresh_token` |
+| `exceptions.py` | Token validation errors |
+| `types.py` | Token payload types |
 
 ---
 

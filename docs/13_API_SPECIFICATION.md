@@ -26,16 +26,32 @@
 
 ## 1. Overview
 
-TRACE exposes a **REST API** via FastAPI. All endpoints (except auth login/refresh and health)
-require a valid JWT access token. Copilot chat additionally supports **Server-Sent Events (SSE)**
+TRACE exposes a **REST API** via FastAPI. All endpoints (except auth login/refresh/register
+and health) require a valid JWT access token. Copilot chat additionally supports **Server-Sent Events (SSE)**
 for streaming responses.
+
+### Implementation status (Milestones 1–2)
+
+| Endpoint | Status |
+| --- | --- |
+| `GET /api/health` | ✅ Implemented |
+| `POST /api/auth/register` | ✅ Implemented |
+| `POST /api/auth/login` | ✅ Implemented |
+| `POST /api/auth/refresh` | ✅ Implemented (refresh token rotation) |
+| `POST /api/auth/logout` | ✅ Implemented |
+| `GET /api/auth/me` | ✅ Implemented |
+| All other endpoints below | ☐ Planned |
+
+> **Note:** The running API uses base path `/api`. The target specification uses `/api/v1`;
+> versioning will be introduced without breaking current clients during early development.
 
 | Property | Value |
 | --- | --- |
-| Base URL | `/api/v1` |
+| Base URL (implemented) | `/api` |
+| Base URL (target) | `/api/v1` |
 | Format | JSON (`application/json`) |
 | Auth | Bearer JWT in `Authorization` header |
-| Streaming | SSE (`text/event-stream`) for `/chat` |
+| Streaming | SSE (`text/event-stream`) for `/chat` *(planned)* |
 | IDs | UUID v4 |
 | Timestamps | ISO 8601 UTC (`TIMESTAMPTZ`) |
 
@@ -92,11 +108,15 @@ Error responses use a consistent envelope (see [Error Reference](#14-error-refer
 
 ### Roles
 
-| Role | Scope |
+| Role (implemented, seeded) | Scope |
 | --- | --- |
-| `admin` | Full access including admin routes |
-| `engineer` | Documents, assets, chat, maintenance |
-| `operator` | Read + chat |
+| `Admin` | Full access including admin routes *(when implemented)* |
+| `Engineer` | Documents, assets, chat, maintenance *(when implemented)* |
+| `Operator` | Read + chat *(when implemented)* |
+| `Viewer` | Read-only; default role for self-registration |
+
+| Role (planned, extended RBAC) | Scope |
+| --- | --- |
 | `inspector` | Read + inspections + compliance |
 | `compliance_officer` | Read + compliance + audit |
 
@@ -104,9 +124,44 @@ Error responses use a consistent envelope (see [Error Reference](#14-error-refer
 
 ## 3. Authentication
 
-Base path: `/api/v1/auth`
+Base path: `/api/auth` *(implemented)* · `/api/v1/auth` *(target)*
 
-### POST `/auth/login`
+> ✅ **Implemented** — All auth endpoints below are live except where noted as target-only.
+
+### POST `/auth/register` ✅
+
+Register a new user. New accounts receive the default **Viewer** role.
+
+**Auth:** Public
+
+**Request**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "full_name": "Jane Operator"
+}
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "message": "Registration successful"
+}
+```
+
+**Errors**
+
+| Status | Condition |
+| --- | --- |
+| 409 | Email already registered |
+| 422 | Validation error (password min 8 chars, invalid email) |
+
+---
+
+### POST `/auth/login` ✅
 
 Authenticate a user and receive tokens.
 
@@ -121,7 +176,17 @@ Authenticate a user and receive tokens.
 }
 ```
 
-**Response `200 OK`**
+**Response `200 OK` (implemented)**
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
+
+**Response `200 OK` (target — includes user envelope)**
 
 ```json
 {
@@ -148,9 +213,10 @@ Authenticate a user and receive tokens.
 
 ---
 
-### POST `/auth/refresh`
+### POST `/auth/refresh` ✅
 
-Obtain a new access token using a refresh token.
+Obtain new tokens using a refresh token. **Implements refresh token rotation** — the old
+refresh token is revoked and a new pair is issued.
 
 **Auth:** Public (requires valid refresh token)
 
@@ -162,7 +228,17 @@ Obtain a new access token using a refresh token.
 }
 ```
 
-**Response `200 OK`**
+**Response `200 OK` (implemented — returns full token pair)**
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
+
+**Response `200 OK` (target — access only)**
 
 ```json
 {
@@ -181,11 +257,11 @@ Obtain a new access token using a refresh token.
 
 ---
 
-### POST `/auth/logout`
+### POST `/auth/logout` ✅
 
-Invalidate the current session.
+Invalidate the current session by revoking the refresh token.
 
-**Auth:** Required
+**Auth:** Required (Bearer access token)
 
 **Request**
 
@@ -195,7 +271,15 @@ Invalidate the current session.
 }
 ```
 
-**Response `204 No Content`**
+**Response `200 OK` (implemented)**
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+**Response `204 No Content` (target)**
 
 **Errors**
 
@@ -205,13 +289,26 @@ Invalidate the current session.
 
 ---
 
-### GET `/auth/me`
+### GET `/auth/me` ✅
 
 Return the authenticated user's profile.
 
 **Auth:** Required
 
-**Response `200 OK`**
+**Response `200 OK` (implemented)**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "engineer@trace.local",
+  "full_name": "Jane Engineer",
+  "role": "Engineer",
+  "is_active": true,
+  "created_at": "2026-06-27T06:30:00Z"
+}
+```
+
+**Response `200 OK` (target — multi-role)**
 
 ```json
 {
@@ -233,6 +330,8 @@ Return the authenticated user's profile.
 ---
 
 ## 4. Documents
+
+> ☐ **Planned** — Not yet implemented.
 
 Base path: `/api/v1/documents`
 
@@ -1338,13 +1437,24 @@ Query audit logs.
 
 ## 13. Health & System
 
-### GET `/health`
+### GET `/health` ✅
 
 Liveness check.
 
 **Auth:** Public
 
-**Response `200 OK`**
+**Implemented path:** `GET /api/health`
+
+**Response `200 OK` (implemented)**
+
+```json
+{
+  "status": "ok",
+  "service": "TRACE Backend"
+}
+```
+
+**Response `200 OK` (target spec)**
 
 ```json
 {
@@ -1356,9 +1466,9 @@ Liveness check.
 
 ---
 
-### GET `/health/ready`
+### GET `/health/ready` ☐
 
-Readiness check (includes dependency status).
+Readiness check (includes dependency status). **Planned.**
 
 **Auth:** Public
 

@@ -4,7 +4,7 @@
 
 > An AI-powered Industrial Knowledge Intelligence Platform that turns scattered, unstructured industrial documents into a single, searchable **Industrial Knowledge Brain**.
 
-[![Status](https://img.shields.io/badge/status-milestone--1-green)]()
+[![Status](https://img.shields.io/badge/status-milestone--2-green)]()
 [![Problem Statement](https://img.shields.io/badge/problem--statement-8-orange)]()
 [![License](https://img.shields.io/badge/license-proprietary-lightgrey)]()
 
@@ -43,6 +43,11 @@ TRACE ingests these documents and transforms them into **one searchable Industri
 Brain** using a layered AI pipeline of OCR, Document Intelligence, Retrieval-Augmented
 Generation (RAG), a Knowledge Graph, and orchestrated AI Agents powered by LLMs.
 
+> **Current status (June 2026):** Milestones 1 and 2 are complete — the platform has a
+> working Next.js frontend, FastAPI backend, PostgreSQL persistence, JWT authentication,
+> and an authenticated industrial dashboard shell. AI ingestion and intelligence features
+> are next on the roadmap.
+
 > **TRACE is NOT a PDF chatbot.**
 > It behaves like *Microsoft Copilot for industrial operations* — understanding assets,
 > compliance, procedures, and incidents, and reasoning across them.
@@ -69,12 +74,18 @@ Generation (RAG), a Knowledge Graph, and orchestrated AI Agents powered by LLMs.
 | **TypeScript** | Type-safe frontend development |
 | **TailwindCSS** | Utility-first styling system |
 | **shadcn/ui** | Accessible, composable component library |
+| **Axios** | HTTP client with JWT refresh interceptor |
+| **React Hook Form + Zod** | Form validation (login, register) |
 
 ### Backend
 
 | Technology | Purpose |
 | --- | --- |
 | **FastAPI** | High-performance Python API layer & orchestration gateway |
+| **SQLAlchemy 2 (async)** | ORM and database access |
+| **Alembic** | Schema migrations |
+| **passlib + bcrypt** | Password hashing |
+| **python-jose** | JWT access and refresh tokens |
 
 ### Database
 
@@ -132,27 +143,81 @@ flowchart TB
 ```text
 TRACE/
 ├── docs/                       # Architecture & planning documentation
-│   ├── 01_PROBLEM_STATEMENT.md
-│   └── 02_PRODUCT_REQUIREMENTS.md
-├── frontend/                   # Next.js + TypeScript + Tailwind + shadcn/ui (planned)
-├── backend/                    # FastAPI service layer (planned)
-├── ai/                         # LangGraph / LangChain / RAG / Knowledge Graph (planned)
-├── datasets/                   # Sample industrial documents & corpora (planned)
-├── scripts/                    # Utility & data-prep scripts (planned)
-└── README.md                   # This file
+├── frontend/                   # Next.js App Router (TypeScript, Tailwind, shadcn/ui)
+│   ├── app/                    # Routes: /, /login, /register, /dashboard
+│   ├── components/             # auth, layout, common, ui
+│   ├── contexts/               # AuthProvider
+│   ├── hooks/                  # useAuth
+│   ├── lib/api/                # Axios client, auth API
+│   ├── lib/auth/               # Token storage, route constants
+│   └── types/                  # Shared TypeScript types
+├── backend/                    # FastAPI service layer
+│   ├── app/
+│   │   ├── api/routes/         # health, auth
+│   │   ├── core/security/      # JWT + password utilities
+│   │   ├── models/             # User, Role, RefreshToken
+│   │   ├── repositories/       # User, Role, RefreshToken
+│   │   ├── schemas/            # Pydantic DTOs
+│   │   └── services/           # AuthService
+│   ├── alembic/versions/       # Database migrations
+│   └── scripts/                # verify_db.py
+├── scripts/                    # init-db.sql
+├── .env.example                # Root environment template
+└── README.md
 ```
 
 | Folder | Responsibility |
 | --- | --- |
 | `docs/` | Problem definition, product requirements, architecture decisions |
-| `frontend/` | User-facing Copilot interface, search, dashboards, document viewer |
-| `backend/` | API gateway, auth, ingestion orchestration, query routing |
-| `ai/` | OCR, document intelligence, embeddings, RAG, knowledge graph, agents |
-| `datasets/` | Representative industrial documents for development & evaluation |
-| `scripts/` | One-off tooling, ingestion helpers, evaluation harnesses |
+| `frontend/` | Login, register, authenticated dashboard shell, API client |
+| `backend/` | REST API, authentication, PostgreSQL persistence |
+| `scripts/` | Database initialization and utility scripts |
+| `ai/` | *(Planned)* OCR, RAG, knowledge graph, agents |
+| `datasets/` | *(Planned)* Sample industrial documents |
 
-> **Note:** During the current phase only architecture documentation is produced. No
-> application code, deployment, CI/CD, or container configuration is generated yet.
+---
+
+## Implemented Features (Milestones 1–2)
+
+### Milestone 1 — Foundations ✅
+
+| Area | Delivered |
+| --- | --- |
+| Frontend | Next.js App Router, TypeScript, Tailwind, shadcn/ui |
+| Backend | FastAPI app factory, CORS, lifespan hooks |
+| Database | PostgreSQL config, SQLAlchemy async session, Alembic |
+| API | `GET /api/health` |
+| DevOps | `.env.example`, `scripts/init-db.sql`, local run instructions |
+| Integration | Frontend backend-status check against health API |
+
+### Milestone 2 — Authentication ✅
+
+| Area | Delivered |
+| --- | --- |
+| **Backend** | User, Role, RefreshToken models; JWT auth; bcrypt passwords |
+| **Backend APIs** | Register, login, refresh (rotation), logout, `/auth/me` |
+| **Backend layers** | Repositories, AuthService, `get_current_user()` dependency |
+| **Default roles** | Admin, Engineer, Operator, Viewer (seeded) |
+| **Frontend** | `/login`, `/register`, AuthContext, Axios + refresh interceptor |
+| **Frontend** | Protected routes, guest routes, logout, localStorage tokens |
+| **Frontend UI** | Industrial enterprise theme, dashboard shell, KPI placeholders |
+
+### Planned (Not Yet Implemented)
+
+Universal ingestion, OCR, RAG, knowledge graph, Copilot chat, semantic search, asset modules, compliance modules, admin UI, notifications, and deployment/CI pipelines remain on the roadmap (see [`docs/14_IMPLEMENTATION_ROADMAP.md`](docs/14_IMPLEMENTATION_ROADMAP.md)).
+
+---
+
+## Screenshots
+
+> Placeholder — add screenshots to `docs/assets/` when capturing the demo.
+
+| Screen | Path | Status |
+| --- | --- | --- |
+| Login | `docs/assets/screenshots/login.png` | Pending |
+| Register | `docs/assets/screenshots/register.png` | Pending |
+| Dashboard | `docs/assets/screenshots/dashboard.png` | Pending |
+| Swagger Auth | `docs/assets/screenshots/swagger-auth.png` | Pending |
 
 ---
 
@@ -183,7 +248,18 @@ flowchart LR
 
 ## 5. Features
 
-### Core Capabilities
+### Platform (Implemented — Milestones 1–2)
+
+| # | Feature | Description | Status |
+| --- | --- | --- | --- |
+| P1 | **Health monitoring** | Backend liveness check; frontend connectivity indicator | ✅ |
+| P2 | **User registration** | Self-service signup with default Viewer role | ✅ |
+| P3 | **JWT authentication** | Login, refresh with rotation, logout, current user | ✅ |
+| P4 | **Role-based access** | Admin, Engineer, Operator, Viewer roles (seeded) | ✅ |
+| P5 | **Protected dashboard** | Authenticated shell with sidebar, topbar, KPI placeholders | ✅ |
+| P6 | **Industrial UI** | Dark enterprise theme, responsive layout, skeleton loaders | ✅ |
+
+### Core Capabilities (Planned)
 
 | # | Feature | Description |
 | --- | --- | --- |
@@ -240,18 +316,27 @@ flowchart LR
 | Phase | Name | Key Outcomes |
 | --- | --- | --- |
 | **Phase 0** | Architecture & Planning | Problem statement, requirements, system design ✅ |
-| **Phase 1** | Foundations | Project scaffolding, health endpoint, DB connection ✅ (Milestone 1) |
+| **Phase 1** | Foundations | Project scaffolding, health endpoint, DB connection ✅ **(Milestone 1)** |
+| **Milestone 2** | Authentication Platform | JWT auth, register/login/refresh/logout, frontend auth UI ✅ |
 | **Phase 2** | Ingestion & OCR | Document upload, OCR, parsing, document intelligence pipeline |
 | **Phase 3** | RAG & Search | Embeddings, FAISS index, retrieval, grounded answering |
 | **Phase 4** | Knowledge Graph | Neo4j entity/relationship extraction, asset linking |
 | **Phase 5** | Agentic Copilot | LangGraph orchestration, multi-step reasoning, citations |
 | **Phase 6** | Hardening & Scale | Performance, security, observability, evaluation |
 
-> **Current status:** Milestone 1 complete — local dev environment (Next.js + FastAPI + PostgreSQL config). Authentication and AI features are next.
+> **Current status:** Milestones 1 and 2 are complete. The platform supports user registration, login, token refresh with rotation, logout, protected APIs, and an authenticated industrial dashboard shell. AI ingestion and intelligence features are next.
+
+### Roadmap progress
+
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| **Milestone 1** | Scaffolding, health API, PostgreSQL, frontend ↔ backend | ✅ Complete |
+| **Milestone 2** | Full authentication stack (backend + frontend) | ✅ Complete |
+| **Milestone 3+** | Ingestion, RAG, graph, Copilot, domain modules | ☐ Planned |
 
 ---
 
-## Local Development (Milestone 1)
+## Local Development
 
 ### Prerequisites
 
@@ -263,7 +348,12 @@ flowchart LR
 
 ```bash
 cp .env.example .env
-cp frontend/.env.local.example frontend/.env.local
+```
+
+Create `frontend/.env.local`:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 Edit `.env` if your PostgreSQL credentials differ from the defaults (`trace` / `trace`).
@@ -274,6 +364,14 @@ Create the database (as postgres superuser):
 
 ```bash
 psql -U postgres -f scripts/init-db.sql
+```
+
+Apply migrations:
+
+```bash
+cd backend
+.venv\Scripts\activate          # Windows
+alembic upgrade head
 ```
 
 Verify connection:
@@ -296,6 +394,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Health check: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
+Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
+
 ### 4. Frontend
 
 ```bash
@@ -304,7 +404,15 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — you should see **TRACE** with **Backend Status: 🟢 Online**.
+Open [http://localhost:3000](http://localhost:3000) — redirects to `/login` or `/dashboard` based on session.
+
+### 5. Quick verification
+
+1. Register at `/register` (new users receive the **Viewer** role).
+2. Sign in at `/login`.
+3. Confirm `/dashboard` shows profile and KPI placeholders.
+4. Test logout from the top bar.
+5. Exercise auth endpoints in Swagger (`/api/auth/*`).
 
 ---
 

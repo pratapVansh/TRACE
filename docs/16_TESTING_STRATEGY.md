@@ -15,8 +15,9 @@
 7. [Performance Testing](#7-performance-testing)
 8. [Integration Testing](#8-integration-testing)
 9. [Test Data Strategy](#9-test-data-strategy)
-10. [CI Integration (Future)](#10-ci-integration-future)
-11. [References](#11-references)
+10. [Testing Performed to Date (Milestones 1–2)](#10-testing-performed-to-date-milestones-12)
+11. [CI Integration (Future)](#11-ci-integration-future)
+12. [References](#12-references)
 
 ---
 
@@ -75,9 +76,9 @@ flowchart TB
 | `ai/extractors/` | Tag extraction, entity recognition |
 | `ai/retrievers/` | Score calculation, filtering, dedup |
 | `ai/agents/` | State transitions, output schema |
-| `backend/services/` | Business logic, error handling |
-| `backend/repositories/` | Query correctness |
-| `backend/core/security.py` | JWT creation, validation, hashing |
+| `backend/services/` | Business logic, error handling | AuthService manually verified ✅ |
+| `backend/repositories/` | Query correctness | Auth repos manually verified ✅ |
+| `backend/core/security/` | JWT creation, validation, hashing | ✅ Implemented |
 
 ### Unit test rules
 
@@ -412,7 +413,52 @@ sequenceDiagram
 
 ---
 
-## 10. CI Integration (Future)
+## 10. Testing Performed to Date (Milestones 1–2)
+
+Manual and ad-hoc verification performed during Milestones 1 and 2. Automated test suites
+described in sections 3–8 remain **planned** for CI integration.
+
+### Backend
+
+| Area | What was verified | Method |
+| --- | --- | --- |
+| Health API | `GET /api/health` returns `{ status: "ok", service: "TRACE Backend" }` | Manual + Swagger |
+| Registration | New user creation, duplicate email rejection, default Viewer role | Manual + Swagger |
+| Login | Valid credentials issue access + refresh tokens; invalid credentials return 401 | Manual + Swagger |
+| JWT | Access token decodes correctly; protected routes reject missing/invalid tokens | Manual |
+| Refresh token | Rotation revokes old token; new pair issued; expired/invalid tokens rejected | Manual + service calls |
+| Logout | Refresh token revoked; subsequent refresh fails | Manual |
+| `/auth/me` | Returns user profile with single role string | Manual |
+| Password hashing | bcrypt via passlib; login verifies hashed passwords | Implementation review |
+| Database | Alembic migrations apply; roles seeded; verify_db script passes | Script execution |
+
+### Frontend
+
+| Area | What was verified | Method |
+| --- | --- | --- |
+| Login page | Form validation (Zod), error display, successful redirect to dashboard | Manual |
+| Register page | Registration flow, validation, redirect to login | Manual |
+| Auth context | Session bootstrap from localStorage on page reload | Manual |
+| Axios interceptor | 401 triggers refresh; queued requests retry with new token | Manual |
+| Protected routes | `/dashboard` redirects unauthenticated users to `/login` | Manual |
+| Guest routes | `/login` and `/register` redirect authenticated users to `/dashboard` | Manual |
+| Logout | Clears tokens, redirects to login | Manual |
+| Dashboard shell | Sidebar, topbar, KPI placeholders, role badge, profile display | Manual |
+| Loading states | Skeleton screens during auth bootstrap | Manual |
+| Build quality | `npm run build` and ESLint pass | CI-local |
+
+### Known gaps (to address in future testing work)
+
+| Gap | Planned resolution |
+| --- | --- |
+| No pytest suite committed yet | Add API tests per section 4 |
+| TestClient async/event-loop issues on Windows | Use httpx async client or direct service tests |
+| No E2E browser tests | Add Playwright after Milestone 3 |
+| RAG / AI evaluation | Sections 5–6 apply when AI pipeline is built |
+
+---
+
+## 11. CI Integration (Future)
 
 > CI/CD pipelines will be configured **after** the working prototype is complete and the
 > demo is successful. This section defines what will be automated.
@@ -427,7 +473,7 @@ sequenceDiagram
 
 ---
 
-## 11. References
+## 12. References
 
 - [`13_API_SPECIFICATION.md`](13_API_SPECIFICATION.md)
 - [`15_AI_DEVELOPMENT_RULES.md`](15_AI_DEVELOPMENT_RULES.md)

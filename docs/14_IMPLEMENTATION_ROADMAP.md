@@ -26,6 +26,14 @@ then ingestion and intelligence, then domain features, then polish and demo prep
 > first. Deployment documentation and infrastructure will be produced only after the
 > application is fully functional.
 
+### Project milestone status
+
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| **Milestone 1** | Project scaffolding, health API, PostgreSQL, frontend ↔ backend | ✅ **COMPLETE** |
+| **Milestone 2** | Authentication (backend + frontend), dashboard shell | ✅ **COMPLETE** |
+| **Milestone 3+** | Ingestion, RAG, graph, Copilot, domain modules | ☐ Planned |
+
 ```mermaid
 gantt
     title TRACE 20-Day Implementation Roadmap
@@ -66,60 +74,62 @@ gantt
 
 ## 3. Phase Summary
 
-| Phase | Days | Focus | Demo-ready output |
-| --- | --- | --- | --- |
-| Foundations | 1–3 | Setup, auth, dashboard shell | Login + empty dashboard |
-| Ingestion | 4–6 | Upload, OCR, parsing | Documents ingested and stored |
-| Intelligence | 7–12 | RAG, graph, agents | Grounded Copilot answers |
-| Domain | 13–17 | Maintenance, compliance, analytics | Full feature set |
-| Polish | 18–20 | Demo prep, bug fixes | Demo-ready prototype |
+| Phase | Days | Focus | Demo-ready output | Status |
+| --- | --- | --- | --- | --- |
+| Foundations | 1–3 | Setup, auth, dashboard shell | Login + empty dashboard | ✅ Complete |
+| Ingestion | 4–6 | Upload, OCR, parsing | Documents ingested and stored | ☐ Planned |
+| Intelligence | 7–12 | RAG, graph, agents | Grounded Copilot answers | ☐ Planned |
+| Domain | 13–17 | Maintenance, compliance, analytics | Full feature set | ☐ Planned |
+| Polish | 18–20 | Demo prep, bug fixes | Demo-ready prototype | ☐ Planned |
 
 ---
 
 ## 4. Daily Plan (20 Days)
 
-### Day 1 — Project Setup & Scaffolding
+### Day 1 — Project Setup & Scaffolding ✅
 
-| Task | Owner | Deliverable |
-| --- | --- | --- |
-| Initialize Next.js frontend (App Router, TypeScript, Tailwind, shadcn/ui) | Frontend | `frontend/` runnable |
-| Initialize FastAPI backend (project structure, config, health endpoint) | Backend | `backend/` runnable |
-| Initialize AI module structure (`ai/` folder, LangChain/LangGraph stubs) | AI | `ai/` scaffold |
-| Set up PostgreSQL schema (users, roles, documents, assets) | Backend | Migrations applied |
-| Configure local dev environment (env files, README dev section) | All | Dev setup documented |
-| Seed initial roles (admin, engineer, operator, inspector, compliance_officer) | Backend | Roles in DB |
+| Task | Owner | Deliverable | Status |
+| --- | --- | --- | --- |
+| Initialize Next.js frontend (App Router, TypeScript, Tailwind, shadcn/ui) | Frontend | `frontend/` runnable | ✅ |
+| Initialize FastAPI backend (project structure, config, health endpoint) | Backend | `backend/` runnable | ✅ |
+| Initialize AI module structure (`ai/` folder, LangChain/LangGraph stubs) | AI | `ai/` scaffold | ☐ |
+| Set up PostgreSQL schema (users, roles, documents, assets) | Backend | Migrations applied | ✅ (auth tables) |
+| Configure local dev environment (env files, README dev section) | All | Dev setup documented | ✅ |
+| Seed initial roles (admin, engineer, operator, inspector, compliance_officer) | Backend | Roles in DB | ✅ (Admin, Engineer, Operator, Viewer) |
 
-**Exit criteria:** Both frontend and backend start locally; health endpoint returns 200.
-
----
-
-### Day 2 — Authentication
-
-| Task | Owner | Deliverable |
-| --- | --- | --- |
-| Implement JWT auth (login, refresh, logout, `/auth/me`) | Backend | Auth endpoints working |
-| Password hashing, user model, role-based dependencies | Backend | RBAC middleware |
-| Login page UI with form validation | Frontend | `/login` page |
-| Auth middleware (route protection, token refresh) | Frontend | Protected routes |
-| Session persistence (httpOnly cookies or secure storage) | Frontend | Login persists across refresh |
-| Seed demo users (admin, engineer) | Backend | Test accounts ready |
-
-**Exit criteria:** User can log in, access protected routes, and log out.
+**Exit criteria:** Both frontend and backend start locally; health endpoint returns 200. ✅
 
 ---
 
-### Day 3 — Dashboard Shell
+### Day 2 — Authentication ✅
 
-| Task | Owner | Deliverable |
-| --- | --- | --- |
-| Dashboard layout (sidebar, top bar, breadcrumbs) | Frontend | Authenticated shell |
-| Navigation links (Copilot, Search, Assets, Graph, Maintenance, Compliance, Documents) | Frontend | Full nav |
-| Dashboard home page with placeholder KPI cards | Frontend | `/` dashboard |
-| Responsive sidebar (drawer on mobile) | Frontend | Mobile nav |
-| Theme setup (light/dark, CSS variables from UI/UX doc) | Frontend | Theming |
-| API client library (typed fetch wrapper) | Frontend | `lib/api/` |
+| Task | Owner | Deliverable | Status |
+| --- | --- | --- | --- |
+| Implement JWT auth (login, refresh, logout, `/auth/me`) | Backend | Auth endpoints working | ✅ |
+| Implement registration endpoint | Backend | `POST /auth/register` | ✅ |
+| Password hashing, user model, role-based dependencies | Backend | RBAC middleware | ✅ |
+| Login page UI with form validation | Frontend | `/login` page | ✅ |
+| Register page UI | Frontend | `/register` page | ✅ |
+| Auth middleware (route protection, token refresh) | Frontend | Protected routes | ✅ |
+| Session persistence (httpOnly cookies or secure storage) | Frontend | Login persists across refresh | ✅ (localStorage) |
+| Seed demo users (admin, engineer) | Backend | Test accounts ready | ☐ (self-registration available) |
 
-**Exit criteria:** Authenticated user sees dashboard shell with navigation; all routes reachable.
+**Exit criteria:** User can log in, access protected routes, and log out. ✅
+
+---
+
+### Day 3 — Dashboard Shell ✅
+
+| Task | Owner | Deliverable | Status |
+| --- | --- | --- | --- |
+| Dashboard layout (sidebar, top bar, breadcrumbs) | Frontend | Authenticated shell | ✅ (breadcrumbs planned) |
+| Navigation links (Copilot, Search, Assets, Graph, Maintenance, Compliance, Documents) | Frontend | Full nav | ✅ (placeholder/disabled links) |
+| Dashboard home page with placeholder KPI cards | Frontend | `/dashboard` | ✅ |
+| Responsive sidebar (drawer on mobile) | Frontend | Mobile nav | ✅ |
+| Theme setup (light/dark, CSS variables from UI/UX doc) | Frontend | Theming | ✅ (dark industrial) |
+| API client library (typed fetch wrapper) | Frontend | `lib/api/` | ✅ (Axios) |
+
+**Exit criteria:** Authenticated user sees dashboard shell with navigation; all routes reachable. ✅
 
 ---
 
@@ -388,8 +398,8 @@ gantt
 
 | # | Milestone | Target Day | Verified |
 | --- | --- | --- | --- |
-| M1 | Auth working (login/logout/protected routes) | Day 2 | ☐ |
-| M2 | Dashboard shell with navigation | Day 3 | ☐ |
+| M1 | Auth working (login/logout/protected routes) | Day 2 | ✅ |
+| M2 | Dashboard shell with navigation | Day 3 | ✅ |
 | M3 | Document upload and ingestion pipeline | Day 6 | ☐ |
 | M4 | Vector search returns relevant results | Day 7 | ☐ |
 | M5 | RAG answers with citations | Day 8 | ☐ |
@@ -402,6 +412,9 @@ gantt
 | M12 | Dashboard KPIs and analytics live | Day 17 | ☐ |
 | M13 | Demo script validated end-to-end | Day 19 | ☐ |
 | M14 | Prototype stable and demo-ready | Day 20 | ☐ |
+
+> **Progress:** 2 of 14 roadmap milestones complete (~14%). Milestones 1 and 2 (project
+> foundations + authentication platform) are fully delivered.
 
 ---
 

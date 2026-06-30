@@ -36,6 +36,22 @@ of data) with clarity (answers and actions must never feel cluttered).
 | **Consistent system** | Tokens, spacing, and components are uniform |
 | **Accessible by default** | WCAG AA contrast, keyboard, screen-reader support |
 
+> **Implementation status (Milestone 2):** The live UI uses an **industrial enterprise dark
+> theme** — not glassmorphism or chatbot styling. Auth pages use a split brand panel + form
+> card; the dashboard uses a persistent sidebar, topbar, and skeleton loading states.
+
+### Implemented design language
+
+| Element | Implementation |
+| --- | --- |
+| Theme | Dark industrial — deep charcoal backgrounds, steel-blue accents |
+| Auth layout | Split panel: geometric brand panel (left) + elevated form card (right) |
+| Dashboard | Sidebar with grouped nav (disabled future links), topbar with search + profile |
+| KPI cards | Four placeholder metrics with icon badges |
+| Loading | `Skeleton` components (auth bootstrap, dashboard, backend status) |
+| Motion | ~200ms transitions on hover/focus; no decorative animation |
+| Typography | System sans-serif stack via Tailwind; semibold headings, muted body text |
+
 ```mermaid
 flowchart LR
     Clarity --> UX["Great Industrial UX"]
@@ -75,6 +91,20 @@ flowchart LR
 | Command palette | Keyboard-first navigation and quick ask |
 | Active state | Clear highlight + accent indicator |
 
+### Authentication pages (implemented)
+
+| Page | Layout | Elements |
+| --- | --- | --- |
+| `/login` | Split auth shell | Brand panel (logo, tagline, geometric accents) + login form card |
+| `/register` | Split auth shell | Same brand panel + registration form (name, email, password) |
+
+| Form element | Style |
+| --- | --- |
+| Inputs | Dark surface, subtle border, focus ring in steel blue |
+| Primary button | Full-width, steel blue background |
+| Validation errors | Inline red text below fields |
+| Loading | Skeleton placeholders during auth bootstrap |
+
 | Principle | Detail |
 | --- | --- |
 | Predictable | Persistent nav location across pages |
@@ -88,20 +118,34 @@ flowchart LR
 A professional, industrial palette: deep neutral base, a confident primary, semantic status
 colors, and subtle accent for AI/Copilot surfaces. Supports light and dark themes.
 
+> **Implemented (Milestone 2):** Dark theme only. Tokens are defined in `frontend/app/globals.css`.
+
+| Token | Implemented (dark) | Use |
+| --- | --- | --- |
+| `--background` | `#0B0F14` | App background |
+| `--surface` | `#111827` | Cards, panels, sidebar |
+| `--surface-muted` | `#1F2937` | Secondary surfaces, inputs |
+| `--primary` | `#3B6EA8` (steel blue) | Primary actions, links, accents |
+| `--primary-foreground` | `#FFFFFF` | Text on primary |
+| `--border` | `#374151` | Dividers, outlines |
+| `--text` | `#F3F4F6` | Primary text |
+| `--text-muted` | `#9CA3AF` | Secondary text, labels |
+| `--success` | `#22C55E` | Online status, pass |
+| `--warning` | `#F59E0B` | Pending states |
+| `--danger` | `#EF4444` | Errors, critical |
+
+### Planned tokens (full product)
+
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
 | `--background` | `#F7F8FA` | `#0B0F14` | App background |
 | `--surface` | `#FFFFFF` | `#121821` | Cards, panels |
 | `--surface-muted` | `#EEF1F5` | `#1A222D` | Secondary surfaces |
 | `--primary` | `#1F6FEB` | `#3B82F6` | Primary actions, links |
-| `--primary-foreground` | `#FFFFFF` | `#FFFFFF` | Text on primary |
 | `--accent` | `#7C3AED` | `#A78BFA` | AI / Copilot accents |
 | `--success` | `#16A34A` | `#22C55E` | Compliant, pass |
 | `--warning` | `#D97706` | `#F59E0B` | Pending, due soon |
 | `--danger` | `#DC2626` | `#EF4444` | Non-compliant, critical |
-| `--border` | `#E2E8F0` | `#23303D` | Dividers, outlines |
-| `--text` | `#0F172A` | `#E5EAF0` | Primary text |
-| `--text-muted` | `#64748B` | `#94A3B8` | Secondary text |
 
 ```mermaid
 flowchart LR
@@ -120,6 +164,19 @@ flowchart LR
 ---
 
 ## 4. Typography
+
+> **Implemented:** Tailwind default sans-serif stack (Geist via Next.js font loading where configured).
+> Headings use semibold/bold weights; form labels and captions use muted smaller text.
+
+| Role | Size (implemented) | Weight |
+| --- | --- | --- |
+| Page title (H1) | 24–30px (`text-2xl` / `text-3xl`) | 600–700 |
+| Section title (H2) | 18–20px (`text-lg`) | 600 |
+| Body | 14–16px (`text-sm` / `text-base`) | 400 |
+| Caption / meta | 12–13px (`text-xs`) | 400, muted color |
+| Form labels | 14px | 500 |
+
+### Planned typography (full product)
 
 | Role | Font | Size | Weight |
 | --- | --- | --- | --- |
@@ -142,28 +199,36 @@ flowchart LR
 
 ## 5. Dashboard Layout
 
+> **Implemented:** Four KPI placeholder cards in a responsive grid, user profile block, and
+> backend connectivity indicator below the topbar.
+
 ```mermaid
 flowchart TB
-    subgraph Grid["Dashboard Grid"]
-        Row1["KPI Cards Row (4 cards)"]
+    subgraph Implemented["Dashboard (implemented)"]
+        Topbar["Topbar - search, role badge, profile, logout"]
+        Sidebar["Sidebar - grouped nav, mobile drawer"]
+        KPI["KPI row - Documents, Assets, Compliance, Maintenance"]
+        Profile["User profile section"]
+        Status["Backend status"]
+    end
+    subgraph Planned["Dashboard (planned)"]
         Row2L["Quick Ask Copilot"]
         Row2R["Alerts Panel"]
         Row3L["Trends Chart"]
         Row3R["Recent Activity Feed"]
     end
-    Row1 --> Row2L
-    Row1 --> Row2R
-    Row2L --> Row3L
-    Row2R --> Row3R
 ```
 
-| Region | Content | Span |
+| Region | Content | Status |
 | --- | --- | --- |
-| KPI row | Assets, documents, open compliance, incidents | Full width, 4 cards |
-| Quick Ask | Inline Copilot input | 2/3 width |
-| Alerts | Overdue compliance, critical incidents | 1/3 width |
-| Trends | Ingestion & query volume | 2/3 width |
-| Activity | Recent uploads/queries | 1/3 width |
+| Sidebar | Grouped navigation (future links disabled) | ✅ |
+| Topbar | Search field, role badge, profile menu, logout | ✅ |
+| KPI row | Documents, Assets, Compliance, Maintenance Tasks | ✅ (placeholders) |
+| User profile | Name, email, role from session | ✅ |
+| Quick Ask | Inline Copilot input | Planned |
+| Alerts | Overdue compliance, critical incidents | Planned |
+| Trends | Ingestion & query volume | Planned |
+| Activity | Recent uploads/queries | Planned |
 
 | Principle | Detail |
 | --- | --- |
@@ -264,15 +329,17 @@ flowchart LR
 Motion is **purposeful and subtle** — it guides attention and conveys system state without
 distraction.
 
-| Animation | Use | Duration |
-| --- | --- | --- |
-| Token streaming | Copilot text appears progressively | continuous |
-| Page transitions | Soft fade/slide between routes | 150–250ms |
-| Card hover | Slight lift + shadow | 120ms |
-| Skeleton shimmer | Loading placeholders | loop |
-| Graph layout | Smooth node positioning | 300–500ms |
-| Toasts | Slide-in/out notifications | 200ms |
-| Accordion / drawer | Ease-in-out expand | 200ms |
+> **Implemented:** ~200ms hover/focus transitions on buttons, nav items, and cards.
+> Loading uses static skeleton placeholders (no shimmer loop yet). Auth bootstrap shows
+> full-page skeleton via `AuthLoadingScreen`.
+
+| Animation | Use | Duration | Status |
+| --- | --- | --- | --- |
+| Hover/focus transitions | Buttons, sidebar links, KPI cards | ~200ms | ✅ |
+| Skeleton loading | Auth bootstrap, dashboard, backend status | — | ✅ |
+| Page transitions | Soft fade/slide between routes | 150–250ms | Planned |
+| Token streaming | Copilot text appears progressively | continuous | Planned |
+| Graph layout | Smooth node positioning | 300–500ms | Planned |
 
 ```mermaid
 flowchart LR
@@ -291,10 +358,14 @@ flowchart LR
 
 ## 10. Glassmorphism
 
-Glassmorphism is used **selectively** for elevated/overlay surfaces to create depth and a
+> **Not used in current implementation (Milestone 2).** The live UI uses solid industrial
+> surfaces (`#111827`, `#1F2937`) with subtle borders — no backdrop blur. Glassmorphism
+> remains a **planned** treatment for future Copilot overlays, command palette, and modals.
+
+Glassmorphism is intended for **selectively** elevated/overlay surfaces to create depth and a
 modern, premium feel — never on dense data tables where it would hurt readability.
 
-| Where Used | Effect |
+| Where Used (planned) | Effect |
 | --- | --- |
 | Top bar | Frosted translucent background |
 | Command palette | Blurred backdrop overlay |
@@ -324,12 +395,16 @@ flowchart LR
 
 ## 11. Mobile Responsiveness
 
-| Breakpoint | Adaptation |
-| --- | --- |
-| `< 640px` | Sidebar → drawer; bottom nav; single-column stacks; charts simplify |
-| `≥ 768px` | Icon sidebar; two-column cards |
-| `≥ 1024px` | Full sidebar; multi-column dashboard |
-| `≥ 1280px` | Side-by-side panels (chat + source) |
+> **Implemented:** Auth pages stack vertically on small screens; brand panel hidden below
+> `lg`. Dashboard sidebar becomes a slide-out drawer with overlay on mobile. KPI grid:
+> 1 column → 2 columns (`sm`) → 4 columns (`lg`).
+
+| Breakpoint | Adaptation | Status |
+| --- | --- | --- |
+| `< 640px` | Auth single column; sidebar drawer; KPI 1-col | ✅ |
+| `≥ 768px` | KPI 2-col grid | ✅ |
+| `≥ 1024px` | Auth split panel; full sidebar; KPI 4-col | ✅ |
+| `≥ 1280px` | Side-by-side panels (chat + source) | Planned |
 
 ```mermaid
 flowchart LR

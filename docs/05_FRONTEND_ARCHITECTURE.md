@@ -30,14 +30,19 @@ The frontend is a **Next.js (App Router) + TypeScript** application styled with
 experience: conversational AI, semantic search, asset intelligence, knowledge-graph
 exploration, maintenance, and compliance views.
 
-| Concern | Approach |
-| --- | --- |
-| Rendering | Server Components for data-heavy pages; Client Components for interactivity |
-| Data fetching | Server-side fetch + React Query (client cache) |
-| Streaming | Server-Sent Events for Copilot token streaming |
-| State | Local component state + lightweight global store (auth, theme) |
-| Styling | Tailwind tokens + shadcn/ui + glassmorphism accents |
-| Type safety | TypeScript end-to-end with shared API types |
+> **Implementation status (Milestones 1–2):** Authentication, token persistence, protected
+> routes, and the industrial dashboard shell are **implemented**. Copilot, search, assets,
+> graph, maintenance, compliance, and admin pages remain **planned** (sidebar links are
+> placeholders).
+
+| Concern | Approach (target) | Current implementation |
+| --- | --- | --- |
+| Rendering | Server Components for data-heavy pages; Client Components for interactivity | Client Components for auth and dashboard |
+| Data fetching | Server-side fetch + React Query (client cache) | Axios client; React Query planned |
+| Streaming | Server-Sent Events for Copilot token streaming | Not yet implemented |
+| State | Local component state + lightweight global store (auth, theme) | `AuthProvider` context + localStorage tokens |
+| Styling | Tailwind tokens + shadcn/ui | Industrial dark theme (see [`07_UI_UX_DESIGN.md`](07_UI_UX_DESIGN.md)) |
+| Type safety | TypeScript end-to-end with shared API types | `types/auth.ts`, `types/api.ts` |
 
 ```mermaid
 flowchart LR
@@ -51,6 +56,40 @@ flowchart LR
 ---
 
 ## 2. Folder Structure
+
+### Implemented (Milestone 2)
+
+```text
+frontend/
+├── app/
+│   ├── layout.tsx                # Root layout + Providers
+│   ├── providers.tsx             # AuthProvider wrapper
+│   ├── page.tsx                  # Redirect to /dashboard or /login
+│   ├── globals.css               # Industrial theme tokens
+│   ├── login/page.tsx            # Login (GuestGuard)
+│   ├── register/page.tsx         # Register (GuestGuard)
+│   └── dashboard/page.tsx        # Dashboard (AuthGuard)
+├── components/
+│   ├── auth/                     # login-form, register-form, auth-guard, brand panel
+│   ├── layout/                   # auth-shell, dashboard-layout, sidebar, topbar
+│   ├── common/                   # trace-logo, form-field, kpi-card, backend-status
+│   ├── ui/                       # button, input, label, checkbox, skeleton, badge
+│   └── copilot/                  # (placeholder)
+├── contexts/
+│   └── auth-context.tsx          # AuthProvider, login/register/logout/refresh
+├── hooks/
+│   └── use-auth.ts               # Auth context hook
+├── lib/
+│   ├── api/                      # client.ts (Axios), auth.ts, health.ts
+│   ├── auth/                     # storage.ts, routes.ts
+│   └── utils.ts
+├── types/
+│   ├── auth.ts
+│   └── api.ts
+└── public/
+```
+
+### Planned (full product)
 
 ```text
 frontend/
@@ -106,10 +145,19 @@ frontend/
 
 ## 3. Pages
 
+### Implemented routes
+
+| Route | Page | Purpose | Guard | Status |
+| --- | --- | --- | --- | --- |
+| `/` | Root redirect | Sends authenticated users to `/dashboard`, others to `/login` | — | ✅ |
+| `/login` | Login | Email/password sign-in | `GuestGuard` | ✅ |
+| `/register` | Register | New user registration | `GuestGuard` | ✅ |
+| `/dashboard` | Dashboard | KPI placeholders, profile, backend status | `AuthGuard` | ✅ |
+
+### Planned routes
+
 | Route | Page | Purpose | Rendering |
 | --- | --- | --- | --- |
-| `/login` | Login | Authentication | Client |
-| `/` | Dashboard | KPIs, recent activity, quick ask | Server + Client |
 | `/copilot` | Copilot | Conversational AI assistant | Client (SSE) |
 | `/search` | Search | Semantic search results | Server + Client |
 | `/assets` | Asset List | Browse/filter assets | Server |
@@ -138,13 +186,46 @@ flowchart TD
 
 ## 4. Components
 
+### Implemented component hierarchy
+
+```mermaid
+flowchart TB
+    Providers["Providers (AuthProvider)"] --> Pages
+    subgraph AuthPages["Auth pages"]
+        LoginPage --> AuthShell
+        RegisterPage --> AuthShell
+        AuthShell --> AuthBrandPanel
+        AuthShell --> LoginForm
+        AuthShell --> RegisterForm
+    end
+    subgraph DashboardPages["Dashboard"]
+        DashboardPage --> AuthGuard
+        AuthGuard --> DashboardLayout
+        DashboardLayout --> Sidebar
+        DashboardLayout --> Topbar
+        DashboardLayout --> KpiCard
+        DashboardLayout --> BackendStatus
+    end
+    AuthGuard --> AuthLoadingScreen
+    GuestGuard --> AuthLoadingScreen
+```
+
+| Category | Implemented components |
+| --- | --- |
+| Auth | `LoginForm`, `RegisterForm`, `AuthGuard`, `GuestGuard`, `AuthBrandPanel`, `AuthLoadingScreen` |
+| Layout | `AuthShell`, `DashboardLayout`, `Sidebar`, `Topbar` |
+| Common | `TraceLogo`, `FormField`, `KpiCard`, `BackendStatus` |
+| UI (shadcn) | `Button`, `Input`, `Label`, `Checkbox`, `Skeleton`, `Badge` |
+
+### Planned components
+
 | Category | Components |
 | --- | --- |
 | Copilot | `ChatWindow`, `MessageBubble`, `CitationCard`, `SourceDrawer`, `PromptInput`, `StreamingIndicator` |
 | Assets | `AssetCard`, `AssetTable`, `AssetHeader`, `AssetTimeline`, `TagBadge` |
 | Graph | `GraphCanvas`, `NodeDetailsPanel`, `GraphLegend`, `GraphFilters` |
 | Charts | `KpiCard`, `TrendChart`, `StatusDonut`, `BarChart` |
-| Layout | `Sidebar`, `TopBar`, `Breadcrumbs`, `CommandPalette`, `ThemeToggle` |
+| Layout | `Breadcrumbs`, `CommandPalette`, `ThemeToggle` |
 | Common | `DataTable`, `EmptyState`, `LoadingSkeleton`, `ConfirmDialog`, `Toast` |
 
 ### Component composition example (Copilot)
@@ -163,11 +244,14 @@ flowchart TB
 
 ## 5. Layouts
 
-| Layout | Used By | Contents |
-| --- | --- | --- |
-| Root Layout | All routes | Providers (theme, query, auth), fonts, global CSS |
-| Auth Layout | `/login` | Minimal centered card, branding |
-| Dashboard Layout | Authenticated routes | Sidebar, top bar, breadcrumbs, content slot |
+| Layout | Used By | Contents | Status |
+| --- | --- | --- | --- |
+| Root Layout | All routes | `Providers` (AuthProvider), fonts, global CSS | ✅ |
+| Auth Shell | `/login`, `/register` | Split layout: brand panel + form card | ✅ |
+| Dashboard Layout | `/dashboard` | Sidebar, top bar, content slot | ✅ |
+
+> **Note:** Route groups `(auth)` and `(dashboard)` from the original plan are not used yet;
+> auth and dashboard pages use flat routes with client-side guards instead.
 
 ```mermaid
 flowchart LR
@@ -182,32 +266,50 @@ flowchart LR
 
 ## 6. Authentication Flow
 
+### Implemented flow (Milestone 2)
+
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as Next.js
-    participant API as FastAPI
-    User->>FE: Enter credentials
-    FE->>API: POST /auth/login
-    API-->>FE: Access + refresh tokens
-    FE->>FE: Store session (httpOnly cookie)
-    User->>FE: Navigate to protected route
-    FE->>FE: Middleware checks session
-    alt Valid
-        FE-->>User: Render page
-    else Expired
-        FE->>API: POST /auth/refresh
-        API-->>FE: New access token
-    end
+    participant FE as Next.js (AuthProvider)
+    participant Store as localStorage
+    participant Axios as Axios Client
+    participant API as FastAPI /api/auth
+    User->>FE: Submit login/register form
+    FE->>API: POST /auth/login or /auth/register
+    API-->>FE: Tokens (login) or success message (register)
+    FE->>Store: Persist access + refresh tokens
+    User->>FE: Navigate to /dashboard
+    FE->>FE: AuthGuard checks isAuthenticated
+    FE->>API: GET /auth/me (Bearer access token)
+    API-->>FE: User profile + role
+    Note over Axios,API: On 401, interceptor queues requests,<br/>POST /auth/refresh, retries with new token
+    User->>FE: Logout
+    FE->>API: POST /auth/logout
+    FE->>Store: Clear tokens
 ```
 
-| Aspect | Approach |
-| --- | --- |
-| Token storage | httpOnly secure cookies |
-| Route protection | Next.js middleware + server-side guards |
-| Role gating | Conditional rendering by role claims |
-| Refresh | Silent token refresh on expiry |
-| Logout | Clear cookies, invalidate session |
+| Aspect | Planned | **Implemented** |
+| --- | --- | --- |
+| Token storage | httpOnly secure cookies | `localStorage` via `lib/auth/storage.ts` |
+| Route protection | Next.js middleware | `AuthGuard` / `GuestGuard` client components |
+| Role gating | Conditional rendering by role claims | Role badge in topbar; RBAC on API |
+| Refresh | Silent token refresh on expiry | Axios response interceptor with request queue |
+| Logout | Clear cookies, invalidate session | Clear storage + `POST /api/auth/logout` |
+| Forms | — | React Hook Form + Zod validation |
+
+### Key modules
+
+| Module | Path | Responsibility |
+| --- | --- | --- |
+| Auth context | `contexts/auth-context.tsx` | Session state, login/register/logout, bootstrap from storage |
+| Axios client | `lib/api/client.ts` | Base URL, Bearer header, 401 refresh interceptor |
+| Auth API | `lib/api/auth.ts` | Typed calls to `/api/auth/*` |
+| Route constants | `lib/auth/routes.ts` | Protected vs guest paths |
+| Hook | `hooks/use-auth.ts` | Consumer hook for auth context |
+
+> **Future:** Migrate token storage to httpOnly cookies and add Next.js middleware for
+> server-side route protection when deployment hardening begins.
 
 ---
 
@@ -216,10 +318,19 @@ sequenceDiagram
 The dashboard is the operational landing surface: KPIs, recent activity, quick Copilot
 access, and alerts.
 
+> **Implemented (Milestone 2):** `/dashboard` renders inside `DashboardLayout` with sidebar
+> navigation (placeholder links), topbar (search field, role badge, profile, logout), four KPI
+> placeholder cards (Documents, Assets, Compliance, Maintenance Tasks), user profile section,
+> and `BackendStatus` connectivity check.
+
 ```mermaid
 flowchart TB
-    subgraph Dashboard
-        KPI["KPI Cards - Assets, Docs, Open Compliance, Incidents"]
+    subgraph Dashboard["Dashboard (implemented)"]
+        KPI["KPI Cards - Documents, Assets, Compliance, Maintenance"]
+        Profile["User profile from /auth/me"]
+        Backend["Backend status indicator"]
+    end
+    subgraph DashboardPlanned["Dashboard (planned)"]
         QA["Quick Ask Copilot"]
         ACT["Recent Activity Feed"]
         ALERT["Compliance & Safety Alerts"]
@@ -227,13 +338,15 @@ flowchart TB
     end
 ```
 
-| Widget | Content |
-| --- | --- |
-| KPI Cards | Total assets, documents ingested, open compliance items, recent incidents |
-| Quick Ask | Inline Copilot prompt |
-| Activity Feed | Recent uploads, queries, status changes |
-| Alerts | Overdue compliance, critical incidents |
-| Trends | Ingestion volume, query volume over time |
+| Widget | Content | Status |
+| --- | --- | --- |
+| KPI Cards | Documents, Assets, Compliance, Maintenance Tasks (placeholder values) | ✅ |
+| User profile | Name, email, role from `/auth/me` | ✅ |
+| Backend status | Health API connectivity | ✅ |
+| Quick Ask | Inline Copilot prompt | Planned |
+| Activity Feed | Recent uploads, queries, status changes | Planned |
+| Alerts | Overdue compliance, critical incidents | Planned |
+| Trends | Ingestion volume, query volume over time | Planned |
 
 ---
 
@@ -349,6 +462,10 @@ flowchart TB
 ---
 
 ## 13. Responsive Strategy
+
+> **Implemented:** Auth pages use a stacked layout on mobile and split panel on `lg+`.
+> Dashboard sidebar collapses to a mobile drawer; KPI grid is 1 → 2 → 4 columns across
+> breakpoints. Loading states use `Skeleton` components (not spinners).
 
 | Breakpoint | Target | Layout Behavior |
 | --- | --- | --- |
