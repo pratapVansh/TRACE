@@ -12,6 +12,15 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
+DEFAULT_ROLES: tuple[tuple[str, str], ...] = (
+    ("SuperAdmin", "Organization owner with unrestricted system access"),
+    ("Admin", "Full system access and user management"),
+    ("Engineer", "Engineering documentation, assets, and technical workflows"),
+    ("Operator", "Operational procedures, logs, and day-to-day plant activities"),
+    ("Viewer", "Read-only access to documents, assets, and search results"),
+)
+
+
 class Role(Base, CreatedAtMixin):
     __tablename__ = "roles"
 

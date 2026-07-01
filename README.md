@@ -197,7 +197,7 @@ TRACE/
 | **Backend** | User, Role, RefreshToken models; JWT auth; bcrypt passwords |
 | **Backend APIs** | Register, login, refresh (rotation), logout, `/auth/me` |
 | **Backend layers** | Repositories, AuthService, `get_current_user()` dependency |
-| **Default roles** | Admin, Engineer, Operator, Viewer (seeded) |
+| **Default roles** | SuperAdmin (bootstrap), Admin, Engineer, Operator, Viewer (seeded) |
 | **Frontend** | `/login`, `/register`, AuthContext, Axios + refresh interceptor |
 | **Frontend** | Protected routes, guest routes, logout, localStorage tokens |
 | **Frontend UI** | Industrial enterprise theme, dashboard shell, KPI placeholders |
@@ -255,7 +255,7 @@ flowchart LR
 | P1 | **Health monitoring** | Backend liveness check; frontend connectivity indicator | ✅ |
 | P2 | **User registration** | Self-service signup with default Viewer role | ✅ |
 | P3 | **JWT authentication** | Login, refresh with rotation, logout, current user | ✅ |
-| P4 | **Role-based access** | Admin, Engineer, Operator, Viewer roles (seeded) | ✅ |
+| P4 | **Role-based access** | SuperAdmin, Admin, Engineer, Operator, Viewer | ✅ |
 | P5 | **Protected dashboard** | Authenticated shell with sidebar, topbar, KPI placeholders | ✅ |
 | P6 | **Industrial UI** | Dark enterprise theme, responsive layout, skeleton loaders | ✅ |
 
@@ -373,6 +373,32 @@ cd backend
 .venv\Scripts\activate          # Windows
 alembic upgrade head
 ```
+
+### Bootstrap the first SuperAdmin
+
+After migrations, create the organization owner account. Public registration always
+creates **Viewer** users — SuperAdmin must be bootstrapped once per installation.
+
+1. Set credentials in the project root `.env`:
+
+```bash
+SUPER_ADMIN_EMAIL=owner@company.com
+SUPER_ADMIN_PASSWORD=your-secure-password
+SUPER_ADMIN_FULL_NAME=Organization Owner
+```
+
+2. Run the bootstrap script from the `backend` directory:
+
+```bash
+cd backend
+.venv\Scripts\activate          # Windows
+python scripts/create_super_admin.py
+# source .venv/bin/activate && python scripts/create_super_admin.py   # macOS/Linux
+```
+
+The script is idempotent: if a SuperAdmin already exists, it prints a message and exits
+without creating another account. Log in with the SuperAdmin credentials via `/api/auth/login`
+or the frontend login page.
 
 Verify connection:
 

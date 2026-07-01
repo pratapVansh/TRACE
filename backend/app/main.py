@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, health
+from app.api.routes import admin_users, auth, demo, health
+from app.core.authorization import PermissionDeniedError
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.session import close_database_connection, verify_database_connection
@@ -39,8 +41,20 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.exception_handler(PermissionDeniedError)
+    async def permission_denied_handler(
+        _request: Request,
+        exc: PermissionDeniedError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": str(exc)},
+        )
+
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
+    app.include_router(admin_users.router, prefix="/api")
+    app.include_router(demo.router, prefix="/api")
 
     return app
 

@@ -10,6 +10,7 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserMeResponse
 from app.services.auth_service import AuthService
 from app.services.exceptions import InactiveAccountError, UserNotFoundError
+from app.services.user_management_service import UserManagementService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -18,6 +19,17 @@ async def get_auth_service(
     session: AsyncSession = Depends(get_db),
 ) -> AuthService:
     return AuthService(
+        session=session,
+        user_repository=UserRepository(session),
+        role_repository=RoleRepository(session),
+        refresh_token_repository=RefreshTokenRepository(session),
+    )
+
+
+async def get_user_management_service(
+    session: AsyncSession = Depends(get_db),
+) -> UserManagementService:
+    return UserManagementService(
         session=session,
         user_repository=UserRepository(session),
         role_repository=RoleRepository(session),

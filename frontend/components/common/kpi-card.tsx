@@ -6,7 +6,7 @@ type KpiCardProps = {
   title: string;
   value: string;
   change?: string;
-  changeType?: "neutral" | "positive" | "warning";
+  changeType?: "neutral" | "positive" | "warning" | "negative";
   icon: LucideIcon;
   className?: string;
 };
@@ -38,6 +38,7 @@ export function KpiCard({
                 "text-xs font-medium",
                 changeType === "positive" && "text-[var(--success)]",
                 changeType === "warning" && "text-[var(--warning)]",
+                changeType === "negative" && "text-[var(--danger)]",
                 changeType === "neutral" && "text-muted-foreground",
               )}
             >

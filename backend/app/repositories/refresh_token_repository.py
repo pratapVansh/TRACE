@@ -25,6 +25,14 @@ class RefreshTokenRepository:
         await self._session.delete(refresh_token)
         await self._session.flush()
 
+    async def delete_refresh_tokens_for_user(self, user_id: uuid.UUID) -> None:
+        result = await self._session.execute(
+            select(RefreshToken).where(RefreshToken.user_id == user_id),
+        )
+        for refresh_token in result.scalars().all():
+            await self._session.delete(refresh_token)
+        await self._session.flush()
+
     async def create_refresh_token(
         self,
         *,

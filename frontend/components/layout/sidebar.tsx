@@ -1,44 +1,13 @@
 "use client";
 
-import {
-  ClipboardList,
-  LayoutDashboard,
-  Search,
-  Settings,
-  Shield,
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { TraceLogo } from "@/components/common/trace-logo";
+import { usePermissions } from "@/hooks/use-permissions";
+import { isNavItemActive, NAV_SECTIONS } from "@/lib/auth/navigation";
 import { cn } from "@/lib/utils";
-import type { LucideIcon } from "lucide-react";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  disabled?: boolean;
-};
-
-const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
-  {
-    title: "Operations",
-    items: [
-      { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-      { href: "/dashboard", label: "Documents", icon: ClipboardList, disabled: true },
-      { href: "/dashboard", label: "Search", icon: Search, disabled: true },
-    ],
-  },
-  {
-    title: "Governance",
-    items: [
-      { href: "/dashboard", label: "Compliance", icon: Shield, disabled: true },
-      { href: "/dashboard", label: "Settings", icon: Settings, disabled: true },
-    ],
-  },
-];
 
 type SidebarProps = {
   mobileOpen?: boolean;
@@ -47,6 +16,12 @@ type SidebarProps = {
 
 export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { canAccess } = usePermissions();
+
+  const visibleSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => canAccess(item.permission)),
+  })).filter((section) => section.items.length > 0);
 
   return (
     <>
@@ -78,27 +53,25 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-4 py-6">
-          {NAV_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.title} className="mb-8 last:mb-0">
               <p className="mb-3 px-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
                 {section.title}
               </p>
               <ul className="space-y-1">
-                {section.items.map(({ href, label, icon: Icon, disabled = false }) => {
-                  const isActive = pathname === href && label === "Overview";
+                {section.items.map(({ href, label, icon: Icon }) => {
+                  const isActive = isNavItemActive(pathname, href);
 
                   return (
-                    <li key={label}>
+                    <li key={href}>
                       <Link
                         href={href}
-                        aria-disabled={disabled}
-                        onClick={disabled ? undefined : onClose}
+                        onClick={onClose}
                         className={cn(
                           "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-industrial",
                           isActive
                             ? "border border-[var(--accent-steel)]/25 bg-[var(--surface)] text-white shadow-sm"
                             : "text-muted-foreground hover:bg-[var(--surface)]/70 hover:text-foreground",
-                          disabled && "pointer-events-none opacity-40",
                         )}
                       >
                         <Icon className="size-4 shrink-0" strokeWidth={1.75} />
