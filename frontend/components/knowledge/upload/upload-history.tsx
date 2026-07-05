@@ -13,7 +13,7 @@ export function UploadHistory({ items }: UploadHistoryProps) {
       <p className="section-label">Archive</p>
       <h3 className="mt-2 text-lg font-semibold text-white">Upload history</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Recent ingestion batches and their indexing outcomes.
+        Recent uploads and their current ingestion status.
       </p>
 
       <ul className="mt-5 space-y-3">
@@ -32,11 +32,7 @@ export function UploadHistory({ items }: UploadHistoryProps) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">.{item.fileType}</Badge>
-              {item.status === "indexed" ? (
-                <DocumentStatusBadge status="indexed" />
-              ) : (
-                <DocumentStatusBadge status="failed" />
-              )}
+              <DocumentStatusBadge status={item.status} />
               <span className="text-xs text-muted-foreground">
                 {item.documentsCreated} doc{item.documentsCreated === 1 ? "" : "s"}
               </span>

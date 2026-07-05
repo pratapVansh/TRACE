@@ -17,6 +17,10 @@ const STATUS_LABEL = {
 } as const;
 
 export function UploadQueue({ items }: UploadQueueProps) {
+  const activeCount = items.filter(
+    (item) => item.status === "queued" || item.status === "uploading",
+  ).length;
+
   return (
     <div className="industrial-card p-5 sm:p-6">
       <div className="mb-5 flex items-center justify-between gap-3">
@@ -24,7 +28,7 @@ export function UploadQueue({ items }: UploadQueueProps) {
           <p className="section-label">Ingestion pipeline</p>
           <h3 className="mt-2 text-lg font-semibold text-white">Upload queue</h3>
         </div>
-        <Badge variant="secondary">{items.length} active</Badge>
+        <Badge variant="secondary">{activeCount} active</Badge>
       </div>
 
       {items.length === 0 ? (
@@ -85,7 +89,7 @@ export function UploadQueue({ items }: UploadQueueProps) {
               {item.status === "complete" ? (
                 <p className="mt-3 flex items-center gap-1.5 text-xs text-[var(--success)]">
                   <CheckCircle2 className="size-3.5" />
-                  Indexed successfully
+                  {item.message ?? "Upload complete"}
                 </p>
               ) : null}
 

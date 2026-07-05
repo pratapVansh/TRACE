@@ -50,6 +50,6 @@ datasets/raw/
 *.log
 logs/
 
-# Database
-*.db
-*.sqlite3
+# Document storage (local uploads)
+backend/storage/
+storage/

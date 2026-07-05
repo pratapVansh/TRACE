@@ -6,6 +6,7 @@ const STATUS_VARIANT: Record<
   DocumentStatus,
   "success" | "warning" | "secondary" | "default"
 > = {
+  queued: "secondary",
   indexed: "success",
   processing: "default",
   review: "warning",

@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 type UploadDropZoneProps = {
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
+  accept?: string;
 };
 
-export function UploadDropZone({ onFilesSelected, disabled }: UploadDropZoneProps) {
+export function UploadDropZone({ onFilesSelected, disabled, accept }: UploadDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFiles = useCallback(
@@ -58,6 +59,7 @@ export function UploadDropZone({ onFilesSelected, disabled }: UploadDropZoneProp
         <input
           type="file"
           multiple
+          accept={accept}
           disabled={disabled}
           className="sr-only"
           onChange={(event) => {

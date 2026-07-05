@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { ValidationMessage } from "@/types/knowledge";
@@ -43,14 +43,5 @@ export function ValidationMessages({ messages }: ValidationMessagesProps) {
         );
       })}
     </ul>
-  );
-}
-
-export function ValidationSuccess({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-[var(--success)]/30 bg-[var(--success)]/10 px-4 py-3 text-sm text-[var(--success)]">
-      <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-      <span>{message}</span>
-    </div>
   );
 }

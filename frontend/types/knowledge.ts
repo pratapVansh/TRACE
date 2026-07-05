@@ -1,4 +1,5 @@
 export type DocumentStatus =
+  | "queued"
   | "indexed"
   | "processing"
   | "review"
@@ -21,19 +22,27 @@ export type Department =
   | "Engineering"
   | "HSE"
   | "Reliability"
-  | "Turnaround";
+  | "Turnaround"
+  | "Unassigned";
 
 export interface KnowledgeDocument {
   id: string;
   title: string;
-  type: DocumentType;
+  /** Present for API-backed documents; mock search data may omit this. */
+  originalFilename?: string;
+  /** Raw backend doc_type used for filtering (manual, spreadsheet, etc.). */
+  docType: string;
+  type: string;
   status: DocumentStatus;
   version: string;
   owner: string;
-  department: Department;
+  department: Department | string;
   lastUpdated: string;
+  createdAt: string;
   assetTag?: string;
   fileSize: string;
+  mimeType?: string;
+  fileExtension?: string;
 }
 
 export type UploadQueueStatus = "queued" | "uploading" | "processing" | "complete" | "failed";
@@ -46,6 +55,7 @@ export interface UploadQueueItem {
   status: UploadQueueStatus;
   progress: number;
   message?: string;
+  file?: File;
 }
 
 export interface UploadHistoryItem {
@@ -54,14 +64,13 @@ export interface UploadHistoryItem {
   fileType: string;
   uploadedBy: string;
   uploadedAt: string;
-  status: "indexed" | "failed";
+  status: DocumentStatus;
   documentsCreated: number;
 }
 
 export interface SupportedFileType {
   extension: string;
   label: string;
-  maxSizeMb: number;
 }
 
 export interface SearchHistoryItem {
@@ -75,4 +84,43 @@ export interface ValidationMessage {
   id: string;
   type: "error" | "warning" | "info";
   message: string;
+}
+
+export interface DocumentListItemApiResponse {
+  id: string;
+  title: string;
+  original_filename: string;
+  doc_type: string;
+  status: string;
+  mime_type: string;
+  file_extension: string;
+  file_size_bytes: number;
+  version_no: number;
+  uploaded_by: string | null;
+  uploaded_by_name: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentListApiResponse {
+  items: DocumentListItemApiResponse[];
+  total: number;
+}
+
+export interface DocumentDetailApiResponse extends DocumentListItemApiResponse {}
+
+export interface DocumentUploadApiResponse {
+  id: string;
+  title: string;
+  original_filename: string;
+  doc_type: string;
+  status: string;
+  mime_type: string;
+  file_extension: string;
+  file_size_bytes: number;
+  uploaded_by: string | null;
+  job_id: string;
+  created_at: string;
+  updated_at: string;
 }

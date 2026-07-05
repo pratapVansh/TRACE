@@ -18,7 +18,7 @@ type KnowledgeFiltersProps = {
   onChange: (filters: FilterValues) => void;
   typeOptions: FilterOption[];
   statusOptions: FilterOption[];
-  departmentOptions: FilterOption[];
+  departmentOptions?: FilterOption[];
   typeLabel?: string;
   statusLabel?: string;
   departmentLabel?: string;
@@ -69,15 +69,17 @@ export function KnowledgeFilters({
   resetFilters = DEFAULT_FILTERS,
   className,
 }: KnowledgeFiltersProps) {
+  const showDepartmentFilter = departmentOptions !== undefined;
   const hasActiveFilters =
     filters.type !== resetFilters.type ||
     filters.status !== resetFilters.status ||
-    filters.department !== resetFilters.department;
+    (showDepartmentFilter && filters.department !== resetFilters.department);
 
   return (
     <div
       className={cn(
-        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:p-5",
+        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:p-5",
+        showDepartmentFilter ? "lg:grid-cols-4" : "lg:grid-cols-3",
         className,
       )}
     >
@@ -93,12 +95,14 @@ export function KnowledgeFilters({
         options={statusOptions}
         onChange={(status) => onChange({ ...filters, status })}
       />
-      <FilterSelect
-        label={departmentLabel}
-        value={filters.department}
-        options={departmentOptions}
-        onChange={(department) => onChange({ ...filters, department })}
-      />
+      {showDepartmentFilter ? (
+        <FilterSelect
+          label={departmentLabel}
+          value={filters.department}
+          options={departmentOptions}
+          onChange={(department) => onChange({ ...filters, department })}
+        />
+      ) : null}
       <div className="flex items-end">
         <button
           type="button"

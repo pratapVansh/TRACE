@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 
 import { KnowledgePageHeader } from "@/components/knowledge/knowledge-page-header";
 import { SupportedFileTypes } from "@/components/knowledge/upload/supported-file-types";
@@ -8,55 +8,113 @@ import { UploadDropZone } from "@/components/knowledge/upload/upload-drop-zone";
 import { UploadHistory } from "@/components/knowledge/upload/upload-history";
 import { UploadQueue } from "@/components/knowledge/upload/upload-queue";
 import { ValidationMessages } from "@/components/knowledge/upload/validation-messages";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDocumentsContext, useUploadHistory } from "@/hooks/use-documents";
 import {
-  INITIAL_UPLOAD_QUEUE,
   MAX_UPLOAD_SIZE_MB,
   SUPPORTED_FILE_TYPES,
-  UPLOAD_HISTORY,
-} from "@/lib/knowledge/mock-data";
+  UPLOAD_ACCEPT_ATTRIBUTE,
+} from "@/lib/knowledge/constants";
+import { mapUploadHistoryFromDocument } from "@/lib/knowledge/mappers";
+import { mapUploadErrorMessage } from "@/lib/knowledge/upload-errors";
+import { validateUploadFile } from "@/lib/knowledge/upload-validation";
 import { formatFileSize, getFileExtension } from "@/lib/knowledge/utils";
 import type { UploadQueueItem, ValidationMessage } from "@/types/knowledge";
 
-function validateFile(file: File): ValidationMessage | null {
-  const extension = getFileExtension(file.name);
-  const supported = SUPPORTED_FILE_TYPES.find(
-    (type) => type.extension === extension,
-  );
-
-  if (!supported) {
-    return {
-      id: `err-${file.name}-${file.lastModified}`,
-      type: "error",
-      message: `"${file.name}" is not supported. Accepted formats: ${SUPPORTED_FILE_TYPES.map((t) => `.${t.extension}`).join(", ")}.`,
-    };
-  }
-
-  const sizeMb = file.size / (1024 * 1024);
-  if (sizeMb > supported.maxSizeMb) {
-    return {
-      id: `size-${file.name}-${file.lastModified}`,
-      type: "error",
-      message: `"${file.name}" exceeds the ${supported.maxSizeMb} MB limit for .${extension} files (${formatFileSize(file.size)}).`,
-    };
-  }
-
-  if (sizeMb > MAX_UPLOAD_SIZE_MB) {
-    return {
-      id: `max-${file.name}-${file.lastModified}`,
-      type: "error",
-      message: `"${file.name}" exceeds the global ${MAX_UPLOAD_SIZE_MB} MB upload limit.`,
-    };
-  }
-
-  return null;
-}
-
 export function UploadDocumentsPageContent() {
   const baseId = useId();
-  const [queue, setQueue] = useState<UploadQueueItem[]>(INITIAL_UPLOAD_QUEUE);
-  const [validationMessages, setValidationMessages] = useState<
-    ValidationMessage[]
-  >([]);
+  const { uploadDocument } = useDocumentsContext();
+  const { documents: recentUploads, isLoading: isHistoryLoading, error: historyError } =
+    useUploadHistory(10);
+
+  const [queue, setQueue] = useState<UploadQueueItem[]>([]);
+  const [validationMessages, setValidationMessages] = useState<ValidationMessage[]>(
+    [],
+  );
+  const pendingUploadsRef = useRef<UploadQueueItem[]>([]);
+  const isProcessingRef = useRef(false);
+
+  const history = useMemo(
+    () => recentUploads.map(mapUploadHistoryFromDocument),
+    [recentUploads],
+  );
+
+  const uploadOne = useCallback(
+    async (item: UploadQueueItem) => {
+      if (!item.file) {
+        return;
+      }
+
+      setQueue((current) =>
+        current.map((entry) =>
+          entry.id === item.id
+            ? { ...entry, status: "uploading", progress: 0, message: "Uploading…" }
+            : entry,
+        ),
+      );
+
+      try {
+        await uploadDocument(item.file, {
+          onUploadProgress: (progress) => {
+            setQueue((current) =>
+              current.map((entry) =>
+                entry.id === item.id ? { ...entry, progress } : entry,
+              ),
+            );
+          },
+        });
+
+        setQueue((current) =>
+          current.map((entry) =>
+            entry.id === item.id
+              ? {
+                  ...entry,
+                  status: "complete",
+                  progress: 100,
+                  message: "Upload complete — queued for ingestion",
+                }
+              : entry,
+          ),
+        );
+
+        window.setTimeout(() => {
+          setQueue((current) => current.filter((entry) => entry.id !== item.id));
+        }, 2500);
+      } catch (error) {
+        setQueue((current) =>
+          current.map((entry) =>
+            entry.id === item.id
+              ? {
+                  ...entry,
+                  status: "failed",
+                  message: mapUploadErrorMessage(error),
+                }
+              : entry,
+          ),
+        );
+      }
+    },
+    [uploadDocument],
+  );
+
+  const processPendingUploads = useCallback(async () => {
+    if (isProcessingRef.current) {
+      return;
+    }
+
+    isProcessingRef.current = true;
+
+    try {
+      while (pendingUploadsRef.current.length > 0) {
+        const nextItem = pendingUploadsRef.current.shift();
+        if (nextItem) {
+          await uploadOne(nextItem);
+        }
+      }
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, [uploadOne]);
 
   const handleFilesSelected = useCallback(
     (files: File[]) => {
@@ -64,7 +122,7 @@ export function UploadDocumentsPageContent() {
       const validFiles: UploadQueueItem[] = [];
 
       files.forEach((file, index) => {
-        const error = validateFile(file);
+        const error = validateUploadFile(file);
         if (error) {
           errors.push(error);
           return;
@@ -78,16 +136,23 @@ export function UploadDocumentsPageContent() {
           status: "queued",
           progress: 0,
           message: "Waiting for upload slot",
+          file,
         });
       });
 
       setValidationMessages(errors);
 
       if (validFiles.length > 0) {
+        pendingUploadsRef.current.push(...validFiles);
         setQueue((current) => [...validFiles, ...current]);
+        void processPendingUploads();
       }
     },
-    [baseId],
+    [baseId, processPendingUploads],
+  );
+
+  const isUploading = queue.some(
+    (item) => item.status === "queued" || item.status === "uploading",
   );
 
   return (
@@ -100,7 +165,11 @@ export function UploadDocumentsPageContent() {
 
       <ValidationMessages messages={validationMessages} />
 
-      <UploadDropZone onFilesSelected={handleFilesSelected} />
+      <UploadDropZone
+        onFilesSelected={handleFilesSelected}
+        disabled={isUploading}
+        accept={UPLOAD_ACCEPT_ATTRIBUTE}
+      />
 
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-7">
@@ -108,10 +177,27 @@ export function UploadDocumentsPageContent() {
         </div>
         <div className="xl:col-span-5">
           <SupportedFileTypes fileTypes={SUPPORTED_FILE_TYPES} />
+          <p className="mt-3 text-xs text-muted-foreground">
+            Maximum file size: {MAX_UPLOAD_SIZE_MB} MB per file.
+          </p>
         </div>
       </div>
 
-      <UploadHistory items={UPLOAD_HISTORY} />
+      {historyError ? (
+        <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+          {historyError}
+        </div>
+      ) : null}
+
+      {isHistoryLoading ? (
+        <div className="industrial-card space-y-3 p-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <UploadHistory items={history} />
+      )}
     </div>
   );
 }

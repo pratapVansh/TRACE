@@ -4,11 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
 from app.core.security import InvalidTokenError, TokenExpiredError, decode_access_token
+from app.core.storage import create_storage_service
+from app.repositories.document_repository import DocumentRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserMeResponse
 from app.services.auth_service import AuthService
+from app.services.document_service import DocumentService
 from app.services.exceptions import InactiveAccountError, UserNotFoundError
 from app.services.user_management_service import UserManagementService
 
@@ -34,6 +37,16 @@ async def get_user_management_service(
         user_repository=UserRepository(session),
         role_repository=RoleRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
+    )
+
+
+async def get_document_service(
+    session: AsyncSession = Depends(get_db),
+) -> DocumentService:
+    return DocumentService(
+        session=session,
+        document_repository=DocumentRepository(session),
+        storage=create_storage_service(),
     )
 
 

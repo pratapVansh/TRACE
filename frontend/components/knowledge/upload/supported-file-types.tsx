@@ -25,9 +25,6 @@ export function SupportedFileTypes({ fileTypes }: SupportedFileTypesProps) {
               </p>
               <p className="text-xs text-muted-foreground">{fileType.label}</p>
             </div>
-            <span className="text-xs text-[var(--accent-steel-muted)]">
-              Max {fileType.maxSizeMb} MB
-            </span>
           </li>
         ))}
       </ul>
