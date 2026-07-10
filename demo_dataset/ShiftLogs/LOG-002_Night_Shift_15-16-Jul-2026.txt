@@ -1,0 +1,52 @@
+======================================================================
+ABC Petrochemicals Pvt. Ltd.  --  Gujarat Manufacturing Plant
+SHIFT LOG  --  NIGHT SHIFT (22:00  -  06:00)
+======================================================================
+Date:      15-Jul-2026 / 16-Jul-2026
+Shift Lead: Sanjay Patel
+Operators:  Ashok Yadav, Manoj Desai
+
+======================================================================
+EQUIPMENT STATUS
+======================================================================
+P-101  : Running normally. Vibration steady at 2.3 mm/s.
+P-102  : Standby.
+C-201  : Running. No alarms.
+B-101  : Auto mode. Steam production steady at 140 t/hr.
+E-301  : Normal duty. Temperatures stable.
+T-501  : Level 62%. Night fill valve closed.
+CT-01  : Normal. Basin level maintained.
+V-220  : Replaced actuator diaphragm. Bench test OK. Valve returned to
+         AUTO mode at 23:30 hrs. Stroke test passed  --  0% to 100% in 12 sec.
+M-110  : Running. Temperature 62 deg C.
+L-401  : Ethylene transfer rate steady at 85%. No pigging issues.
+
+======================================================================
+SHIFT EVENTS
+======================================================================
+22:30   --  V-220 actuator diaphragm replacement completed.
+23:00   --  V-220 bench calibration and stroking test. Verified OK.
+23:30   --  V-220 returned to service in AUTO mode. Downstream pressure: 7.2 barg.
+01:15   --  Routine round: all equipment operating normally.
+03:00   --  B-101 soot blowing cycle completed (manual mode).
+04:30   --  T-501 level check and data logged.
+05:00   --  Pre-day-shift preparation: log sheets updated.
+
+======================================================================
+SAFETY OBSERVATIONS
+======================================================================
+  • V-220 work area barricaded properly during maintenance.
+  • All LOTO tags accounted for and removed after V-220 job completion.
+  • No safety incidents during the shift.
+
+======================================================================
+HANDOVER NOTES
+======================================================================
+  --> V-220 actuator replacement complete and tested. Ready for normal service.
+  --> Morning to monitor E-301 outlet temperature trend.
+  --> CT-01 chemical cleaning to be planned for Q3.
+  --> B-101 internal inspection due  --  coordinate with maintenance.
+
+Handover By: Sanjay Patel    |    Time: 05:45
+Received By: Vikram Singh (morning shift)
+======================================================================

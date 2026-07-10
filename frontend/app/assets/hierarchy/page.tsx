@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@/types/permissions";
 
 export default function AssetHierarchyPage() {
   return (
-    <ProtectedPage permission={PERMISSIONS.ASSETS}>
+    <ProtectedPage permission={PERMISSIONS.ASSETS_READ}>
       <AssetHierarchyPageContent />
     </ProtectedPage>
   );

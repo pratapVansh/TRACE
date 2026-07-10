@@ -28,3 +28,7 @@ class InvalidDocumentStatusError(DocumentServiceError):
 
 class DocumentStorageError(DocumentServiceError):
     """Raised when persisting or reading document bytes fails."""
+
+
+class DocumentProcessingActiveError(DocumentServiceError):
+    """Raised when attempting to delete a document that is being processed."""

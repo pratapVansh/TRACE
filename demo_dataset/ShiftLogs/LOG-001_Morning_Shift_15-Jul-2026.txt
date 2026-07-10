@@ -1,0 +1,54 @@
+======================================================================
+ABC Petrochemicals Pvt. Ltd.  --  Gujarat Manufacturing Plant
+SHIFT LOG  --  MORNING SHIFT (06:00  -  14:00)
+======================================================================
+Date:      15-Jul-2026
+Shift Lead: Vikram Singh
+Operators:  Ramesh Kumar, Sunil Patil, Jitendra Verma
+
+======================================================================
+PRODUCTION SUMMARY
+======================================================================
+Ethylene Cracker   : 95% throughput (target: 98%)
+Propylene Unit     : 100% throughput
+Utilities          : All within limits
+
+================================================================------
+EQUIPMENT STATUS
+======================================================================
+P-101  : Running normally. Bearing temp 54 deg C, vibration 2.1 mm/s.
+P-102  : Standby (isolated). Seal repair completed 22-Feb-2026.
+C-201  : Running. Vibration monitored  --  see INS-002 for details.
+B-101  : Running at 42 barg / 440 deg C. Boiler inspection due.
+E-301  : Duty service. Outlet temp 118 deg C (normal).
+T-501  : Level 65%. Receiving feed at 12 m^3/hr.
+CT-01  : All 6 cells in service. Basin temp 31 deg C.
+V-220  : 38% open. Manual mode until actuator replaced. [ACTIVE WORK]
+M-110  : Running. Motor current 38 A (FLA: 45 A).
+L-401  : Ethylene transfer at 85% rate. Pipeline pigging scheduled.
+
+======================================================================
+SHIFT EVENTS
+======================================================================
+08:45   --  Fire water pump run test completed (15 min run). OK.
+09:30   --  Contractor toolbox talk: confined space entry.
+11:00   --  E-301 feed pump seal water strainer cleaned.
+12:15   --  Spare P-102 seal flush line flushed and checked.
+13:00   --  Cooling tower water analysis: pH 7.8, Cl 85 ppm.
+
+======================================================================
+SAFETY OBSERVATIONS
+======================================================================
+  • One missing lockout tag on utility panel (replaced immediately).
+  • Good housekeeping observed in cracker unit.
+
+======================================================================
+HANDOVER NOTES
+======================================================================
+  --> Night shift to monitor V-220 actuator replacement progress.
+  --> T-501 inspection report (INS-001) to be filed.
+  --> Keep P-101 standby pump (P-101-S) available.
+
+Handover By: Vikram Singh    |    Time: 13:45
+Received By: N/A (night shift)
+======================================================================

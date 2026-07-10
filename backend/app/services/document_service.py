@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import hashlib
 import mimetypes
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,13 +13,12 @@ from app.core.config import settings
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
 from app.models.document import Document
-from app.models.document_version import DocumentVersion
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.auth import UserMeResponse
+from app.services.audit_service import AuditService
 from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentFileContent,
-    DocumentListItemResponse,
     DocumentListResponse,
     DocumentResponse,
     UpdateDocumentRequest,
@@ -24,6 +26,7 @@ from app.schemas.documents import (
 )
 from app.services.document_exceptions import (
     DocumentNotFoundError,
+    DocumentProcessingActiveError,
     DocumentStorageError,
     DuplicateDocumentError,
     EmptyFileError,
@@ -31,13 +34,24 @@ from app.services.document_exceptions import (
     InvalidDocumentStatusError,
     UnsupportedFileTypeError,
 )
+from app.services.document_classifier import classify_document
+from app.schemas.pagination import build_pagination_metadata
+from app.services.document_mapper import (
+    get_latest_version,
+    to_detail_response,
+    to_list_item,
+    to_upload_response,
+    try_decode_text,
+)
+from app.services.processing_status import ProcessingStage, ProcessingStatus
+
+if TYPE_CHECKING:
+    from app.services.document_processing_queue import DocumentProcessingQueueService
 
 DOCUMENT_STATUS_QUEUED = "queued"
 ALLOWED_DOCUMENT_STATUSES = frozenset(
     {"queued", "indexed", "processing", "review", "archived", "failed"},
 )
-INGESTION_JOB_STATUS_QUEUED = "queued"
-INGESTION_JOB_STAGE_UPLOAD = "upload"
 DEFAULT_DOC_TYPE = "unknown"
 INITIAL_VERSION_NO = 1
 
@@ -76,15 +90,20 @@ class DocumentService:
         session: AsyncSession,
         document_repository: DocumentRepository,
         storage: StorageBackend,
+        audit_service: AuditService,
+        processing_queue: DocumentProcessingQueueService | None = None,
     ) -> None:
         self._session = session
         self._document_repository = document_repository
         self._storage = storage
+        self._audit_service = audit_service
+        self._processing_queue = processing_queue
 
     async def upload_document(
         self,
         actor: UserMeResponse,
         data: UploadDocumentRequest,
+        ip_address: str | None = None,
     ) -> DocumentResponse:
         extension, mime_type = self._validate_upload(data.filename, data.content)
 
@@ -99,6 +118,11 @@ class DocumentService:
         doc_type = data.doc_type or self._infer_doc_type(extension)
         extra_metadata = self._build_metadata(source=data.source)
 
+        classification = classify_document(
+            filename=data.filename,
+            content_text=try_decode_text(data.content, extension),
+        )
+
         document = await self._document_repository.create_document(
             title=title,
             original_filename=data.filename,
@@ -106,6 +130,9 @@ class DocumentService:
             status=DOCUMENT_STATUS_QUEUED,
             uploaded_by=actor.id,
             extra_metadata=extra_metadata,
+            department=classification.department,
+            document_category=classification.category,
+            equipment_ids=classification.equipment_ids,
         )
 
         storage_uri = self._storage.build_document_path(
@@ -132,16 +159,37 @@ class DocumentService:
             )
             ingestion_job = await self._document_repository.create_ingestion_job(
                 document_id=document.id,
-                status=INGESTION_JOB_STATUS_QUEUED,
-                stage=INGESTION_JOB_STAGE_UPLOAD,
+                status=ProcessingStatus.PENDING.value,
+                stage=ProcessingStage.UPLOAD.value,
+                max_retries=settings.processing_queue_max_retries,
             )
+            response = to_upload_response(document, document_version, ingestion_job.id)
             await self._session.commit()
         except Exception:
             await self._session.rollback()
             self._storage.delete(stored_uri)
             raise
 
-        return self._to_upload_response(document, document_version, ingestion_job.id)
+        if self._processing_queue is not None:
+            await self._processing_queue.enqueue(document.id, ingestion_job.id)
+
+        await self._audit_service.log(
+            user_id=actor.id,
+            username=actor.full_name,
+            action="document_uploaded",
+            entity_type="document",
+            entity_id=document.id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
+        return response
+
+    async def get_processing_status(self, document_id: UUID):
+        if self._processing_queue is None:
+            raise DocumentNotFoundError()
+        return await self._processing_queue.get_processing_status(document_id)
 
     async def list_documents(
         self,
@@ -152,6 +200,8 @@ class DocumentService:
         doc_type: str | None = None,
         status: str | None = None,
         department: str | None = None,
+        document_category: str | None = None,
+        equipment_id: str | None = None,
     ) -> DocumentListResponse:
         documents = await self._document_repository.list_documents(
             skip=skip,
@@ -160,22 +210,28 @@ class DocumentService:
             doc_type=doc_type,
             status=status,
             department=department,
+            document_category=document_category,
+            equipment_id=equipment_id,
         )
         total = await self._document_repository.count_documents(
             search=search,
             doc_type=doc_type,
             status=status,
             department=department,
+            document_category=document_category,
+            equipment_id=equipment_id,
         )
         return DocumentListResponse(
-            items=[self._to_list_item(document) for document in documents],
-            total=total,
+            items=[to_list_item(document) for document in documents],
+            **build_pagination_metadata(total=total, skip=skip, limit=limit),
         )
 
     async def update_document(
         self,
         document_id: UUID,
         data: UpdateDocumentRequest,
+        actor: UserMeResponse | None = None,
+        ip_address: str | None = None,
     ) -> DocumentDetailResponse:
         updates = data.model_dump(exclude_unset=True)
         document = await self._document_repository.get_document_by_id(document_id)
@@ -198,33 +254,72 @@ class DocumentService:
             doc_type=updates.get("doc_type"),
             status=updates.get("status"),
             extra_metadata=extra_metadata,
+            department=updates.get("department"),
+            document_category=updates.get("document_category"),
+            equipment_ids=updates.get("equipment_ids"),
         )
         if updated is None:
             raise DocumentNotFoundError()
 
         await self._session.commit()
-        latest_version = self._get_latest_version(updated)
-        return self._to_detail_response(updated, latest_version)
+
+        if actor is not None:
+            changed_fields = {k: v for k, v in updates.items() if v is not None}
+            await self._audit_service.log(
+                user_id=actor.id,
+                username=actor.full_name,
+                action="document_updated",
+                entity_type="document",
+                entity_id=document_id,
+                ip_address=ip_address,
+                error_message=str(changed_fields) if changed_fields else None,
+            )
+            await self._audit_service.flush()
+            await self._session.commit()
+
+        latest_version = get_latest_version(updated)
+        return to_detail_response(updated, latest_version)
 
     async def get_document(self, document_id: UUID) -> DocumentDetailResponse:
         document = await self._document_repository.get_document_by_id(document_id)
         if document is None:
             raise DocumentNotFoundError()
 
-        latest_version = self._get_latest_version(document)
-        return self._to_detail_response(document, latest_version)
+        latest_version = get_latest_version(document)
+
+        await self._audit_service.log(
+            user_id=None,
+            username=None,
+            action="document_viewed",
+            entity_type="document",
+            entity_id=document_id,
+            ip_address=None,
+        )
+        await self._audit_service.flush()
+
+        return to_detail_response(document, latest_version)
 
     async def get_document_content(self, document_id: UUID) -> DocumentFileContent:
         document = await self._document_repository.get_document_by_id(document_id)
         if document is None:
             raise DocumentNotFoundError()
 
-        latest_version = self._get_latest_version(document)
+        latest_version = get_latest_version(document)
 
         try:
             content = self._storage.read(latest_version.storage_uri)
         except StorageError as exc:
             raise DocumentStorageError("Failed to read stored document") from exc
+
+        await self._audit_service.log(
+            user_id=None,
+            username=None,
+            action="document_downloaded",
+            entity_type="document",
+            entity_id=document_id,
+            ip_address=None,
+        )
+        await self._audit_service.flush()
 
         return DocumentFileContent(
             document_id=document.id,
@@ -233,10 +328,24 @@ class DocumentService:
             content=content,
         )
 
-    async def delete_document(self, document_id: UUID) -> None:
+    async def delete_document(
+        self,
+        document_id: UUID,
+        actor: UserMeResponse | None = None,
+        ip_address: str | None = None,
+    ) -> None:
         document = await self._document_repository.get_document_by_id(document_id)
         if document is None:
             raise DocumentNotFoundError()
+
+        latest_job = await self._document_repository.get_latest_ingestion_job_for_document(
+            document_id,
+        )
+        if latest_job is not None and latest_job.status in {
+            ProcessingStatus.PENDING.value,
+            ProcessingStatus.PROCESSING.value,
+        }:
+            raise DocumentProcessingActiveError()
 
         storage_uris = [version.storage_uri for version in document.versions]
 
@@ -251,6 +360,19 @@ class DocumentService:
             deleted_at=datetime.now(UTC),
         )
         await self._session.commit()
+
+        if actor is not None:
+            await self._audit_service.log(
+                user_id=actor.id,
+                username=actor.full_name,
+                action="document_deleted",
+                entity_type="document",
+                entity_id=document_id,
+                ip_address=ip_address,
+                error_message=document.original_filename,
+            )
+            await self._audit_service.flush()
+            await self._session.commit()
 
     def _validate_upload(self, filename: str, content: bytes) -> tuple[str, str]:
         if not content:
@@ -313,90 +435,6 @@ class DocumentService:
                 metadata["source"] = updates["source"]
             else:
                 metadata.pop("source", None)
-        if "department" in updates:
-            if updates["department"]:
-                metadata["department"] = updates["department"]
-            else:
-                metadata.pop("department", None)
         return metadata
 
-    @staticmethod
-    def _get_latest_version(document: Document) -> DocumentVersion:
-        for version in document.versions:
-            if version.is_latest:
-                return version
 
-        if not document.versions:
-            raise DocumentNotFoundError()
-
-        return max(document.versions, key=lambda version: version.version_no)
-
-    def _to_upload_response(
-        self,
-        document: Document,
-        document_version: DocumentVersion,
-        job_id: UUID,
-    ) -> DocumentResponse:
-        return DocumentResponse(
-            id=document.id,
-            title=document.title,
-            original_filename=document.original_filename,
-            doc_type=document.doc_type,
-            status=document.status,
-            mime_type=document_version.mime_type,
-            file_extension=document_version.file_extension,
-            file_size_bytes=document_version.file_size_bytes,
-            uploaded_by=document.uploaded_by,
-            job_id=job_id,
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-        )
-
-    def _to_list_item(self, document: Document) -> DocumentListItemResponse:
-        latest_version = self._get_latest_version(document)
-        uploaded_by_name = (
-            document.uploaded_by_user.full_name if document.uploaded_by_user else None
-        )
-
-        return DocumentListItemResponse(
-            id=document.id,
-            title=document.title,
-            original_filename=document.original_filename,
-            doc_type=document.doc_type,
-            status=document.status,
-            mime_type=latest_version.mime_type,
-            file_extension=latest_version.file_extension,
-            file_size_bytes=latest_version.file_size_bytes,
-            version_no=latest_version.version_no,
-            uploaded_by=document.uploaded_by,
-            uploaded_by_name=uploaded_by_name,
-            metadata=document.extra_metadata,
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-        )
-
-    def _to_detail_response(
-        self,
-        document: Document,
-        latest_version: DocumentVersion,
-    ) -> DocumentDetailResponse:
-        uploaded_by_name = (
-            document.uploaded_by_user.full_name if document.uploaded_by_user else None
-        )
-
-        return DocumentDetailResponse(
-            id=document.id,
-            title=document.title,
-            original_filename=document.original_filename,
-            doc_type=document.doc_type,
-            status=document.status,
-            mime_type=latest_version.mime_type,
-            file_extension=latest_version.file_extension,
-            file_size_bytes=latest_version.file_size_bytes,
-            version_no=latest_version.version_no,
-            uploaded_by=document.uploaded_by,
-            uploaded_by_name=uploaded_by_name,
-            metadata=document.extra_metadata,
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-        )

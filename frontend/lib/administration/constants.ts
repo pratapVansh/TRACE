@@ -2,28 +2,36 @@ import { PERMISSIONS, USER_ROLES, type Permission } from "@/types/permissions";
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
   [PERMISSIONS.DASHBOARD]: "Dashboard",
-  [PERMISSIONS.DOCUMENTS]: "Documents",
+  [PERMISSIONS.DOCUMENTS_READ]: "Documents",
   [PERMISSIONS.DOCUMENTS_UPLOAD]: "Upload Documents",
   [PERMISSIONS.SEARCH]: "Search",
-  [PERMISSIONS.ASSETS]: "Assets",
-  [PERMISSIONS.MAINTENANCE]: "Maintenance",
-  [PERMISSIONS.COMPLIANCE]: "Compliance",
-  [PERMISSIONS.SOP_LIBRARY]: "SOP Library",
   [PERMISSIONS.COPILOT]: "Copilot",
   [PERMISSIONS.KNOWLEDGE_GRAPH]: "Knowledge Graph",
   [PERMISSIONS.AI_AGENTS]: "AI Agents",
-  [PERMISSIONS.SETTINGS]: "Administration",
+  [PERMISSIONS.ASSETS_READ]: "Assets",
+  [PERMISSIONS.ASSETS_WRITE]: "Assets (Write)",
+  [PERMISSIONS.MAINTENANCE]: "Maintenance",
+  [PERMISSIONS.COMPLIANCE]: "Compliance",
+  [PERMISSIONS.SOP_LIBRARY]: "SOP Library",
+  [PERMISSIONS.USER_MANAGEMENT]: "User Management",
+  [PERMISSIONS.ROLE_MANAGEMENT]: "Role Management",
+  [PERMISSIONS.SYSTEM_SETTINGS]: "System Settings",
 };
 
 export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] = [
   {
     label: "Platform",
-    permissions: [PERMISSIONS.DASHBOARD, PERMISSIONS.SETTINGS],
+    permissions: [
+      PERMISSIONS.DASHBOARD,
+      PERMISSIONS.USER_MANAGEMENT,
+      PERMISSIONS.ROLE_MANAGEMENT,
+      PERMISSIONS.SYSTEM_SETTINGS,
+    ],
   },
   {
     label: "Knowledge",
     permissions: [
-      PERMISSIONS.DOCUMENTS,
+      PERMISSIONS.DOCUMENTS_READ,
       PERMISSIONS.DOCUMENTS_UPLOAD,
       PERMISSIONS.SEARCH,
       PERMISSIONS.SOP_LIBRARY,
@@ -31,7 +39,12 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
   },
   {
     label: "Operations",
-    permissions: [PERMISSIONS.ASSETS, PERMISSIONS.MAINTENANCE, PERMISSIONS.COMPLIANCE],
+    permissions: [
+      PERMISSIONS.ASSETS_READ,
+      PERMISSIONS.ASSETS_WRITE,
+      PERMISSIONS.MAINTENANCE,
+      PERMISSIONS.COMPLIANCE,
+    ],
   },
   {
     label: "Intelligence",

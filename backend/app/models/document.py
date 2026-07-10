@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import DateTime, ForeignKey, String, Text, text
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -42,6 +42,15 @@ class Document(Base, TimestampMixin):
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    department: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, index=True,
+    )
+    document_category: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True,
+    )
+    equipment_ids: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(64)), nullable=True,
     )
 
     uploaded_by_user: Mapped["User | None"] = relationship("User")

@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@/types/permissions";
 
 export default function DocumentsPage() {
   return (
-    <ProtectedPage permission={PERMISSIONS.DOCUMENTS}>
+    <ProtectedPage permission={PERMISSIONS.DOCUMENTS_READ}>
       <DocumentsPageContent />
     </ProtectedPage>
   );

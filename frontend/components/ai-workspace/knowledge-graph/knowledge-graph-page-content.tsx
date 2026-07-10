@@ -10,7 +10,7 @@ export function KnowledgeGraphPageContent() {
       <PageHeader
         sectionLabel="AI Workspace"
         title="Knowledge Graph"
-        description="Explore relationships between assets, procedures, incidents, and compliance standards across Northfield Refinery Complex."
+        description="Explore relationships between assets, procedures, incidents, and compliance standards across the facility."
       />
 
       <FutureNotice />

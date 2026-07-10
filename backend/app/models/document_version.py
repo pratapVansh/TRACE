@@ -10,6 +10,7 @@ from app.models.mixins import CreatedAtMixin
 
 if TYPE_CHECKING:
     from app.models.document import Document
+    from app.models.document_extracted_text import DocumentExtractedText
 
 
 class DocumentVersion(Base, CreatedAtMixin):
@@ -43,3 +44,9 @@ class DocumentVersion(Base, CreatedAtMixin):
     )
 
     document: Mapped["Document"] = relationship("Document", back_populates="versions")
+    extracted_text: Mapped["DocumentExtractedText | None"] = relationship(
+        "DocumentExtractedText",
+        back_populates="document_version",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )

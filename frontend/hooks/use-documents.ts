@@ -33,6 +33,9 @@ export function useDocuments(options: DocumentQueryOptions = {}) {
 
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +67,9 @@ export function useDocuments(options: DocumentQueryOptions = {}) {
     if (!enabled) {
       setDocuments([]);
       setTotal(0);
+      setTotalPages(1);
+      setHasNext(false);
+      setHasPrevious(false);
       return;
     }
 
@@ -89,6 +95,9 @@ export function useDocuments(options: DocumentQueryOptions = {}) {
 
         setDocuments(response.documents);
         setTotal(response.total);
+        setTotalPages(response.totalPages);
+        setHasNext(response.hasNext);
+        setHasPrevious(response.hasPrevious);
       } catch (fetchError) {
         if (cancelled) {
           return;
@@ -130,6 +139,9 @@ export function useDocuments(options: DocumentQueryOptions = {}) {
     });
     setDocuments(response.documents);
     setTotal(response.total);
+    setTotalPages(response.totalPages);
+    setHasNext(response.hasNext);
+    setHasPrevious(response.hasPrevious);
   }, [
     fetchDocuments,
     options.department,
@@ -140,12 +152,12 @@ export function useDocuments(options: DocumentQueryOptions = {}) {
     skip,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
   return {
     documents,
     total,
     totalPages,
+    hasNext,
+    hasPrevious,
     page,
     pageSize,
     isLoading,

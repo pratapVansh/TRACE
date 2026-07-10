@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.schemas.pagination import PaginatedResponse
+
 
 class AdminUserResponse(BaseModel):
     id: UUID
@@ -13,9 +15,8 @@ class AdminUserResponse(BaseModel):
     created_at: datetime
 
 
-class AdminUserListResponse(BaseModel):
-    items: list[AdminUserResponse]
-    total: int
+class AdminUserListResponse(PaginatedResponse[AdminUserResponse]):
+    pass
 
 
 class CreateAdminUserRequest(BaseModel):

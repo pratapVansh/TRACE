@@ -29,7 +29,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
             <p className="section-label">Administration</p>
             <h3 className="mt-1 text-xl font-semibold text-white">Invite user</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Send an invitation to join the Northfield Refinery workspace.
+              Send an invitation to join the workspace.
             </p>
           </div>
           <button

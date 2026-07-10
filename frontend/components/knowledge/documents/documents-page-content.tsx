@@ -126,7 +126,7 @@ export function DocumentsPageContent() {
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Documents"
-        description="Browse, filter, and manage technical records, SOPs, inspection reports, and engineering documentation across Northfield Refinery Complex."
+        description="Browse, filter, and manage technical records, SOPs, inspection reports, and engineering documentation across the facility."
         action={
           <Link
             href={APP_ROUTES.documentsUpload}

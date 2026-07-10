@@ -13,7 +13,7 @@ export function AiAgentsPageContent() {
       />
 
       <FutureNotice
-        description="Agent orchestration via LangGraph is planned for a future milestone. Cards below show the intended agent roster and capabilities."
+        description="Agent orchestration via LangGraph is planned for a future milestone."
       />
 
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

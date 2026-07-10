@@ -23,6 +23,7 @@ from app.schemas.auth import (
     RegisterRequest,
     UserMeResponse,
 )
+from app.services.audit_service import AuditService
 from app.services.exceptions import (
     DefaultRoleNotFoundError,
     EmailAlreadyRegisteredError,
@@ -44,13 +45,19 @@ class AuthService:
         user_repository: UserRepository,
         role_repository: RoleRepository,
         refresh_token_repository: RefreshTokenRepository,
+        audit_service: AuditService,
     ) -> None:
         self._session = session
         self._user_repository = user_repository
         self._role_repository = role_repository
         self._refresh_token_repository = refresh_token_repository
+        self._audit_service = audit_service
 
-    async def register_user(self, data: RegisterRequest) -> None:
+    async def register_user(
+        self,
+        data: RegisterRequest,
+        ip_address: str | None = None,
+    ) -> None:
         existing_user = await self._user_repository.get_user_by_email(data.email)
         if existing_user is not None:
             raise EmailAlreadyRegisteredError()
@@ -60,7 +67,7 @@ class AuthService:
             raise DefaultRoleNotFoundError()
 
         password_hash = hash_password(data.password)
-        await self._user_repository.create_user(
+        user = await self._user_repository.create_user(
             full_name=data.full_name,
             email=data.email,
             password_hash=password_hash,
@@ -68,12 +75,51 @@ class AuthService:
         )
         await self._session.commit()
 
-    async def login_user(self, data: LoginRequest) -> LoginResponse:
+        await self._audit_service.log(
+            user_id=user.id,
+            username=data.full_name,
+            action="user_registered",
+            entity_type="user",
+            entity_id=user.id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
+    async def login_user(
+        self,
+        data: LoginRequest,
+        ip_address: str | None = None,
+    ) -> LoginResponse:
         user = await self._user_repository.get_user_by_email(data.email)
         if user is None or not verify_password(data.password, user.password_hash):
+            await self._audit_service.log(
+                user_id=None,
+                username=data.email,
+                action="failed_login",
+                entity_type="user",
+                entity_id=None,
+                ip_address=ip_address,
+                status="failure",
+                error_message="Invalid credentials",
+            )
+            await self._audit_service.flush()
+            await self._session.commit()
             raise InvalidCredentialsError()
 
         if not user.is_active:
+            await self._audit_service.log(
+                user_id=user.id,
+                username=user.full_name,
+                action="failed_login",
+                entity_type="user",
+                entity_id=user.id,
+                ip_address=ip_address,
+                status="failure",
+                error_message="Inactive account",
+            )
+            await self._audit_service.flush()
+            await self._session.commit()
             raise InactiveAccountError()
 
         access_token = create_access_token(user.id, user.role.name)
@@ -85,6 +131,17 @@ class AuthService:
             token=refresh_token,
             expires_at=expires_at,
         )
+        await self._session.commit()
+
+        await self._audit_service.log(
+            user_id=user.id,
+            username=user.full_name,
+            action="login",
+            entity_type="user",
+            entity_id=user.id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
         await self._session.commit()
 
         return LoginResponse(
@@ -124,6 +181,16 @@ class AuthService:
             token=new_refresh_token,
             expires_at=expires_at,
         )
+
+        await self._audit_service.log(
+            user_id=user.id,
+            username=user.full_name,
+            action="token_refreshed",
+            entity_type="user",
+            entity_id=user.id,
+            ip_address=None,
+        )
+        await self._audit_service.flush()
         await self._session.commit()
 
         return LoginResponse(
@@ -148,7 +215,12 @@ class AuthService:
             created_at=user.created_at,
         )
 
-    async def logout_user(self, current_user: UserMeResponse, data: RefreshTokenRequest) -> None:
+    async def logout_user(
+        self,
+        current_user: UserMeResponse,
+        data: RefreshTokenRequest,
+        ip_address: str | None = None,
+    ) -> None:
         stored_token = await self._refresh_token_repository.get_refresh_token(data.refresh_token)
         if stored_token is None:
             raise RevokedRefreshTokenError()
@@ -157,4 +229,15 @@ class AuthService:
             raise InvalidRefreshTokenError()
 
         await self._refresh_token_repository.delete_refresh_token(stored_token)
+        await self._session.commit()
+
+        await self._audit_service.log(
+            user_id=current_user.id,
+            username=current_user.full_name,
+            action="logout",
+            entity_type="user",
+            entity_id=current_user.id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
         await self._session.commit()

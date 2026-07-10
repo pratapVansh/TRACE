@@ -106,6 +106,12 @@ export interface DocumentListItemApiResponse {
 export interface DocumentListApiResponse {
   items: DocumentListItemApiResponse[];
   total: number;
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
 }
 
 export interface DocumentDetailApiResponse extends DocumentListItemApiResponse {}

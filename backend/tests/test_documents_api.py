@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.schemas.documents import DocumentDetailResponse, DocumentListResponse
+from app.services.document_exceptions import DocumentProcessingActiveError
 
 
 def test_list_documents_supports_search_and_pagination(
@@ -29,6 +30,8 @@ def test_list_documents_supports_search_and_pagination(
         doc_type="manual",
         status=None,
         department=None,
+        document_category=None,
+        equipment_id=None,
     )
 
 
@@ -87,4 +90,18 @@ def test_delete_document_returns_no_content(
     response = api_client.delete(f"/api/documents/{document_id}")
 
     assert response.status_code == 204
-    mock_document_service.delete_document.assert_awaited_once_with(document_id)
+    mock_document_service.delete_document.assert_awaited_once()
+
+
+def test_delete_document_rejects_during_active_processing(
+    api_client: TestClient,
+    mock_document_service: AsyncMock,
+) -> None:
+    document_id = uuid.uuid4()
+    mock_document_service.delete_document.side_effect = DocumentProcessingActiveError()
+
+    response = api_client.delete(f"/api/documents/{document_id}")
+
+    assert response.status_code == 409
+    assert "being processed" in response.json()["detail"]
+    mock_document_service.delete_document.assert_awaited_once()

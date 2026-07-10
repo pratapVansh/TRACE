@@ -24,7 +24,7 @@ export function CopilotPageContent() {
       <PageHeader
         sectionLabel="AI Workspace"
         title="Copilot"
-        description="Conversational interface for grounded industrial knowledge — preview UI with sample conversation and citations."
+        description="Conversational interface for grounded industrial knowledge."
       />
 
       <FutureNotice

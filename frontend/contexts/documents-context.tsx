@@ -23,6 +23,7 @@ import {
 import { mapDocumentFromApi } from "@/lib/knowledge/mappers";
 import { PERMISSIONS } from "@/types/permissions";
 import type {
+  DocumentListApiResponse,
   DocumentUploadApiResponse,
   KnowledgeDocument,
 } from "@/types/knowledge";
@@ -38,6 +39,11 @@ type DocumentsContextValue = {
   fetchDocuments: (params?: DocumentListParams) => Promise<{
     documents: KnowledgeDocument[];
     total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
   }>;
   uploadDocument: (
     file: File,
@@ -58,7 +64,7 @@ const DocumentsContext = createContext<DocumentsContextValue | undefined>(undefi
 export function DocumentsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const { canAccess } = usePermissions();
-  const canReadDocuments = canAccess(PERMISSIONS.DOCUMENTS);
+  const canReadDocuments = canAccess(PERMISSIONS.DOCUMENTS_READ);
   const [queryVersion, setQueryVersion] = useState(0);
 
   const invalidateQueries = useCallback(() => {
@@ -68,13 +74,18 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
   const fetchDocuments = useCallback(
     async (params: DocumentListParams = {}) => {
       if (!isAuthenticated || !canReadDocuments) {
-        return { documents: [], total: 0 };
+        return { documents: [], total: 0, page: 0, pageSize: 0, totalPages: 0, hasNext: false, hasPrevious: false };
       }
 
-      const response = await listDocuments(params);
+      const response: DocumentListApiResponse = await listDocuments(params);
       return {
         documents: response.items.map(mapDocumentFromApi),
         total: response.total,
+        page: response.page,
+        pageSize: response.page_size,
+        totalPages: response.total_pages,
+        hasNext: response.has_next,
+        hasPrevious: response.has_previous,
       };
     },
     [canReadDocuments, isAuthenticated],

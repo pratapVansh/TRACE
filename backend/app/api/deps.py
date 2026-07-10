@@ -1,53 +1,108 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db
 from app.core.security import InvalidTokenError, TokenExpiredError, decode_access_token
 from app.core.storage import create_storage_service
+from app.repositories.audit_repository import AuditRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserMeResponse
+from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
+from app.services.document_processing_queue import DocumentProcessingQueueService
+from app.services.document_processing_service import DocumentProcessingService
 from app.services.document_service import DocumentService
 from app.services.exceptions import InactiveAccountError, UserNotFoundError
+from app.services.processing_factory import create_document_processing_service
 from app.services.user_management_service import UserManagementService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+async def get_audit_service(
+    session: AsyncSession = Depends(get_db),
+) -> AuditService:
+    return AuditService(
+        session=session,
+        audit_repository=AuditRepository(session),
+    )
+
+
 async def get_auth_service(
     session: AsyncSession = Depends(get_db),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> AuthService:
     return AuthService(
         session=session,
         user_repository=UserRepository(session),
         role_repository=RoleRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
+        audit_service=audit_service,
     )
 
 
 async def get_user_management_service(
     session: AsyncSession = Depends(get_db),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> UserManagementService:
     return UserManagementService(
         session=session,
         user_repository=UserRepository(session),
         role_repository=RoleRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
+        audit_service=audit_service,
+    )
+
+
+async def get_document_processing_service(
+    session: AsyncSession = Depends(get_db),
+) -> DocumentProcessingService:
+    repository = DocumentRepository(session)
+    storage = create_storage_service()
+    audit_service = AuditService(
+        session=session,
+        audit_repository=AuditRepository(session),
+    )
+    return create_document_processing_service(session, repository, storage, audit_service)
+
+
+async def get_document_processing_queue(
+    session: AsyncSession = Depends(get_db),
+    processing_service: DocumentProcessingService = Depends(get_document_processing_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> DocumentProcessingQueueService:
+    return DocumentProcessingQueueService(
+        session=session,
+        processing_service=processing_service,
+        document_repository=DocumentRepository(session),
+        audit_service=audit_service,
     )
 
 
 async def get_document_service(
     session: AsyncSession = Depends(get_db),
+    processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
+    audit_service: AuditService = Depends(get_audit_service),
 ) -> DocumentService:
     return DocumentService(
         session=session,
         document_repository=DocumentRepository(session),
         storage=create_storage_service(),
+        audit_service=audit_service,
+        processing_queue=processing_queue,
     )
+
+
+def _extract_ip(request: Request) -> str | None:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    client = request.client
+    return client.host if client is not None else None
 
 
 async def get_current_user(

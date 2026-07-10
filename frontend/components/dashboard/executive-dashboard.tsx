@@ -25,11 +25,6 @@ export function ExecutiveDashboard({
   const { documents: recentDocuments, isLoading: isDocumentsLoading, total } =
     useRecentDocuments(5);
 
-  const totalAssets = data.kpis.find((kpi) => kpi.id === "industrial-assets");
-  const assetTotal = totalAssets
-    ? Number.parseInt(totalAssets.value.replace(/,/g, ""), 10)
-    : 0;
-
   const kpis = useMemo(
     () =>
       data.kpis.map((kpi) =>
@@ -53,7 +48,13 @@ export function ExecutiveDashboard({
         lastUpdated={data.lastUpdated}
       />
 
-      <DashboardKpiGrid kpis={kpis} />
+      {data.kpis.length > 0 ? (
+        <DashboardKpiGrid kpis={kpis} />
+      ) : (
+        <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-8 text-center">
+          <p className="text-sm text-muted-foreground">No KPI data available.</p>
+        </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-8">
@@ -76,7 +77,7 @@ export function ExecutiveDashboard({
         <div className="xl:col-span-5">
           <AssetDistributionWidget
             categories={data.assetCategories}
-            totalAssets={assetTotal}
+            totalAssets={0}
           />
         </div>
         <div className="xl:col-span-4">

@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("PROCESSING_QUEUE_WORKER_ENABLED", "false")
+
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock
@@ -8,6 +12,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import get_current_user, get_document_service
 from app.main import app
 from app.schemas.auth import UserMeResponse
+from app.schemas.pagination import build_pagination_metadata
 from app.schemas.documents import (
     DocumentDetailResponse,
     DocumentListItemResponse,
@@ -79,7 +84,10 @@ def sample_list_response(sample_document_response: DocumentResponse) -> Document
         created_at=sample_document_response.created_at,
         updated_at=sample_document_response.updated_at,
     )
-    return DocumentListResponse(items=[item], total=1)
+    return DocumentListResponse(
+        items=[item],
+        **build_pagination_metadata(total=1, skip=0, limit=100),
+    )
 
 
 @pytest.fixture

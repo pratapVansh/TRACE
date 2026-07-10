@@ -160,7 +160,7 @@ export function UploadDocumentsPageContent() {
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Upload Documents"
-        description="Ingest drawings, manuals, inspection reports, and operational records into the Northfield Refinery knowledge repository."
+        description="Ingest drawings, manuals, inspection reports, and operational records into the knowledge repository."
       />
 
       <ValidationMessages messages={validationMessages} />

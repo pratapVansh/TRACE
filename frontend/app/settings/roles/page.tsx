@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@/types/permissions";
 
 export default function SettingsRolesPage() {
   return (
-    <ProtectedPage permission={PERMISSIONS.SETTINGS}>
+    <ProtectedPage permission={PERMISSIONS.ROLE_MANAGEMENT}>
       <RolesPageContent />
     </ProtectedPage>
   );

@@ -37,6 +37,22 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 100
     allowed_upload_extensions: str = "pdf,docx,pptx,xlsx,txt,png,jpg,jpeg"
 
+    # Security
+    security_headers_hsts_enabled: bool = False  # Enable only in production
+
+    # Rate limiting
+    auth_rate_limit_max: int = 10
+    auth_rate_limit_window_seconds: int = 60
+    upload_rate_limit_max: int = 20
+    upload_rate_limit_window_seconds: int = 60
+    global_rate_limit_enabled: bool = True
+
+    # Background document processing queue
+    processing_queue_worker_enabled: bool = True
+    processing_queue_poll_interval_seconds: float = 2.0
+    processing_queue_batch_size: int = 5
+    processing_queue_max_retries: int = 3
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.backend_cors_origins.split(",")]

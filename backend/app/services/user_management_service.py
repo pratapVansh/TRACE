@@ -11,6 +11,7 @@ from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.pagination import build_pagination_metadata
 from app.schemas.admin_users import (
     AdminUserListResponse,
     AdminUserResponse,
@@ -20,6 +21,7 @@ from app.schemas.admin_users import (
     UpdateUserStatusRequest,
 )
 from app.schemas.auth import UserMeResponse
+from app.services.audit_service import AuditService
 from app.services.exceptions import EmailAlreadyRegisteredError
 from app.services.user_management_exceptions import (
     ForbiddenUserManagementActionError,
@@ -37,11 +39,13 @@ class UserManagementService:
         user_repository: UserRepository,
         role_repository: RoleRepository,
         refresh_token_repository: RefreshTokenRepository,
+        audit_service: AuditService,
     ) -> None:
         self._session = session
         self._user_repository = user_repository
         self._role_repository = role_repository
         self._refresh_token_repository = refresh_token_repository
+        self._audit_service = audit_service
 
     async def list_users(
         self,
@@ -53,13 +57,14 @@ class UserManagementService:
         total = await self._user_repository.count_users()
         return AdminUserListResponse(
             items=[self._to_response(user) for user in users],
-            total=total,
+            **build_pagination_metadata(total=total, skip=skip, limit=limit),
         )
 
     async def create_user(
         self,
         actor: UserMeResponse,
         data: CreateAdminUserRequest,
+        ip_address: str | None = None,
     ) -> AdminUserResponse:
         if not can_assign_role(actor.role, data.role):
             raise InvalidRoleAssignmentError(
@@ -85,6 +90,18 @@ class UserManagementService:
         loaded_user = await self._user_repository.get_user_by_id(user.id)
         if loaded_user is None:
             raise ManagedUserNotFoundError()
+
+        await self._audit_service.log(
+            user_id=actor.id,
+            username=actor.full_name,
+            action="user_created",
+            entity_type="user",
+            entity_id=user.id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
         return self._to_response(loaded_user)
 
     async def update_user_role(
@@ -92,6 +109,7 @@ class UserManagementService:
         actor: UserMeResponse,
         user_id: UUID,
         data: UpdateUserRoleRequest,
+        ip_address: str | None = None,
     ) -> AdminUserResponse:
         target_user = await self._get_manageable_user(actor, user_id)
 
@@ -113,6 +131,19 @@ class UserManagementService:
         updated_user = await self._user_repository.get_user_by_id(user_id)
         if updated_user is None:
             raise ManagedUserNotFoundError()
+
+        await self._audit_service.log(
+            user_id=actor.id,
+            username=actor.full_name,
+            action="user_role_assigned",
+            entity_type="user",
+            entity_id=user_id,
+            ip_address=ip_address,
+            error_message=f"Assigned role: {data.role}",
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
         return self._to_response(updated_user)
 
     async def update_user_status(
@@ -120,6 +151,7 @@ class UserManagementService:
         actor: UserMeResponse,
         user_id: UUID,
         data: UpdateUserStatusRequest,
+        ip_address: str | None = None,
     ) -> AdminUserResponse:
         target_user = await self._get_manageable_user(actor, user_id)
 
@@ -134,6 +166,19 @@ class UserManagementService:
         updated_user = await self._user_repository.get_user_by_id(user_id)
         if updated_user is None:
             raise ManagedUserNotFoundError()
+
+        await self._audit_service.log(
+            user_id=actor.id,
+            username=actor.full_name,
+            action="user_status_updated",
+            entity_type="user",
+            entity_id=user_id,
+            ip_address=ip_address,
+            error_message=f"Active: {data.is_active}",
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
         return self._to_response(updated_user)
 
     async def reset_user_password(
@@ -141,6 +186,7 @@ class UserManagementService:
         actor: UserMeResponse,
         user_id: UUID,
         data: ResetUserPasswordRequest,
+        ip_address: str | None = None,
     ) -> AdminUserResponse:
         target_user = await self._get_manageable_user(actor, user_id)
 
@@ -154,6 +200,18 @@ class UserManagementService:
         updated_user = await self._user_repository.get_user_by_id(user_id)
         if updated_user is None:
             raise ManagedUserNotFoundError()
+
+        await self._audit_service.log(
+            user_id=actor.id,
+            username=actor.full_name,
+            action="user_password_reset",
+            entity_type="user",
+            entity_id=user_id,
+            ip_address=ip_address,
+        )
+        await self._audit_service.flush()
+        await self._session.commit()
+
         return self._to_response(updated_user)
 
     async def _get_manageable_user(self, actor: UserMeResponse, user_id: UUID) -> User:

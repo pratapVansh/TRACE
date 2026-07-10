@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@/types/permissions";
 
 export default function SettingsUsersPage() {
   return (
-    <ProtectedPage permission={PERMISSIONS.SETTINGS}>
+    <ProtectedPage permission={PERMISSIONS.USER_MANAGEMENT}>
       <UsersPageContent />
     </ProtectedPage>
   );

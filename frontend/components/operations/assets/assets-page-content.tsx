@@ -88,7 +88,7 @@ export function AssetsPageContent() {
       <PageHeader
         sectionLabel="Industrial Operations"
         title="Assets"
-        description="Monitor registered equipment tags, health status, and maintenance schedules across Northfield Refinery Complex."
+        description="Monitor registered equipment tags, health status, and maintenance schedules across all production units."
         action={
           <Link
             href={APP_ROUTES.assetHierarchy}

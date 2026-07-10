@@ -82,7 +82,7 @@ export function AssetHierarchyPageContent() {
       <PageHeader
         sectionLabel="Industrial Operations"
         title="Asset Hierarchy"
-        description="Explore the site → unit → system → equipment structure for Northfield Refinery Complex."
+        description="Explore the site → unit → system → equipment structure for the facility."
         action={
           <Link
             href={APP_ROUTES.assets}

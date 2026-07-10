@@ -1,5 +1,8 @@
+from unittest.mock import AsyncMock
+
 import pytest
 
+from app.services.audit_service import AuditService
 from app.services.document_exceptions import (
     EmptyFileError,
     FileTooLargeError,
@@ -10,7 +13,12 @@ from app.services.document_service import DocumentService
 
 @pytest.fixture
 def service() -> DocumentService:
-    return DocumentService(session=None, document_repository=None, storage=None)
+    return DocumentService(
+        session=None,
+        document_repository=None,
+        storage=None,
+        audit_service=AsyncMock(spec=AuditService),
+    )
 
 
 def test_validate_upload_rejects_empty_file(service: DocumentService) -> None:
@@ -40,19 +48,17 @@ def test_validate_upload_accepts_valid_txt(service: DocumentService) -> None:
     assert mime_type == "text/plain"
 
 
-def test_apply_metadata_updates_source_and_department(service: DocumentService) -> None:
+def test_apply_metadata_updates_updates_source(service: DocumentService) -> None:
     updated = service._apply_metadata_updates(
         {"source": "legacy"},
-        {"source": "inspection", "department": "Engineering"},
+        {"source": "inspection"},
     )
     assert updated["source"] == "inspection"
-    assert updated["department"] == "Engineering"
 
 
-def test_apply_metadata_updates_can_clear_values(service: DocumentService) -> None:
+def test_apply_metadata_updates_can_clear_source(service: DocumentService) -> None:
     updated = service._apply_metadata_updates(
-        {"source": "legacy", "department": "Engineering"},
-        {"source": "", "department": ""},
+        {"source": "legacy"},
+        {"source": ""},
     )
     assert "source" not in updated
-    assert "department" not in updated

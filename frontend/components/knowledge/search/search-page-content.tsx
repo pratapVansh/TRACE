@@ -164,7 +164,7 @@ export function SearchPageContent() {
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Search"
-        description="Search indexed documents by title or filename across the Northfield Refinery knowledge repository."
+        description="Search indexed documents by title or filename across the knowledge repository."
       />
 
       <GlobalSearchBar

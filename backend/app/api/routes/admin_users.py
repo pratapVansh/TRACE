@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.authorization import require_permission
-from app.api.deps import get_user_management_service
+from app.api.deps import _extract_ip, get_user_management_service
 from app.core.authorization import PERMISSIONS
 from app.schemas.admin_users import (
     AdminUserListResponse,
@@ -43,12 +43,15 @@ async def list_users(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(
+    request: Request,
     payload: CreateAdminUserRequest,
     current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.USER_MANAGEMENT)),
     user_management_service: UserManagementService = Depends(get_user_management_service),
 ) -> AdminUserResponse:
     try:
-        return await user_management_service.create_user(current_user, payload)
+        return await user_management_service.create_user(
+            current_user, payload, ip_address=_extract_ip(request),
+        )
     except EmailAlreadyRegisteredError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -68,13 +71,16 @@ async def create_user(
 
 @router.patch("/{user_id}/role", response_model=AdminUserResponse)
 async def update_user_role(
+    request: Request,
     user_id: UUID,
     payload: UpdateUserRoleRequest,
     current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.USER_MANAGEMENT)),
     user_management_service: UserManagementService = Depends(get_user_management_service),
 ) -> AdminUserResponse:
     try:
-        return await user_management_service.update_user_role(current_user, user_id, payload)
+        return await user_management_service.update_user_role(
+            current_user, user_id, payload, ip_address=_extract_ip(request),
+        )
     except ManagedUserNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,13 +110,16 @@ async def update_user_role(
 
 @router.patch("/{user_id}/status", response_model=AdminUserResponse)
 async def update_user_status(
+    request: Request,
     user_id: UUID,
     payload: UpdateUserStatusRequest,
     current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.USER_MANAGEMENT)),
     user_management_service: UserManagementService = Depends(get_user_management_service),
 ) -> AdminUserResponse:
     try:
-        return await user_management_service.update_user_status(current_user, user_id, payload)
+        return await user_management_service.update_user_status(
+            current_user, user_id, payload, ip_address=_extract_ip(request),
+        )
     except ManagedUserNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -130,13 +139,16 @@ async def update_user_status(
 
 @router.patch("/{user_id}/password", response_model=AdminUserResponse)
 async def reset_user_password(
+    request: Request,
     user_id: UUID,
     payload: ResetUserPasswordRequest,
     current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.USER_MANAGEMENT)),
     user_management_service: UserManagementService = Depends(get_user_management_service),
 ) -> AdminUserResponse:
     try:
-        return await user_management_service.reset_user_password(current_user, user_id, payload)
+        return await user_management_service.reset_user_password(
+            current_user, user_id, payload, ip_address=_extract_ip(request),
+        )
     except ManagedUserNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
