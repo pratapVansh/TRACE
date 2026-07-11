@@ -46,7 +46,8 @@ from app.services.document_mapper import (
 from app.services.processing_status import ProcessingStage, ProcessingStatus
 
 if TYPE_CHECKING:
-    from app.services.document_processing_queue import DocumentProcessingQueueService
+    from app.processing.service import ProcessingQueueService
+from app.services.document_processing_queue import DocumentProcessingQueueService
 
 DOCUMENT_STATUS_QUEUED = "queued"
 ALLOWED_DOCUMENT_STATUSES = frozenset(
@@ -92,12 +93,14 @@ class DocumentService:
         storage: StorageBackend,
         audit_service: AuditService,
         processing_queue: DocumentProcessingQueueService | None = None,
+        processing_queue_service: ProcessingQueueService | None = None,
     ) -> None:
         self._session = session
         self._document_repository = document_repository
         self._storage = storage
         self._audit_service = audit_service
         self._processing_queue = processing_queue
+        self._processing_queue_service = processing_queue_service
 
     async def upload_document(
         self,
@@ -163,7 +166,15 @@ class DocumentService:
                 stage=ProcessingStage.UPLOAD.value,
                 max_retries=settings.processing_queue_max_retries,
             )
-            response = to_upload_response(document, document_version, ingestion_job.id)
+            if self._processing_queue_service is not None:
+                processing_job = await self._processing_queue_service.enqueue(
+                    document.id,
+                    document_version.id,
+                )
+                response_job_id = processing_job.id
+            else:
+                response_job_id = ingestion_job.id
+            response = to_upload_response(document, document_version, response_job_id)
             await self._session.commit()
         except Exception:
             await self._session.rollback()
@@ -187,6 +198,27 @@ class DocumentService:
         return response
 
     async def get_processing_status(self, document_id: UUID):
+        if self._processing_queue_service is not None:
+            from app.schemas.documents import DocumentProcessingStatusResponse
+
+            job = await self._processing_queue_service._repository.get_latest_job_for_document(
+                document_id,
+            )
+            if job is not None:
+                return DocumentProcessingStatusResponse(
+                    document_id=document_id,
+                    job_id=job.id,
+                    status=job.status,
+                    stage=job.current_step,
+                    document_status=job.status,
+                    error=job.error_message,
+                    retry_count=job.retries,
+                    max_retries=job.max_retries,
+                    next_retry_at=None,
+                    started_at=job.started_at,
+                    finished_at=job.completed_at,
+                    updated_at=job.created_at,
+                )
         if self._processing_queue is None:
             raise DocumentNotFoundError()
         return await self._processing_queue.get_processing_status(document_id)

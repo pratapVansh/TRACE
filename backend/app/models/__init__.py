@@ -10,6 +10,9 @@ from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.user import User
 
+# Register ProcessingJob model with Base.metadata for Alembic detection.
+from app.processing.models import ProcessingJob  # noqa: F401, E402
+
 __all__ = [
     "AuditLog",
     "Base",
@@ -17,6 +20,7 @@ __all__ = [
     "DocumentExtractedText",
     "DocumentVersion",
     "IngestionJob",
+    "ProcessingJob",
     "RefreshToken",
     "Role",
     "User",

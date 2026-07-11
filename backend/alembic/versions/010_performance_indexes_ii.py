@@ -2,6 +2,7 @@
 
 from typing import Sequence, Union
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "010_performance_indexes_ii"
@@ -18,7 +19,7 @@ def upgrade() -> None:
         "ix_documents_active_listing",
         "documents",
         ["created_at"],
-        postgresql_where=op.text("deleted_at IS NULL"),
+        postgresql_where=sa.text("deleted_at IS NULL"),
     )
 
     # Composite index: worker polls ingestion_jobs WHERE status='pending'
@@ -34,7 +35,7 @@ def upgrade() -> None:
         "ix_document_versions_latest",
         "document_versions",
         ["document_id"],
-        postgresql_where=op.text("is_latest IS TRUE"),
+        postgresql_where=sa.text("is_latest IS TRUE"),
     )
 
     # B-tree index: login flow checks users.is_active.

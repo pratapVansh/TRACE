@@ -11,6 +11,8 @@ from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserMeResponse
+from app.processing.dependencies import get_processing_queue_service
+from app.processing.service import ProcessingQueueService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.document_processing_queue import DocumentProcessingQueueService
@@ -83,10 +85,26 @@ async def get_document_processing_queue(
     )
 
 
+async def get_processing_service(
+    session: AsyncSession = Depends(get_db),
+) -> ProcessingQueueService:
+    from app.processing.repository import ProcessingJobRepository
+    from app.processing.queue import ProcessingQueue
+
+    repository = ProcessingJobRepository(session)
+    queue = ProcessingQueue(repository)
+    return ProcessingQueueService(
+        session=session,
+        repository=repository,
+        queue=queue,
+    )
+
+
 async def get_document_service(
     session: AsyncSession = Depends(get_db),
     processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
     audit_service: AuditService = Depends(get_audit_service),
+    processing_queue_service: ProcessingQueueService = Depends(get_processing_service),
 ) -> DocumentService:
     return DocumentService(
         session=session,
@@ -94,6 +112,7 @@ async def get_document_service(
         storage=create_storage_service(),
         audit_service=audit_service,
         processing_queue=processing_queue,
+        processing_queue_service=processing_queue_service,
     )
 
 

@@ -5,14 +5,14 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin_users, auth, demo, documents, health
+from app.api.routes import admin_users, auth, demo, documents, health, processing
 from app.core.authorization import PermissionDeniedError
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.session import close_database_connection, verify_database_connection
 from app.middleware.correlation import setup_correlation_middleware
 from app.middleware.security_headers import setup_security_headers_middleware
-from app.tasks.document_processing_worker import run_document_processing_worker
+from app.processing.worker import run_processing_worker
 
 
 @asynccontextmanager
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     worker_stop_event = asyncio.Event()
     worker_task = None
     if settings.processing_queue_worker_enabled and db_ok:
-        worker_task = asyncio.create_task(run_document_processing_worker(worker_stop_event))
+        worker_task = asyncio.create_task(run_processing_worker(worker_stop_event))
 
     yield
 
@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_users.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
     app.include_router(demo.router, prefix="/api")
+    app.include_router(processing.router, prefix="/api")
 
     return app
 
