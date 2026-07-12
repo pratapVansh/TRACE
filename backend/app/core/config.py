@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     upload_rate_limit_window_seconds: int = 60
     global_rate_limit_enabled: bool = True
 
+    # Chunking & Embeddings (Milestone 6+)
+    chunk_size: int = 512
+    chunk_overlap: int = 64
+    chunk_min_size: int = 50
+    embedding_model_name: str = "all-MiniLM-L6-v2"
+    embedding_batch_size: int = 32
+    embedding_retry_attempts: int = 3
+
     # Background document processing queue
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0

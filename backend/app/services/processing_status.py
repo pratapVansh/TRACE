@@ -21,6 +21,8 @@ class ProcessingStage(StrEnum):
     OCR = "ocr"
     METADATA_EXTRACTION = "metadata_extraction"
     LANGUAGE_DETECTION = "language_detection"
+    CHUNKING = "chunking"
+    EMBEDDING = "embedding"
     COMPLETED = "completed"
     FAILED = "failed"
 

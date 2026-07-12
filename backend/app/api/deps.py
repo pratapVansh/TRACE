@@ -6,6 +6,7 @@ from app.core.dependencies import get_db
 from app.core.security import InvalidTokenError, TokenExpiredError, decode_access_token
 from app.core.storage import create_storage_service
 from app.repositories.audit_repository import AuditRepository
+from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
@@ -15,6 +16,7 @@ from app.processing.dependencies import get_processing_queue_service
 from app.processing.service import ProcessingQueueService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
+from app.services.chunk_index_service import ChunkIndexService
 from app.services.document_processing_queue import DocumentProcessingQueueService
 from app.services.document_processing_service import DocumentProcessingService
 from app.services.document_service import DocumentService
@@ -97,6 +99,20 @@ async def get_processing_service(
         session=session,
         repository=repository,
         queue=queue,
+    )
+
+
+async def get_chunk_repository(
+    session: AsyncSession = Depends(get_db),
+) -> DocumentChunkRepository:
+    return DocumentChunkRepository(session)
+
+
+async def get_chunk_index_service(
+    session: AsyncSession = Depends(get_db),
+) -> ChunkIndexService:
+    return ChunkIndexService(
+        chunk_repository=DocumentChunkRepository(session),
     )
 
 

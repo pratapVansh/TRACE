@@ -10,6 +10,7 @@ from app.db.base import Base
 from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.document_chunk import DocumentChunk
     from app.models.document_version import DocumentVersion
     from app.models.ingestion_job import IngestionJob
     from app.models.user import User
@@ -61,6 +62,11 @@ class Document(Base, TimestampMixin):
     )
     ingestion_jobs: Mapped[list["IngestionJob"]] = relationship(
         "IngestionJob",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    chunks: Mapped[list["DocumentChunk"]] = relationship(
+        "DocumentChunk",
         back_populates="document",
         cascade="all, delete-orphan",
     )

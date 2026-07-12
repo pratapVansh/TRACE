@@ -40,3 +40,11 @@ class MetadataExtractionError(DocumentProcessingError):
 
 class TextExtractionError(DocumentProcessingError):
     """Raised when TXT/plain text extraction fails."""
+
+
+class ChunkingError(DocumentProcessingError):
+    """Raised when document chunking fails."""
+
+
+class EmbeddingError(DocumentProcessingError):
+    """Raised when embedding generation fails."""

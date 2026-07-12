@@ -1,10 +1,14 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage.base import StorageBackend
+from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.repositories.document_repository import DocumentRepository
 from app.services.audit_service import AuditService
 from app.services.document_processing_service import DocumentProcessingService
+from app.services.embedding_service import EmbeddingService
+from app.services.processors.chunking_processor import ChunkingProcessor
 from app.services.processors.docx_text_extraction import DocxTextExtractionProcessor
+from app.services.processors.embedding_processor import EmbeddingProcessor
 from app.services.processors.image_ocr_extraction import ImageOcrExtractionProcessor
 from app.services.processors.language_detection import LanguageDetectionProcessor
 from app.services.processors.metadata_extraction import MetadataExtractionProcessor
@@ -22,6 +26,12 @@ def create_document_processing_service(
     audit_service: AuditService,
 ) -> DocumentProcessingService:
     """Build a fully wired document processing service."""
+    chunk_repository = DocumentChunkRepository(session)
+    embedding_service = EmbeddingService(
+        session=session,
+        chunk_repository=chunk_repository,
+    )
+
     return DocumentProcessingService(
         session=session,
         document_repository=document_repository,
@@ -61,6 +71,17 @@ def create_document_processing_service(
             MetadataExtractionProcessor(
                 storage=storage,
                 document_repository=document_repository,
+            ),
+            ChunkingProcessor(
+                session=session,
+                document_repository=document_repository,
+                document_chunk_repository=chunk_repository,
+            ),
+            EmbeddingProcessor(
+                session=session,
+                document_repository=document_repository,
+                chunk_repository=chunk_repository,
+                embedding_service=embedding_service,
             ),
         ],
     )
