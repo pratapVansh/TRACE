@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     ranking_freshness_weight: float = 0.15
     ranking_freshness_decay_days: int = 365
 
+    # LLM / AI Copilot (Milestone 8)
+    groq_api_key: str = ""
+    llm_provider: str = "groq"
+    groq_model: str = "llama3-70b-8192"
+
     # Background document processing queue
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0

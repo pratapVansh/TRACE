@@ -1,103 +1,131 @@
 "use client";
 
-import { Bot, UserRound } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { SendHorizonal } from "lucide-react";
 
-import { formatDateTime } from "@/lib/dashboard/format";
+import { ChatMessage } from "@/components/ai-workspace/copilot/chat-message";
+import { TypingIndicator } from "@/components/ai-workspace/copilot/typing-indicator";
 import { cn } from "@/lib/utils";
-import type { CopilotMessage } from "@/types/ai-workspace";
+import type { Citation } from "@/types/chat";
+
+export type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  citations?: Citation[];
+};
 
 type ConversationAreaProps = {
-  messages: CopilotMessage[];
-  draft?: string;
-  onDraftChange?: (value: string) => void;
-  onSubmit?: () => void;
+  messages: Message[];
+  isWaiting: boolean;
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSubmit: () => void;
+  disabled?: boolean;
 };
 
 export function ConversationArea({
   messages,
-  draft = "",
+  isWaiting,
+  draft,
   onDraftChange,
   onSubmit,
+  disabled,
 }: ConversationAreaProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isWaiting]);
+
+  useEffect(() => {
+    if (!disabled && !isWaiting) {
+      inputRef.current?.focus();
+    }
+  }, [disabled, isWaiting, messages.length]);
+
   return (
-    <div className="industrial-card flex h-full min-h-[520px] flex-col">
+    <div className="industrial-card flex h-full min-h-[600px] flex-col overflow-hidden">
       <div className="border-b border-border px-5 py-4">
         <p className="section-label">Conversation</p>
-        <h3 className="mt-1 text-lg font-semibold text-white">Industrial Copilot</h3>
+        <h3 className="mt-1 text-lg font-semibold text-white">
+          Industrial Copilot
+        </h3>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-        {messages.map((message) => {
-          const isUser = message.role === "user";
-
-          return (
-            <div
-              key={message.id}
-              className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}
-            >
-              <div
-                className={cn(
-                  "flex size-9 shrink-0 items-center justify-center rounded-lg border",
-                  isUser
-                    ? "border-border bg-[var(--surface-secondary)] text-[var(--accent-steel-muted)]"
-                    : "border-[var(--accent-steel)]/25 bg-[var(--accent-steel)]/10 text-[var(--accent-steel-muted)]",
-                )}
-              >
-                {isUser ? (
-                  <UserRound className="size-4" strokeWidth={1.75} />
-                ) : (
-                  <Bot className="size-4" strokeWidth={1.75} />
-                )}
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+        {messages.length === 0 && !isWaiting && (
+          <div className="flex h-full items-center justify-center">
+            <div className="max-w-md text-center">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-[var(--accent-steel)]/20 bg-[var(--accent-steel)]/10">
+                <svg
+                  className="size-6 text-[var(--accent-steel-muted)]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+                  />
+                </svg>
               </div>
-
-              <div
-                className={cn(
-                  "max-w-[85%] space-y-2 rounded-xl border px-4 py-3",
-                  isUser
-                    ? "border-border bg-[var(--surface-secondary)]"
-                    : "border-[var(--accent-steel)]/20 bg-[var(--surface)]",
-                )}
-              >
-                <p className="text-sm leading-relaxed text-foreground">{message.content}</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{formatDateTime(message.timestamp)}</span>
-                  {message.citationIds?.length ? (
-                    <span>· {message.citationIds.length} sources cited</span>
-                  ) : null}
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Ask a question about your documents. The AI will search indexed
+                records and provide grounded answers with citations.
+              </p>
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <ChatMessage
+            key={msg.id}
+            role={msg.role}
+            content={msg.content}
+            citations={msg.citations}
+          />
+        ))}
+
+        {isWaiting && <TypingIndicator />}
+
+        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-border p-4">
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit?.();
+            onSubmit();
           }}
-          className="flex flex-col gap-3 sm:flex-row"
+          className="flex gap-3"
         >
           <input
+            ref={inputRef}
             type="text"
             value={draft}
-            onChange={(event) => onDraftChange?.(event.target.value)}
+            onChange={(event) => onDraftChange(event.target.value)}
             placeholder="Ask about assets, procedures, compliance, or incidents…"
-            disabled
-            className="h-12 flex-1 rounded-xl border border-border bg-[var(--surface-secondary)] px-4 text-sm text-muted-foreground placeholder:text-muted-foreground"
+            disabled={disabled}
+            className="h-12 flex-1 rounded-xl border border-border bg-[var(--surface-secondary)] px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-industrial focus:border-[var(--accent-steel)]/40 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled
-            className="h-12 shrink-0 rounded-xl bg-[var(--accent-steel)]/50 px-6 text-sm font-medium text-white/60"
+            disabled={disabled || !draft.trim()}
+            className={cn(
+              "flex h-12 shrink-0 items-center gap-2 rounded-xl px-5 text-sm font-medium transition-industrial",
+              draft.trim() && !disabled
+                ? "bg-[var(--accent-steel)] text-white hover:bg-[var(--accent-steel)]/80"
+                : "bg-[var(--accent-steel)]/30 text-white/40",
+            )}
           >
-            Send
+            <SendHorizonal className="size-4" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Send</span>
           </button>
         </form>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Input disabled — AI responses are preview-only in this milestone.
-        </p>
       </div>
     </div>
   );

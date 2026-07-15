@@ -2,7 +2,9 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.base import LLMProvider
 from app.core.dependencies import get_db
+from app.services.prompt_builder import PromptBuilder
 from app.core.security import InvalidTokenError, TokenExpiredError, decode_access_token
 from app.core.storage import create_storage_service
 from app.repositories.audit_repository import AuditRepository
@@ -16,6 +18,10 @@ from app.processing.dependencies import get_processing_queue_service
 from app.processing.service import ProcessingQueueService
 from app.services.audit_service import AuditService
 from app.services.qdrant_indexing_service import QdrantIndexingService
+from app.services.chat_service import ChatService
+from app.services.conversation_store import ConversationStore
+from app.services.rag_service import RagService
+from app.services.retriever_service import RetrieverService
 from app.services.vector_store import QdrantVectorStore, VectorStore
 from app.services.auth_service import AuthService
 from app.services.chunk_index_service import ChunkIndexService
@@ -143,6 +149,45 @@ def get_ranking_service(
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> RankingService:
     return RankingService(vector_store=vector_store)
+
+
+def get_retriever_service(
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> RetrieverService:
+    return RetrieverService(vector_store=vector_store)
+
+
+def get_llm_provider(request: Request) -> LLMProvider:
+    provider: LLMProvider | None = getattr(request.app.state, "llm_provider", None)
+    if provider is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LLM provider not initialized",
+        )
+    return provider
+
+
+def get_rag_service(
+    retriever: RetrieverService = Depends(get_retriever_service),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> RagService:
+    return RagService(
+        retriever=retriever,
+        prompt_builder=PromptBuilder(),
+        llm=llm,
+    )
+
+
+_conversation_store = ConversationStore()
+
+
+def get_chat_service(
+    rag: RagService = Depends(get_rag_service),
+) -> ChatService:
+    return ChatService(
+        rag=rag,
+        conversation_store=_conversation_store,
+    )
 
 
 def _extract_ip(request: Request) -> str | None:

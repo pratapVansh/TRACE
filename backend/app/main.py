@@ -5,7 +5,9 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin_users, auth, chunks, demo, documents, health, processing, search, vector
+from app.ai.base import LLMConnectionError, LLMConfigurationError
+from app.ai.groq_provider import GroqProvider
+from app.api.routes import admin_users, auth, chat, chunks, demo, documents, health, llm, processing, rag, search, vector
 from app.core.authorization import PermissionDeniedError
 from app.core.config import settings
 from app.core.logging import logger
@@ -41,6 +43,19 @@ async def lifespan(app: FastAPI):
         logger.info("Qdrant not configured — skipping vector store initialization")
     app.state.qdrant_connected = qdrant_ok
     app.state.qdrant_store = qdrant_store
+
+    llm_provider: GroqProvider | None = None
+    if settings.llm_provider == "groq" and settings.groq_api_key:
+        try:
+            provider = GroqProvider()
+            await provider.initialize()
+            llm_provider = provider
+            logger.info("LLM provider initialized (groq, model=%s)", settings.groq_model)
+        except (LLMConnectionError, LLMConfigurationError) as exc:
+            logger.warning("LLM provider unavailable at startup: %s", exc)
+    else:
+        logger.info("LLM provider not configured — skipping initialization")
+    app.state.llm_provider = llm_provider
 
     doc_worker_stop_event = asyncio.Event()
     doc_worker_task = None
@@ -98,6 +113,9 @@ def create_app() -> FastAPI:
     app.include_router(processing.router, prefix="/api")
     app.include_router(search.router, prefix="/api")
     app.include_router(vector.router, prefix="/api")
+    app.include_router(llm.router, prefix="/api")
+    app.include_router(rag.router, prefix="/api")
+    app.include_router(chat.router, prefix="/api")
 
     return app
 
