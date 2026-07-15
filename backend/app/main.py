@@ -5,14 +5,15 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin_users, auth, chunks, demo, documents, health, processing
+from app.api.routes import admin_users, auth, chunks, demo, documents, health, processing, search, vector
 from app.core.authorization import PermissionDeniedError
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.session import close_database_connection, verify_database_connection
 from app.middleware.correlation import setup_correlation_middleware
 from app.middleware.security_headers import setup_security_headers_middleware
-from app.processing.worker import run_processing_worker
+from app.services.vector_store import QdrantVectorStore, VectorStoreConnectionError
+from app.tasks.document_processing_worker import run_document_processing_worker
 
 
 @asynccontextmanager
@@ -25,16 +26,35 @@ async def lifespan(app: FastAPI):
         )
     app.state.db_connected = db_ok
 
-    worker_stop_event = asyncio.Event()
-    worker_task = None
+    qdrant_store = QdrantVectorStore()
+    qdrant_ok = False
+    if settings.qdrant_url:
+        try:
+            await qdrant_store.connect()
+            await qdrant_store.create_collection()
+            await qdrant_store.create_fulltext_index()
+            qdrant_ok = True
+            logger.info("Qdrant initialized successfully")
+        except VectorStoreConnectionError as exc:
+            logger.warning("Qdrant unavailable at startup: %s", exc)
+    else:
+        logger.info("Qdrant not configured — skipping vector store initialization")
+    app.state.qdrant_connected = qdrant_ok
+    app.state.qdrant_store = qdrant_store
+
+    doc_worker_stop_event = asyncio.Event()
+    doc_worker_task = None
+
     if settings.processing_queue_worker_enabled and db_ok:
-        worker_task = asyncio.create_task(run_processing_worker(worker_stop_event))
+        doc_worker_task = asyncio.create_task(
+            run_document_processing_worker(doc_worker_stop_event)
+        )
 
     yield
 
-    if worker_task is not None:
-        worker_stop_event.set()
-        await worker_task
+    if doc_worker_task is not None:
+        doc_worker_stop_event.set()
+        await doc_worker_task
     await close_database_connection()
     logger.info("Shutdown complete")
 
@@ -76,6 +96,8 @@ def create_app() -> FastAPI:
     app.include_router(documents.router, prefix="/api")
     app.include_router(demo.router, prefix="/api")
     app.include_router(processing.router, prefix="/api")
+    app.include_router(search.router, prefix="/api")
+    app.include_router(vector.router, prefix="/api")
 
     return app
 

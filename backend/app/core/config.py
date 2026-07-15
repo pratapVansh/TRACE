@@ -55,6 +55,18 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 32
     embedding_retry_attempts: int = 3
 
+    # Qdrant vector store (Milestone 7+)
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
+    qdrant_collection_name: str = "document_chunks"
+
+    # Ranking weights (Milestone 7.6)
+    ranking_semantic_weight: float = 0.35
+    ranking_keyword_weight: float = 0.30
+    ranking_metadata_weight: float = 0.20
+    ranking_freshness_weight: float = 0.15
+    ranking_freshness_decay_days: int = 365
+
     # Background document processing queue
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0

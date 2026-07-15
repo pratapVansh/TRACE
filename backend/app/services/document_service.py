@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
 from app.models.document import Document
@@ -45,9 +46,8 @@ from app.services.document_mapper import (
 )
 from app.services.processing_status import ProcessingStage, ProcessingStatus
 
-if TYPE_CHECKING:
-    from app.processing.service import ProcessingQueueService
 from app.services.document_processing_queue import DocumentProcessingQueueService
+from app.services.qdrant_indexing_service import QdrantIndexingService
 
 DOCUMENT_STATUS_QUEUED = "queued"
 ALLOWED_DOCUMENT_STATUSES = frozenset(
@@ -93,14 +93,14 @@ class DocumentService:
         storage: StorageBackend,
         audit_service: AuditService,
         processing_queue: DocumentProcessingQueueService | None = None,
-        processing_queue_service: ProcessingQueueService | None = None,
+        indexing_service: QdrantIndexingService | None = None,
     ) -> None:
         self._session = session
         self._document_repository = document_repository
         self._storage = storage
         self._audit_service = audit_service
         self._processing_queue = processing_queue
-        self._processing_queue_service = processing_queue_service
+        self._indexing_service = indexing_service
 
     async def upload_document(
         self,
@@ -166,23 +166,15 @@ class DocumentService:
                 stage=ProcessingStage.UPLOAD.value,
                 max_retries=settings.processing_queue_max_retries,
             )
-            if self._processing_queue_service is not None:
-                processing_job = await self._processing_queue_service.enqueue(
-                    document.id,
-                    document_version.id,
-                )
-                response_job_id = processing_job.id
-            else:
-                response_job_id = ingestion_job.id
+            if self._processing_queue is not None:
+                await self._processing_queue.enqueue(document.id, ingestion_job.id)
+            response_job_id = ingestion_job.id
             response = to_upload_response(document, document_version, response_job_id)
             await self._session.commit()
         except Exception:
             await self._session.rollback()
             self._storage.delete(stored_uri)
             raise
-
-        if self._processing_queue is not None:
-            await self._processing_queue.enqueue(document.id, ingestion_job.id)
 
         await self._audit_service.log(
             user_id=actor.id,
@@ -198,27 +190,6 @@ class DocumentService:
         return response
 
     async def get_processing_status(self, document_id: UUID):
-        if self._processing_queue_service is not None:
-            from app.schemas.documents import DocumentProcessingStatusResponse
-
-            job = await self._processing_queue_service._repository.get_latest_job_for_document(
-                document_id,
-            )
-            if job is not None:
-                return DocumentProcessingStatusResponse(
-                    document_id=document_id,
-                    job_id=job.id,
-                    status=job.status,
-                    stage=job.current_step,
-                    document_status=job.status,
-                    error=job.error_message,
-                    retry_count=job.retries,
-                    max_retries=job.max_retries,
-                    next_retry_at=None,
-                    started_at=job.started_at,
-                    finished_at=job.completed_at,
-                    updated_at=job.created_at,
-                )
         if self._processing_queue is None:
             raise DocumentNotFoundError()
         return await self._processing_queue.get_processing_status(document_id)
@@ -294,6 +265,24 @@ class DocumentService:
             raise DocumentNotFoundError()
 
         await self._session.commit()
+
+        if updated.status == "indexed" and self._indexing_service is not None:
+            qdrant_updates: dict = {}
+            if "doc_type" in updates:
+                qdrant_updates["document_type"] = updates["doc_type"]
+            if "original_filename" in updates or "title" in updates:
+                qdrant_updates["filename"] = updates.get("original_filename", updated.original_filename)
+            if qdrant_updates:
+                try:
+                    await self._indexing_service._vector_store.update_document_payload(
+                        document_id,
+                        qdrant_updates,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to update Qdrant payload for document_id=%s",
+                        document_id,
+                    )
 
         if actor is not None:
             changed_fields = {k: v for k, v in updates.items() if v is not None}
@@ -392,6 +381,15 @@ class DocumentService:
             deleted_at=datetime.now(UTC),
         )
         await self._session.commit()
+
+        if self._indexing_service is not None:
+            try:
+                await self._indexing_service.delete_document_vectors(document_id)
+            except Exception:
+                logger.warning(
+                    "Failed to delete Qdrant vectors for document_id=%s",
+                    document_id,
+                )
 
         if actor is not None:
             await self._audit_service.log(

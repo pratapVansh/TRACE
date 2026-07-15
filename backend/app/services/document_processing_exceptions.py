@@ -48,3 +48,7 @@ class ChunkingError(DocumentProcessingError):
 
 class EmbeddingError(DocumentProcessingError):
     """Raised when embedding generation fails."""
+
+
+class IndexingError(DocumentProcessingError):
+    """Raised when vector indexing fails."""

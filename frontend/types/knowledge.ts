@@ -80,6 +80,36 @@ export interface SearchHistoryItem {
   searchedAt: string;
 }
 
+export interface SearchFilter {
+  document_id?: string;
+  filename?: string;
+  language?: string;
+  document_type?: string;
+  uploaded_by?: string;
+  uploaded_after?: string;
+  uploaded_before?: string;
+}
+
+export interface RankingWeights {
+  semantic: number;
+  keyword: number;
+  metadata_boost: number;
+  freshness: number;
+}
+
+export interface SearchResultItem {
+  score: number;
+  document_id: string;
+  chunk: string;
+  page: number | null;
+  filename: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SearchResponse {
+  results: SearchResultItem[];
+}
+
 export interface ValidationMessage {
   id: string;
   type: "error" | "warning" | "info";

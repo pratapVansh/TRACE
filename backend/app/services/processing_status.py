@@ -23,6 +23,7 @@ class ProcessingStage(StrEnum):
     LANGUAGE_DETECTION = "language_detection"
     CHUNKING = "chunking"
     EMBEDDING = "embedding"
+    INDEXING = "indexing"
     COMPLETED = "completed"
     FAILED = "failed"
 

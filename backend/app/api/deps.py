@@ -15,9 +15,12 @@ from app.schemas.auth import UserMeResponse
 from app.processing.dependencies import get_processing_queue_service
 from app.processing.service import ProcessingQueueService
 from app.services.audit_service import AuditService
+from app.services.qdrant_indexing_service import QdrantIndexingService
+from app.services.vector_store import QdrantVectorStore, VectorStore
 from app.services.auth_service import AuthService
 from app.services.chunk_index_service import ChunkIndexService
 from app.services.document_processing_queue import DocumentProcessingQueueService
+from app.services.ranking_service import RankingService
 from app.services.document_processing_service import DocumentProcessingService
 from app.services.document_service import DocumentService
 from app.services.exceptions import InactiveAccountError, UserNotFoundError
@@ -120,16 +123,26 @@ async def get_document_service(
     session: AsyncSession = Depends(get_db),
     processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
     audit_service: AuditService = Depends(get_audit_service),
-    processing_queue_service: ProcessingQueueService = Depends(get_processing_service),
 ) -> DocumentService:
+    indexing_service = QdrantIndexingService(vector_store=QdrantVectorStore())
     return DocumentService(
         session=session,
         document_repository=DocumentRepository(session),
         storage=create_storage_service(),
         audit_service=audit_service,
         processing_queue=processing_queue,
-        processing_queue_service=processing_queue_service,
+        indexing_service=indexing_service,
     )
+
+
+def get_vector_store() -> VectorStore:
+    return QdrantVectorStore()
+
+
+def get_ranking_service(
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> RankingService:
+    return RankingService(vector_store=vector_store)
 
 
 def _extract_ip(request: Request) -> str | None:
