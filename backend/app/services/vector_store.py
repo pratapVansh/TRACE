@@ -4,23 +4,59 @@ import threading
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from qdrant_client import QdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    PayloadSchemaType,
-    PointStruct,
-    Range,
-    TextIndexParams,
-    TokenizerType,
-    VectorParams,
-)
-
 from app.core.config import settings
 from app.core.logging import logger
+from app.core.retry import RetryPolicy, is_http_status_retryable, retry_sync
+
+# Lazy import — qdrant_client may not be importable in all environments
+# (e.g., grpc DLL blocked by App Control policy on Windows).
+# Type-checkers can safely ignore the module-level names.
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.exceptions import UnexpectedResponse
+    from qdrant_client.models import (  # type: ignore[unused-import]
+        Distance,
+        FieldCondition,
+        Filter,
+        MatchValue,
+        PayloadSchemaType,
+        PointStruct,
+        Range,
+        TextIndexParams,
+        TokenizerType,
+        VectorParams,
+    )
+    _QDRAINT_AVAILABLE = True
+except ImportError:
+    QdrantClient = None  # type: ignore[assignment,misc]
+    UnexpectedResponse = Exception  # type: ignore[assignment,misc]
+    # Define dummy types so type annotations don't fail
+    Distance = object
+    FieldCondition = object
+    Filter = object
+    MatchValue = object
+    PayloadSchemaType = object
+    PointStruct = object
+    Range = object
+    TextIndexParams = object
+    TokenizerType = object
+    VectorParams = object
+    _QDRAINT_AVAILABLE = False
+
+
+def _is_qdrant_retryable(exc: Exception) -> bool:
+    if isinstance(exc, ValueError):
+        return False
+    if isinstance(exc, UnexpectedResponse):
+        return is_http_status_retryable(getattr(exc, "status_code", None))
+    return True
+
+
+_qdrant_retry_policy = RetryPolicy(
+    max_retries=settings.qdrant_max_retries,
+    base_delay_seconds=1.0,
+    max_delay_seconds=30.0,
+)
 
 VECTOR_DIMENSION = 384  # all-MiniLM-L6-v2
 QDRANT_UPSERT_BATCH_SIZE = 64
@@ -150,6 +186,8 @@ def _get_client() -> QdrantClient:
                 _CLIENT = QdrantClient(
                     url=settings.qdrant_url,
                     api_key=settings.qdrant_api_key,
+                    timeout=settings.qdrant_timeout_seconds,
+                    prefer_grpc=False,
                 )
     return _CLIENT
 
@@ -159,7 +197,12 @@ class QdrantVectorStore(VectorStore):
     async def connect(self) -> None:
         try:
             client = _get_client()
-            client.get_collections()
+            retry_sync(
+                client.get_collections,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant connect",
+            )
             logger.info("Qdrant connected to %s", settings.qdrant_url)
         except Exception as exc:
             raise VectorStoreConnectionError(
@@ -169,7 +212,12 @@ class QdrantVectorStore(VectorStore):
     async def health_check(self) -> dict:
         client = _get_client()
         try:
-            cluster_info = client.get_collections()
+            cluster_info = retry_sync(
+                client.get_collections,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant health check",
+            )
             version = getattr(cluster_info, "time", None)
         except Exception as exc:
             raise VectorStoreConnectionError("Qdrant health check failed") from exc
@@ -178,7 +226,11 @@ class QdrantVectorStore(VectorStore):
         vector_count = 0
         if exists:
             try:
-                count_result = client.count(
+                count_result = retry_sync(
+                    client.count,
+                    _qdrant_retry_policy,
+                    _is_qdrant_retryable,
+                    "Qdrant count",
                     collection_name=settings.qdrant_collection_name,
                     exact=True,
                 )
@@ -202,7 +254,11 @@ class QdrantVectorStore(VectorStore):
             return
 
         try:
-            client.create_collection(
+            retry_sync(
+                client.create_collection,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant create_collection",
                 collection_name=settings.qdrant_collection_name,
                 vectors_config=VectorParams(
                     size=VECTOR_DIMENSION,
@@ -224,7 +280,13 @@ class QdrantVectorStore(VectorStore):
         if not await self.collection_exists():
             return
         try:
-            client.delete_collection(collection_name=settings.qdrant_collection_name)
+            retry_sync(
+                client.delete_collection,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant delete_collection",
+                collection_name=settings.qdrant_collection_name,
+            )
             logger.info("Collection '%s' deleted", settings.qdrant_collection_name)
         except Exception as exc:
             raise VectorStoreOperationError(
@@ -262,7 +324,11 @@ class QdrantVectorStore(VectorStore):
                 for v in batch
             ]
             try:
-                client.upsert(
+                retry_sync(
+                    client.upsert,
+                    _qdrant_retry_policy,
+                    _is_qdrant_retryable,
+                    "Qdrant upsert",
                     collection_name=settings.qdrant_collection_name,
                     points=points,
                 )
@@ -279,7 +345,11 @@ class QdrantVectorStore(VectorStore):
     ) -> int:
         client = _get_client()
         try:
-            result = client.delete(
+            result = retry_sync(
+                client.delete,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant delete_vectors_by_document",
                 collection_name=settings.qdrant_collection_name,
                 points_selector=Filter(
                     must=[
@@ -307,7 +377,11 @@ class QdrantVectorStore(VectorStore):
     ) -> int:
         client = _get_client()
         try:
-            result = client.set_payload(
+            result = retry_sync(
+                client.set_payload,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant update_document_payload",
                 collection_name=settings.qdrant_collection_name,
                 payload=payload,
                 filter=Filter(
@@ -335,7 +409,11 @@ class QdrantVectorStore(VectorStore):
     ) -> int:
         client = _get_client()
         try:
-            result = client.delete(
+            result = retry_sync(
+                client.delete,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant delete_vectors_by_ids",
                 collection_name=settings.qdrant_collection_name,
                 points_selector=point_ids,
             )
@@ -356,9 +434,13 @@ class QdrantVectorStore(VectorStore):
     ) -> list[dict]:
         client = _get_client()
         try:
-            results = client.search(
+            results = retry_sync(
+                client.query_points,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant search",
                 collection_name=settings.qdrant_collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=query_filter,
                 limit=top_k,
                 offset=offset,
@@ -367,10 +449,11 @@ class QdrantVectorStore(VectorStore):
             )
             return [
                 {
+                    "id": str(hit.id),
                     "score": hit.score,
                     "payload": hit.payload,
                 }
-                for hit in results
+                for hit in results.points
             ]
         except Exception as exc:
             raise VectorStoreOperationError(
@@ -379,23 +462,28 @@ class QdrantVectorStore(VectorStore):
 
     async def create_fulltext_index(self) -> None:
         client = _get_client()
-        try:
-            client.create_payload_index(
-                collection_name=settings.qdrant_collection_name,
-                field_name="content",
-                field_schema=TextIndexParams(
-                    type=PayloadSchemaType.TEXT,
-                    tokenizer=TokenizerType.WORD,
-                    min_token_len=2,
-                    max_token_len=20,
-                ),
-            )
-            logger.info("Full-text index created on 'content' field")
-        except Exception as exc:
-            logger.info(
-                "Full-text index on 'content' already exists or creation skipped: %s",
-                exc,
-            )
+        for field_name, field_schema in (
+            ("content", TextIndexParams(
+                type=PayloadSchemaType.TEXT,
+                tokenizer=TokenizerType.WORD,
+                min_token_len=2,
+                max_token_len=20,
+            )),
+            ("document_id", PayloadSchemaType.KEYWORD),
+        ):
+            try:
+                client.create_payload_index(
+                    collection_name=settings.qdrant_collection_name,
+                    field_name=field_name,
+                    field_schema=field_schema,
+                )
+                logger.info("Payload index created on '%s' field", field_name)
+            except Exception as exc:
+                logger.info(
+                    "Payload index on '%s' already exists or creation skipped: %s",
+                    field_name,
+                    exc,
+                )
 
     async def fulltext_search(
         self,
@@ -406,7 +494,11 @@ class QdrantVectorStore(VectorStore):
     ) -> list[dict]:
         client = _get_client()
         try:
-            results = client.query_points(
+            results = retry_sync(
+                client.query_points,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant fulltext_search",
                 collection_name=settings.qdrant_collection_name,
                 query=query_text,
                 using="fulltext",
@@ -417,7 +509,7 @@ class QdrantVectorStore(VectorStore):
                 with_vectors=False,
             )
             return [
-                {"score": point.score, "payload": point.payload}
+                {"id": str(point.id), "score": point.score, "payload": point.payload}
                 for point in results.points
             ]
         except Exception as exc:

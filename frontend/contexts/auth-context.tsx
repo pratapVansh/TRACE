@@ -51,6 +51,7 @@ async function resolveInitialAuthState(): Promise<ResolvedAuthState> {
 
   try {
     const user = await getCurrentUserRequest();
+    authStorage.setTokens(accessToken, refreshToken);
     return { user, accessToken, refreshToken };
   } catch {
     try {

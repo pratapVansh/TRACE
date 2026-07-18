@@ -1,0 +1,380 @@
+import threading
+import time
+from typing import Any
+
+from neo4j import (
+    AsyncDriver,
+    AsyncGraphDatabase,
+    basic_auth,
+)
+from neo4j.exceptions import (
+    ServiceUnavailable,
+    SessionError,
+    TransactionError,
+)
+
+from app.graph.base import (
+    GraphStore,
+    GraphStoreConnectionError,
+    GraphStoreConfigurationError,
+    GraphStoreOperationError,
+)
+from app.core.config import settings
+from app.core.logging import logger
+
+_VALID_URI_PREFIXES = ("bolt://", "bolt+s://", "bolt+ssc://", "neo4j://", "neo4j+s://", "neo4j+ssc://")
+
+_INDEX_QUERIES = [
+    "CREATE INDEX IF NOT EXISTS FOR (n:Entity) ON (n.id)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Entity) ON (n.name)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Entity) ON (n.document_id)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Compressor) ON (n.name)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Failure) ON (n.name)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Cause) ON (n.name)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Operator) ON (n.name)",
+]
+
+
+class ManagedTransaction:
+    """Wraps a Neo4j AsyncTransaction and its session, ensuring the session
+    is closed when the transaction finishes (commit or rollback).
+
+    Supports async context manager protocol (``async with``).
+    """
+
+    def __init__(self, session: Any, transaction: Any) -> None:
+        self._session = session
+        self._transaction = transaction
+
+    async def commit(self) -> None:
+        try:
+            await self._transaction.commit()
+        finally:
+            await self._close_session()
+
+    async def rollback(self) -> None:
+        try:
+            await self._transaction.rollback()
+        finally:
+            await self._close_session()
+
+    @property
+    def closed(self) -> bool:
+        return self._transaction.closed
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._transaction, name)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        if exc_type is not None:
+            await self.rollback()
+        else:
+            await self.commit()
+
+    async def _close_session(self) -> None:
+        try:
+            await self._session.close()
+        except Exception:
+            logger.exception("Error closing Neo4j session after transaction")
+
+
+class Neo4jGraphStore(GraphStore):
+    """Graph store backed by Neo4j."""
+
+    def __init__(
+        self,
+        uri: str | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> None:
+        self._uri = (uri or settings.neo4j_uri).strip()
+        self._username = (username or settings.neo4j_username).strip()
+        self._password = (password or settings.neo4j_password).strip()
+        self._driver: AsyncDriver | None = None
+        self._connected = False
+        self._lock = threading.Lock()
+        self._db_name: str | None = settings.neo4j_database or None
+
+        errors: list[str] = []
+
+        if not self._uri:
+            errors.append(
+                "NEO4J_URI is not set. Provide a uri or set the environment variable."
+            )
+        elif not self._is_valid_uri(self._uri):
+            errors.append(
+                f"NEO4J_URI has an invalid scheme: {self._uri!r}. "
+                f"Expected one of: {', '.join(_VALID_URI_PREFIXES)}."
+            )
+
+        if not self._username:
+            errors.append(
+                "NEO4J_USERNAME is not set. Provide a username or set the environment variable."
+            )
+
+        if not self._password:
+            errors.append(
+                "NEO4J_PASSWORD is not set. Provide a password or set the environment variable."
+            )
+
+        if errors:
+            msg = "; ".join(errors)
+            logger.error("Neo4j configuration error(s): %s", msg)
+            raise GraphStoreConfigurationError(msg)
+
+        logger.info(
+            "Neo4jGraphStore configured — uri=%s username=%s database=%s "
+            "connection_timeout=%ds max_connection_lifetime=%ds",
+            self._uri,
+            self._username,
+            self._db_name,
+            settings.neo4j_connection_timeout_seconds,
+            settings.neo4j_max_connection_lifetime_seconds,
+        )
+
+    @staticmethod
+    def _is_valid_uri(uri: str) -> bool:
+        return any(uri.lower().startswith(prefix) for prefix in _VALID_URI_PREFIXES)
+
+    async def _ensure_indexes(self) -> None:
+        try:
+            driver = await self._get_driver()
+            async with driver.session(database=self._db_name) as session:
+                for query in _INDEX_QUERIES:
+                    await session.run(query)
+            logger.info("Neo4j indexes created or confirmed")
+        except Exception as exc:
+            logger.warning("Failed to create Neo4j indexes — continuing: %s", exc)
+
+    @property
+    def provider_name(self) -> str:
+        return "neo4j"
+
+    async def _get_driver(self) -> AsyncDriver:
+        if self._driver is None:
+            with self._lock:
+                if self._driver is None:
+                    self._driver = AsyncGraphDatabase.driver(
+                        self._uri,
+                        auth=basic_auth(self._username, self._password),
+                        connection_timeout=settings.neo4j_connection_timeout_seconds,
+                        max_connection_lifetime=settings.neo4j_max_connection_lifetime_seconds,
+                    )
+        return self._driver
+
+    async def connect(self) -> None:
+        try:
+            driver = await self._get_driver()
+            await driver.verify_connectivity()
+            await self._ensure_indexes()
+            self._connected = True
+            logger.info(
+                "Neo4j connected — uri=%s",
+                self._uri,
+            )
+        except ServiceUnavailable as exc:
+            self._connected = False
+            logger.error("Neo4j connection failed — %s", exc)
+            raise GraphStoreConnectionError(
+                f"Cannot reach Neo4j at {self._uri}: {exc}"
+            ) from exc
+        except Exception as exc:
+            self._connected = False
+            logger.exception("Unexpected error during Neo4j connect")
+            raise GraphStoreConnectionError(
+                f"Neo4j connection failed: {exc}"
+            ) from exc
+
+    async def close(self) -> None:
+        driver = self._driver
+        if driver is not None:
+            with self._lock:
+                if self._driver is not None:
+                    await self._driver.close()
+                    self._driver = None
+                    self._connected = False
+                    logger.info("Neo4j driver closed")
+
+    async def health_check(self) -> dict:
+        start = time.monotonic()
+        driver = self._driver
+        if driver is None:
+            elapsed = (time.monotonic() - start) * 1000
+            logger.warning("Health check skipped — Neo4jGraphStore not initialized")
+            return {
+                "provider": self.provider_name,
+                "connection_status": "disconnected",
+                "database_version": "",
+                "database_name": "",
+                "latency_ms": round(elapsed, 2),
+            }
+
+        if not self._connected:
+            logger.info("Attempting reconnection during health check")
+            try:
+                await self.connect()
+            except GraphStoreConnectionError:
+                elapsed = (time.monotonic() - start) * 1000
+                return {
+                    "provider": self.provider_name,
+                    "connection_status": "disconnected",
+                    "database_version": "",
+                    "database_name": "",
+                    "latency_ms": round(elapsed, 2),
+                }
+
+        try:
+            info = await driver.get_server_info()
+            elapsed = (time.monotonic() - start) * 1000
+            logger.info(
+                "Health check passed — provider=%s version=%s address=%s latency=%.0fms",
+                self.provider_name,
+                info.agent,
+                info.address,
+                elapsed,
+            )
+            db_name = str(info.address) if hasattr(info, "address") and info.address else (info.agent.split("/")[0] if info.agent else "")
+            return {
+                "provider": self.provider_name,
+                "connection_status": "connected",
+                "database_version": info.agent,
+                "database_name": db_name,
+                "latency_ms": round(elapsed, 2),
+            }
+        except ServiceUnavailable as exc:
+            self._connected = False
+            elapsed = (time.monotonic() - start) * 1000
+            logger.error(
+                "Health check failed — connection error after %.0fms: %s",
+                elapsed,
+                exc,
+            )
+            return {
+                "provider": self.provider_name,
+                "connection_status": "disconnected",
+                "database_version": "",
+                "database_name": "",
+                "latency_ms": round(elapsed, 2),
+            }
+        except Exception as exc:
+            elapsed = (time.monotonic() - start) * 1000
+            logger.error(
+                "Health check failed — %s: %s after %.0fms",
+                type(exc).__name__,
+                exc,
+                elapsed,
+            )
+            return {
+                "provider": self.provider_name,
+                "connection_status": "error",
+                "database_version": "",
+                "database_name": "",
+                "latency_ms": round(elapsed, 2),
+            }
+
+    async def _ensure_connected(self) -> AsyncDriver:
+        driver = await self._get_driver()
+        if not self._connected:
+            logger.info("Reconnecting to Neo4j")
+            await self.connect()
+            logger.info("Neo4j reconnection successful")
+        return driver
+
+    async def execute_read(
+        self,
+        query: str,
+        parameters: dict | None = None,
+    ) -> list[dict]:
+        try:
+            driver = await self._ensure_connected()
+        except GraphStoreConnectionError as exc:
+            raise GraphStoreConnectionError(
+                f"Cannot execute read query — not connected: {exc}"
+            ) from exc
+
+        try:
+            async with driver.session(database=self._db_name) as session:
+                result = await session.run(query, parameters or {})
+                records = await result.data()
+                return records if records is not None else []
+        except ServiceUnavailable as exc:
+            self._connected = False
+            raise GraphStoreConnectionError(
+                f"Neo4j connection lost during read: {exc}"
+            ) from exc
+        except (SessionError, TransactionError) as exc:
+            raise GraphStoreOperationError(
+                f"Neo4j read query failed: {exc}"
+            ) from exc
+        except Exception as exc:
+            logger.exception("Unexpected error during Neo4j read query")
+            raise GraphStoreOperationError(
+                f"Neo4j read query failed: {exc}"
+            ) from exc
+
+    async def execute_write(
+        self,
+        query: str,
+        parameters: dict | None = None,
+    ) -> list[dict]:
+        try:
+            driver = await self._ensure_connected()
+        except GraphStoreConnectionError as exc:
+            raise GraphStoreConnectionError(
+                f"Cannot execute write query — not connected: {exc}"
+            ) from exc
+
+        try:
+            async with driver.session(database=self._db_name) as session:
+                result = await session.run(query, parameters or {})
+                records = await result.data()
+                await result.consume()
+                return records if records is not None else []
+        except ServiceUnavailable as exc:
+            self._connected = False
+            raise GraphStoreConnectionError(
+                f"Neo4j connection lost during write: {exc}"
+            ) from exc
+        except (SessionError, TransactionError) as exc:
+            raise GraphStoreOperationError(
+                f"Neo4j write query failed: {exc}"
+            ) from exc
+        except Exception as exc:
+            logger.exception("Unexpected error during Neo4j write query")
+            raise GraphStoreOperationError(
+                f"Neo4j write query failed: {exc}"
+            ) from exc
+
+    async def begin_transaction(self) -> object:
+        try:
+            driver = await self._ensure_connected()
+        except GraphStoreConnectionError as exc:
+            raise GraphStoreConnectionError(
+                f"Cannot begin transaction — not connected: {exc}"
+            ) from exc
+
+        session = driver.session(database=self._db_name)
+        try:
+            tx = await session.begin_transaction()
+        except ServiceUnavailable as exc:
+            await session.close()
+            self._connected = False
+            raise GraphStoreConnectionError(
+                f"Neo4j connection lost during transaction begin: {exc}"
+            ) from exc
+        except Exception as exc:
+            await session.close()
+            logger.exception("Unexpected error beginning Neo4j transaction")
+            raise GraphStoreOperationError(
+                f"Neo4j transaction begin failed: {exc}"
+            ) from exc
+
+        return ManagedTransaction(session, tx)

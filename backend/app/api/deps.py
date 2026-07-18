@@ -2,8 +2,10 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.base import LLMProvider
+from app.ai.base import LLMProvider, NullLLMProvider
+from app.core.config import settings
 from app.core.dependencies import get_db
+from app.repositories.conversation_repository import ConversationRepository
 from app.services.prompt_builder import PromptBuilder
 from app.core.security import InvalidTokenError, TokenExpiredError, decode_access_token
 from app.core.storage import create_storage_service
@@ -19,9 +21,10 @@ from app.processing.service import ProcessingQueueService
 from app.services.audit_service import AuditService
 from app.services.qdrant_indexing_service import QdrantIndexingService
 from app.services.chat_service import ChatService
-from app.services.conversation_store import ConversationStore
 from app.services.rag_service import RagService
 from app.services.retriever_service import RetrieverService
+from app.graph.base import GraphStore
+from app.graph.neo4j_graph_store import Neo4jGraphStore
 from app.services.vector_store import QdrantVectorStore, VectorStore
 from app.services.auth_service import AuthService
 from app.services.chunk_index_service import ChunkIndexService
@@ -71,8 +74,27 @@ async def get_user_management_service(
     )
 
 
+def get_graph_store(request: Request) -> GraphStore:
+    store: GraphStore | None = getattr(request.app.state, "neo4j_store", None)
+    if store is not None:
+        return store
+    from fastapi import HTTPException, status
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Neo4j graph store is not configured or unavailable",
+    )
+
+
+def get_graph_store_optional(request: Request) -> GraphStore | None:
+    store: GraphStore | None = getattr(request.app.state, "neo4j_store", None)
+    if store is not None:
+        return store
+    return None
+
+
 async def get_document_processing_service(
     session: AsyncSession = Depends(get_db),
+    graph_store: GraphStore | None = Depends(get_graph_store_optional),
 ) -> DocumentProcessingService:
     repository = DocumentRepository(session)
     storage = create_storage_service()
@@ -80,7 +102,10 @@ async def get_document_processing_service(
         session=session,
         audit_repository=AuditRepository(session),
     )
-    return create_document_processing_service(session, repository, storage, audit_service)
+    return create_document_processing_service(
+        session, repository, storage, audit_service,
+        graph_store=graph_store,
+    )
 
 
 async def get_document_processing_queue(
@@ -125,12 +150,20 @@ async def get_chunk_index_service(
     )
 
 
+def get_vector_store(request: Request) -> VectorStore:
+    store: VectorStore | None = getattr(request.app.state, "qdrant_store", None)
+    if store is not None:
+        return store
+    return QdrantVectorStore()
+
+
 async def get_document_service(
     session: AsyncSession = Depends(get_db),
     processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
     audit_service: AuditService = Depends(get_audit_service),
+    vector_store: VectorStore = Depends(get_vector_store),
 ) -> DocumentService:
-    indexing_service = QdrantIndexingService(vector_store=QdrantVectorStore())
+    indexing_service = QdrantIndexingService(vector_store=vector_store)
     return DocumentService(
         session=session,
         document_repository=DocumentRepository(session),
@@ -141,8 +174,20 @@ async def get_document_service(
     )
 
 
-def get_vector_store() -> VectorStore:
-    return QdrantVectorStore()
+def get_graph_query_service(
+    store: GraphStore = Depends(get_graph_store),
+) -> "GraphQueryService":
+    from app.graph.graph_query import GraphQueryService
+    return GraphQueryService(graph_store=store)
+
+
+def get_graph_query_optional(
+    store: GraphStore | None = Depends(get_graph_store_optional),
+) -> "GraphQueryService | None":
+    if store is None:
+        return None
+    from app.graph.graph_query import GraphQueryService
+    return GraphQueryService(graph_store=store)
 
 
 def get_ranking_service(
@@ -157,14 +202,28 @@ def get_retriever_service(
     return RetrieverService(vector_store=vector_store)
 
 
+def get_hybrid_retriever(
+    vector_store: VectorStore = Depends(get_vector_store),
+    graph_svc: "GraphQueryService | None" = Depends(get_graph_query_optional),
+) -> "HybridRetriever":
+    from app.services.hybrid_retriever import (
+        ContextMerger,
+        GraphRetriever,
+        HybridRetriever,
+        VectorRetriever,
+    )
+    return HybridRetriever(
+        vector_retriever=VectorRetriever(vector_store=vector_store),
+        graph_retriever=GraphRetriever(graph_query_service=graph_svc) if graph_svc else None,
+        context_merger=ContextMerger(),
+    )
+
+
 def get_llm_provider(request: Request) -> LLMProvider:
     provider: LLMProvider | None = getattr(request.app.state, "llm_provider", None)
-    if provider is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="LLM provider not initialized",
-        )
-    return provider
+    if provider is not None:
+        return provider
+    return NullLLMProvider()
 
 
 def get_rag_service(
@@ -178,15 +237,30 @@ def get_rag_service(
     )
 
 
-_conversation_store = ConversationStore()
+def get_graph_rag_service(
+    hybrid_retriever: "HybridRetriever" = Depends(get_hybrid_retriever),
+    retriever: RetrieverService = Depends(get_retriever_service),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> "GraphRagService":
+    from app.services.rag_service import GraphRagService
+    return GraphRagService(
+        hybrid_retriever=hybrid_retriever,
+        retriever=retriever,
+        prompt_builder=PromptBuilder(),
+        llm=llm,
+    )
 
 
-def get_chat_service(
+async def get_chat_service(
+    graph_rag: "GraphRagService" = Depends(get_graph_rag_service),
     rag: RagService = Depends(get_rag_service),
+    session: AsyncSession = Depends(get_db),
 ) -> ChatService:
     return ChatService(
-        rag=rag,
-        conversation_store=_conversation_store,
+        rag=graph_rag,
+        rag_fallback=rag,
+        conversation_repository=ConversationRepository(session),
+        session=session,
     )
 
 

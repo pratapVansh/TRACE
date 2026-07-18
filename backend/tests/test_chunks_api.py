@@ -89,6 +89,7 @@ class TestListDocumentChunks:
         mock_chunk_repository: AsyncMock,
     ) -> None:
         mock_chunk_repository.get_chunks_by_document.return_value = []
+        mock_chunk_repository.count_chunks_by_document.return_value = 0
 
         doc_id = uuid.uuid4()
         response = api_client.get(f"/api/documents/{doc_id}/chunks")
@@ -109,6 +110,7 @@ class TestListDocumentChunks:
             _make_chunk(document_id=doc_id, chunk_index=1, embedding_status="completed"),
         ]
         mock_chunk_repository.get_chunks_by_document.return_value = chunks
+        mock_chunk_repository.count_chunks_by_document.return_value = 2
 
         response = api_client.get(f"/api/documents/{doc_id}/chunks")
 
@@ -127,7 +129,8 @@ class TestListDocumentChunks:
     ) -> None:
         doc_id = uuid.uuid4()
         chunks = [_make_chunk(document_id=doc_id, chunk_index=i) for i in range(10)]
-        mock_chunk_repository.get_chunks_by_document.return_value = chunks
+        mock_chunk_repository.get_chunks_by_document.return_value = chunks[2:5]
+        mock_chunk_repository.count_chunks_by_document.return_value = 10
 
         response = api_client.get(f"/api/documents/{doc_id}/chunks?skip=2&limit=3")
 
@@ -137,6 +140,12 @@ class TestListDocumentChunks:
         assert data["total"] == 10
         assert data["page"] == 1
         assert data["page_size"] == 3
+        mock_chunk_repository.get_chunks_by_document.assert_called_with(
+            doc_id,
+            embedding_status=None,
+            skip=2,
+            limit=3,
+        )
 
     def test_list_chunks_with_embedding_status_filter(
         self,
@@ -145,6 +154,7 @@ class TestListDocumentChunks:
     ) -> None:
         doc_id = uuid.uuid4()
         mock_chunk_repository.get_chunks_by_document.return_value = []
+        mock_chunk_repository.count_chunks_by_document.return_value = 0
 
         response = api_client.get(
             f"/api/documents/{doc_id}/chunks?embedding_status=pending",
@@ -154,6 +164,8 @@ class TestListDocumentChunks:
         mock_chunk_repository.get_chunks_by_document.assert_called_with(
             doc_id,
             embedding_status="pending",
+            skip=0,
+            limit=100,
         )
 
 

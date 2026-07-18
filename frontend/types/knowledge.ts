@@ -97,6 +97,13 @@ export interface RankingWeights {
   freshness: number;
 }
 
+export interface SearchGraphFact {
+  entity_name: string;
+  entity_type: string;
+  confidence: number;
+  source_document: string;
+}
+
 export interface SearchResultItem {
   score: number;
   document_id: string;
@@ -104,6 +111,7 @@ export interface SearchResultItem {
   page: number | null;
   filename: string;
   metadata: Record<string, unknown>;
+  graph_facts?: SearchGraphFact[];
 }
 
 export interface SearchResponse {

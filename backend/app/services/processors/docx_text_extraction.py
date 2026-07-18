@@ -1,3 +1,5 @@
+import asyncio
+
 from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
@@ -36,12 +38,14 @@ class DocxTextExtractionProcessor:
         )
 
         try:
-            content = self._storage.read(context.version.storage_uri)
+            content = await asyncio.to_thread(
+                self._storage.read, context.version.storage_uri,
+            )
         except StorageError as exc:
             raise DocxTextExtractionError("Failed to read stored DOCX") from exc
 
         try:
-            result = extract_docx_text(content)
+            result = await asyncio.to_thread(extract_docx_text, content)
         except DocxTextExtractionError:
             raise
         except Exception as exc:

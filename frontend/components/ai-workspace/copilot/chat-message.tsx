@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Check, Copy, UserRound } from "lucide-react";
+import { Bot, Check, Copy, Loader2, UserRound } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -12,9 +12,12 @@ type ChatMessageProps = {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  onCitationClick?: (citation: Citation) => void;
+  confidence?: number;
+  isStreaming?: boolean;
 };
 
-export function ChatMessage({ role, content, citations }: ChatMessageProps) {
+export function ChatMessage({ role, content, citations, onCitationClick, confidence, isStreaming }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const isUser = role === "user";
 
@@ -66,7 +69,16 @@ export function ChatMessage({ role, content, citations }: ChatMessageProps) {
             {citations.map((citation, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-md border border-[var(--accent-steel)]/15 bg-[var(--accent-steel)]/5 px-2 py-0.5 text-[11px] text-[var(--accent-steel-muted)]"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[var(--accent-steel)]/15 bg-[var(--accent-steel)]/5 px-2 py-0.5 text-[11px] text-[var(--accent-steel-muted)] transition-industrial hover:border-[var(--accent-steel)]/30"
+                onClick={() => onCitationClick?.(citation)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onCitationClick?.(citation);
+                  }
+                }}
               >
                 <span className="font-medium text-white">
                   {citation.document_name}
@@ -75,7 +87,7 @@ export function ChatMessage({ role, content, citations }: ChatMessageProps) {
                   <span>p.{citation.page_number}</span>
                 )}
                 <span className="opacity-60">
-                  {Math.round(citation.score * 100)}%
+                  {Math.round(citation.similarity_score * 100)}%
                 </span>
               </span>
             ))}
@@ -83,7 +95,27 @@ export function ChatMessage({ role, content, citations }: ChatMessageProps) {
         )}
 
         {!isUser && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-3 pt-1">
+            {confidence != null && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px]",
+                  confidence >= 0.7
+                    ? "text-green-400 bg-green-400/10"
+                    : confidence >= 0.4
+                      ? "text-yellow-400 bg-yellow-400/10"
+                      : "text-red-400 bg-red-400/10",
+                )}
+              >
+                {(confidence * 100).toFixed(0)}% confidence
+              </span>
+            )}
+            {isStreaming && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--accent-steel-muted)]">
+                <Loader2 className="size-3 animate-spin" strokeWidth={2} />
+                Generating...
+              </span>
+            )}
             <button
               type="button"
               onClick={handleCopy}

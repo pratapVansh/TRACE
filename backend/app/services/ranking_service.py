@@ -2,12 +2,18 @@ import math
 import re
 from datetime import UTC, datetime
 
-from qdrant_client.models import Filter
-
 from app.core.config import settings
 from app.core.logging import logger
 from app.schemas.vector import RankingWeights
 from app.services.vector_store import VectorStore, VectorStoreOperationError
+
+# Lazy import for qdrant types
+try:
+    from qdrant_client.models import Filter  # noqa: PLC0415
+    _QD_RANK_AVAILABLE = True
+except ImportError:
+    Filter = object  # type: ignore[assignment,misc]
+    _QD_RANK_AVAILABLE = False
 
 
 class RankingService:

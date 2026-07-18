@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, FileText } from "lucide-react";
+import { ExternalLink, FileText, Share2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
@@ -108,6 +108,22 @@ export function SearchResultCard({ result, query }: SearchResultCardProps) {
           <div className="text-sm leading-relaxed text-muted-foreground [&>mark]:font-medium">
             {highlighted}
           </div>
+
+          {result.graph_facts && result.graph_facts.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <Share2 className="size-3.5 shrink-0 text-[var(--accent-steel-muted)] mt-0.5" />
+              {result.graph_facts.map((gf, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--accent-steel)]/20 bg-[var(--accent-steel)]/5 px-2 py-0.5 text-xs text-[var(--accent-steel-muted)]"
+                  title={`Confidence: ${(gf.confidence * 100).toFixed(0)}%`}
+                >
+                  {gf.entity_name}
+                  <span className="text-muted-foreground/50">({gf.entity_type})</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:flex-col">

@@ -1,9 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
-from qdrant_client.models import FieldCondition, Filter, MatchValue, Range
+try:
+    from qdrant_client.models import FieldCondition, Filter, MatchValue, Range  # noqa: PLC0415
+    _QD_SEARCH_AVAILABLE = True
+except ImportError:
+    FieldCondition = object  # type: ignore[assignment,misc]
+    Filter = object
+    MatchValue = object
+    Range = object
+    _QD_SEARCH_AVAILABLE = False
 
 from app.api.authorization import require_permission
-from app.api.deps import get_ranking_service, get_vector_store
+from app.api.deps import get_graph_query_optional, get_ranking_service, get_vector_store
 from app.core.authorization import PERMISSIONS
+from app.core.config import settings
+from app.middleware.rate_limit import RateLimiter
 from app.schemas.auth import UserMeResponse
 from app.schemas.vector import (
     RankingWeights,
@@ -18,6 +28,11 @@ from app.services.ranking_service import RankingService
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+search_rate_limiter = RateLimiter(
+    max_requests=settings.search_rate_limit_max,
+    window_seconds=settings.search_rate_limit_window_seconds,
+)
 
 
 def _build_qdrant_filter(filters: SearchFilter) -> Filter | None:
@@ -64,9 +79,11 @@ def _build_qdrant_filter(filters: SearchFilter) -> Filter | None:
 @router.post("", response_model=SearchResponse)
 async def search(
     request: SearchRequest,
+    _rate_limit: None = Depends(search_rate_limiter),
     current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.SEARCH)),
     vector_store: VectorStore = Depends(get_vector_store),
     ranking_service: RankingService = Depends(get_ranking_service),
+    graph_svc: "GraphQueryService | None" = Depends(get_graph_query_optional),
 ) -> SearchResponse:
     query = request.query.strip()
     if not query:
@@ -111,16 +128,37 @@ async def search(
             except VectorStoreOperationError as exc:
                 raise HTTPException(status_code=503, detail=str(exc))
 
-    items = [
-        SearchResultItem(
+    # Build base results from vector search
+    items: list[SearchResultItem] = []
+    for r in results:
+        chunk_content = r["payload"].get("content", "")
+        graph_facts_for_item: list[dict] = []
+
+        # M27: enrich with graph facts if graph service is available
+        if graph_svc:
+            try:
+                entities, _total = await graph_svc.search_entities(
+                    query=query, skip=0, limit=5,
+                )
+                for ent in entities:
+                    if ent.name.lower() in chunk_content.lower():
+                        graph_facts_for_item.append({
+                            "entity_name": ent.name,
+                            "entity_type": ent.type,
+                            "confidence": ent.confidence,
+                            "source_document": ent.source_document,
+                        })
+            except Exception:
+                pass  # graph enrichment is best-effort
+
+        items.append(SearchResultItem(
             score=r["score"],
             document_id=r["payload"].get("document_id", ""),
-            chunk=r["payload"].get("content", ""),
+            chunk=chunk_content,
             page=r["payload"].get("page_number"),
             filename=r["payload"].get("filename", ""),
             metadata=r["payload"].get("metadata") or {},
-        )
-        for r in results
-    ]
+            graph_facts=graph_facts_for_item,
+        ))
 
     return SearchResponse(results=items)

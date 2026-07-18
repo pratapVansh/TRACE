@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.config import settings
+
 
 class RetrievalFilter(BaseModel):
     document_id: str | None = None
@@ -14,6 +16,7 @@ class RetrievalFilter(BaseModel):
 
 
 class RetrievedChunk(BaseModel):
+    chunk_id: str = ""
     score: float = Field(ge=0.0, le=1.0)
     document_id: str
     document_name: str
@@ -25,8 +28,8 @@ class RetrievedChunk(BaseModel):
 
 class RetrievalRequest(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
-    top_k: int = Field(default=10, ge=1, le=50)
-    similarity_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
+    top_k: int = Field(default=settings.retrieval_top_k, ge=1, le=50)
+    similarity_threshold: float = Field(default=settings.retrieval_similarity_threshold, ge=0.0, le=1.0)
     filters: RetrievalFilter | None = None
 
 

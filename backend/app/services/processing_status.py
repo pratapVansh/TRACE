@@ -22,6 +22,7 @@ class ProcessingStage(StrEnum):
     METADATA_EXTRACTION = "metadata_extraction"
     LANGUAGE_DETECTION = "language_detection"
     CHUNKING = "chunking"
+    GRAPH_EXTRACTION = "graph_extraction"
     EMBEDDING = "embedding"
     INDEXING = "indexing"
     COMPLETED = "completed"

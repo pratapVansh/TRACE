@@ -15,6 +15,7 @@ const AUTH_SKIP_REFRESH_PATHS = [
 
 export const apiClient = axios.create({
   baseURL: API_URL,
+  timeout: 30_000,
   headers: {
     "Content-Type": "application/json",
   },

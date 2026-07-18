@@ -16,9 +16,9 @@ class TestGroqProviderInit:
             GroqProvider(api_key="")
 
     def test_valid_api_key_creates_provider(self):
-        provider = GroqProvider(api_key="sk-test-key", model="llama3-70b-8192")
+        provider = GroqProvider(api_key="sk-test-key", model="llama-3.3-70b-versatile")
         assert provider.provider_name == "groq"
-        assert provider.model_name == "llama3-70b-8192"
+        assert provider.model_name == "llama-3.3-70b-versatile"
 
     async def test_not_initialized_raises_on_generate(self):
         provider = GroqProvider(api_key="sk-test-key")
@@ -39,7 +39,7 @@ class TestGroqProviderProperties:
 
     def test_model_name_default(self):
         p = GroqProvider(api_key="sk-test")
-        assert p.model_name == "llama3-70b-8192"
+        assert p.model_name == "llama-3.3-70b-versatile"
 
     def test_model_name_custom(self):
         p = GroqProvider(api_key="sk-test", model="mixtral-8x7b-32768")

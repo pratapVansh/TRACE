@@ -52,3 +52,7 @@ class EmbeddingError(DocumentProcessingError):
 
 class IndexingError(DocumentProcessingError):
     """Raised when vector indexing fails."""
+
+
+class GraphExtractionError(DocumentProcessingError):
+    """Raised when entity/relationship extraction or graph persistence fails."""

@@ -1,3 +1,5 @@
+import asyncio
+
 from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
@@ -28,7 +30,9 @@ class MetadataExtractionProcessor:
         )
 
         try:
-            content = self._storage.read(context.version.storage_uri)
+            content = await asyncio.to_thread(
+                self._storage.read, context.version.storage_uri,
+            )
         except StorageError as exc:
             raise MetadataExtractionError("Failed to read stored file for metadata") from exc
 

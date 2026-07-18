@@ -1,7 +1,8 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import case, delete, select, update as sa_update
+from sqlalchemy import case, delete, func, select, update as sa_update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document_chunk import DocumentChunk
@@ -52,16 +53,36 @@ class DocumentChunkRepository:
         document_id: uuid.UUID,
         *,
         embedding_status: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> Sequence[DocumentChunk]:
         query = (
             select(DocumentChunk)
             .where(DocumentChunk.document_id == document_id)
             .order_by(DocumentChunk.chunk_index)
+            .offset(skip)
+            .limit(limit)
         )
         if embedding_status is not None:
             query = query.where(DocumentChunk.embedding_status == embedding_status)
         result = await self._session.execute(query)
         return result.scalars().all()
+
+    async def count_chunks_by_document(
+        self,
+        document_id: uuid.UUID,
+        *,
+        embedding_status: str | None = None,
+    ) -> int:
+        query = (
+            select(func.count())
+            .select_from(DocumentChunk)
+            .where(DocumentChunk.document_id == document_id)
+        )
+        if embedding_status is not None:
+            query = query.where(DocumentChunk.embedding_status == embedding_status)
+        result = await self._session.execute(query)
+        return result.scalar_one()
 
     async def delete_document_chunks(
         self,
@@ -104,7 +125,13 @@ class DocumentChunkRepository:
 
         chunk_ids = [u["id"] for u in updates]
         embedding_case = case(
-            *[(DocumentChunk.id == u["id"], u.get("embedding")) for u in updates],
+            *[
+                (
+                    DocumentChunk.id == u["id"],
+                    func.cast(u.get("embedding"), JSONB),
+                )
+                for u in updates
+            ],
             else_=DocumentChunk.embedding,
         )
         status_case = case(

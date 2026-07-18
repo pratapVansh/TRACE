@@ -58,6 +58,7 @@ class SearchResultItem(BaseModel):
     page: int | None = None
     filename: str
     metadata: dict = Field(default_factory=dict)
+    graph_facts: list = Field(default_factory=list, description="Related graph facts (M27)")
 
 
 class SearchResponse(BaseModel):

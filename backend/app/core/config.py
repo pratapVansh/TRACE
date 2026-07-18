@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     auth_rate_limit_window_seconds: int = 60
     upload_rate_limit_max: int = 20
     upload_rate_limit_window_seconds: int = 60
+    chat_rate_limit_max: int = 10
+    chat_rate_limit_window_seconds: int = 60
+    search_rate_limit_max: int = 30
+    search_rate_limit_window_seconds: int = 60
+    rag_rate_limit_max: int = 10
+    rag_rate_limit_window_seconds: int = 60
     global_rate_limit_enabled: bool = True
 
     # Chunking & Embeddings (Milestone 6+)
@@ -59,6 +65,8 @@ class Settings(BaseSettings):
     qdrant_url: str = ""
     qdrant_api_key: str = ""
     qdrant_collection_name: str = "document_chunks"
+    qdrant_timeout_seconds: int = 30
+    qdrant_max_retries: int = 3
 
     # Ranking weights (Milestone 7.6)
     ranking_semantic_weight: float = 0.35
@@ -70,7 +78,22 @@ class Settings(BaseSettings):
     # LLM / AI Copilot (Milestone 8)
     groq_api_key: str = ""
     llm_provider: str = "groq"
-    groq_model: str = "llama3-70b-8192"
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_timeout_seconds: int = 60
+    groq_max_retries: int = 3
+
+    # Retrieval (Milestone 8.1)
+    retrieval_top_k: int = 15
+    retrieval_similarity_threshold: float = 0.25
+    retrieval_dedup_documents: bool = True
+
+    # Neo4j graph store (Milestone 9)
+    neo4j_uri: str = ""
+    neo4j_username: str = ""
+    neo4j_password: str = ""
+    neo4j_database: str = ""
+    neo4j_connection_timeout_seconds: int = 30
+    neo4j_max_connection_lifetime_seconds: int = 3600
 
     # Background document processing queue
     processing_queue_worker_enabled: bool = True

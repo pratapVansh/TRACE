@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+MAX_LIST_DOCUMENTS_LIMIT = 500
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -206,6 +208,7 @@ class DocumentService:
         document_category: str | None = None,
         equipment_id: str | None = None,
     ) -> DocumentListResponse:
+        limit = min(limit, MAX_LIST_DOCUMENTS_LIMIT)
         documents = await self._document_repository.list_documents(
             skip=skip,
             limit=limit,

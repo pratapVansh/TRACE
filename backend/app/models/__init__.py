@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.models.audit_log import AuditLog
+from app.models.conversation import Conversation, Message  # noqa: F401
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.models.document_extracted_text import DocumentExtractedText
@@ -17,11 +18,13 @@ from app.processing.models import ProcessingJob  # noqa: F401, E402
 __all__ = [
     "AuditLog",
     "Base",
+    "Conversation",
     "Document",
     "DocumentChunk",
     "DocumentExtractedText",
     "DocumentVersion",
     "IngestionJob",
+    "Message",
     "ProcessingJob",
     "RefreshToken",
     "Role",

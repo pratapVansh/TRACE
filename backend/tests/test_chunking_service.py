@@ -14,6 +14,7 @@ from app.services.chunking_service import (
     _find_section_title,
     _looks_like_heading,
     _merge_tiny_chunks,
+    _parse_semantic_regions,
 )
 
 
@@ -137,6 +138,92 @@ class TestMergeTinyChunks:
         chunks = [{"chunk_index": 0, "content": "tiny", "token_count": 5}]
         result = _merge_tiny_chunks(chunks)
         assert len(result) == 1
+
+
+class TestParseSemanticRegions:
+    def test_regions_empty_text(self) -> None:
+        assert _parse_semantic_regions("") == []
+
+    def test_regions_whitespace_only(self) -> None:
+        assert _parse_semantic_regions("   \n\n  ") == []
+
+    def test_regions_paragraph_only(self) -> None:
+        text = "Hello world. This is a test."
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 1
+        assert regions[0].type == "paragraph"
+        assert regions[0].content == "Hello world. This is a test."
+
+    def test_regions_heading_then_paragraph(self) -> None:
+        text = "# Introduction\nThis is the intro paragraph."
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 2
+        assert regions[0].type == "heading"
+        assert regions[0].content == "# Introduction"
+        assert regions[1].type == "paragraph"
+        assert regions[1].content == "This is the intro paragraph."
+
+    def test_regions_multiple_paragraphs_separated_by_blanks(self) -> None:
+        text = "First paragraph.\n\nSecond paragraph."
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 2
+        assert all(r.type == "paragraph" for r in regions)
+        assert regions[0].content == "First paragraph."
+        assert regions[1].content == "Second paragraph."
+
+    def test_regions_code_block(self) -> None:
+        text = "Some text.\n```python\nprint('hello')\n```\nMore text."
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 3
+        assert regions[0].type == "paragraph"
+        assert regions[1].type == "code"
+        assert "```python" in regions[1].content
+        assert "print('hello')" in regions[1].content
+        assert "```" in regions[1].content
+        assert regions[2].type == "paragraph"
+
+    def test_regions_table(self) -> None:
+        text = "| Header1 | Header2 |\n| Cell1  | Cell2  |"
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 1
+        assert regions[0].type == "table"
+        assert "Header1" in regions[0].content
+
+    def test_regions_list(self) -> None:
+        text = "- Item one\n- Item two\n- Item three"
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 1
+        assert regions[0].type == "list"
+        assert regions[0].content.count("\n") == 2
+
+    def test_regions_section_break(self) -> None:
+        text = "Before\n---\nAfter"
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 3
+        assert regions[0].type == "paragraph"
+        assert regions[1].type == "section_break"
+        assert regions[2].type == "paragraph"
+
+    def test_regions_mixed_structure(self) -> None:
+        text = (
+            "# Chapter 1\n\n"
+            "This is a paragraph.\n\n"
+            "- List item 1\n"
+            "- List item 2\n\n"
+            "Another paragraph.\n\n"
+            "| A | B |\n"
+            "| 1 | 2 |\n"
+        )
+        regions = _parse_semantic_regions(text)
+        types = [r.type for r in regions]
+        assert types == ["heading", "paragraph", "list", "paragraph", "table"]
+
+    def test_regions_code_block_with_unmatched_fence(self) -> None:
+        text = "```\nunclosed\ncode"
+        regions = _parse_semantic_regions(text)
+        assert len(regions) == 1
+        assert regions[0].type == "code"
+        assert "unclosed" in regions[0].content
 
 
 @pytest.fixture

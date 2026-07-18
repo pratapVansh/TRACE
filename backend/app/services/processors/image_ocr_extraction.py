@@ -1,3 +1,5 @@
+import asyncio
+
 from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
@@ -41,12 +43,14 @@ class ImageOcrExtractionProcessor:
         )
 
         try:
-            content = self._storage.read(context.version.storage_uri)
+            content = await asyncio.to_thread(
+                self._storage.read, context.version.storage_uri,
+            )
         except StorageError as exc:
             raise ImageOcrExtractionError("Failed to read stored image") from exc
 
         try:
-            result = extract_image_text(content)
+            result = await asyncio.to_thread(extract_image_text, content)
         except ImageOcrExtractionError:
             raise
         except Exception as exc:

@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -58,14 +59,20 @@ async def list_document_chunks(
     chunk_repository: DocumentChunkRepository = Depends(get_chunk_repository),
     db: AsyncSession = Depends(get_db),
 ) -> ChunkListResponse:
-    chunks = await chunk_repository.get_chunks_by_document(
-        document_id,
-        embedding_status=embedding_status,
+    chunks, total = await asyncio.gather(
+        chunk_repository.get_chunks_by_document(
+            document_id,
+            embedding_status=embedding_status,
+            skip=skip,
+            limit=limit,
+        ),
+        chunk_repository.count_chunks_by_document(
+            document_id,
+            embedding_status=embedding_status,
+        ),
     )
-    total = len(chunks)
-    paged = chunks[skip:skip + limit]
     return ChunkListResponse(
-        items=[_chunk_to_response(c) for c in paged],
+        items=[_chunk_to_response(c) for c in chunks],
         **_build_pagination_meta(total, skip, limit),
     )
 

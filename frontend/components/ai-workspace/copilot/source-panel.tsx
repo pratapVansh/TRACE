@@ -4,9 +4,10 @@ import type { Citation } from "@/types/chat";
 
 type SourcePanelProps = {
   citations: Citation[];
+  onCitationClick?: (citation: Citation) => void;
 };
 
-export function SourcePanel({ citations }: SourcePanelProps) {
+export function SourcePanel({ citations, onCitationClick }: SourcePanelProps) {
   if (citations.length === 0) {
     return (
       <div className="industrial-card flex h-full flex-col p-5">
@@ -37,7 +38,16 @@ export function SourcePanel({ citations }: SourcePanelProps) {
         {citations.map((citation, i) => (
           <li
             key={i}
-            className="rounded-xl border border-border bg-[var(--surface-secondary)] p-3 sm:p-4"
+            className="cursor-pointer rounded-xl border border-border bg-[var(--surface-secondary)] p-3 transition-industrial hover:border-[var(--accent-steel)]/25 sm:p-4"
+            onClick={() => onCitationClick?.(citation)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onCitationClick?.(citation);
+              }
+            }}
           >
             <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -56,13 +66,22 @@ export function SourcePanel({ citations }: SourcePanelProps) {
                   </span>
                 )}
                 <span className="whitespace-nowrap rounded-md border border-[var(--accent-steel)]/15 bg-[var(--accent-steel)]/5 px-1.5 py-0.5 text-[11px] text-[var(--accent-steel-muted)]">
-                  {Math.round(citation.score * 100)}% match
+                  {Math.round(citation.similarity_score * 100)}% match
                 </span>
               </div>
             </div>
-            <p className="break-words text-xs leading-relaxed text-muted-foreground">
-              {citation.chunk_content}
-            </p>
+            {citation.highlighted_excerpt ? (
+              <div
+                className="break-words text-xs leading-relaxed text-muted-foreground [&>mark]:bg-[var(--accent-steel)]/20 [&>mark]:text-white [&>mark]:rounded-sm [&>mark]:px-0.5"
+                dangerouslySetInnerHTML={{
+                  __html: citation.highlighted_excerpt,
+                }}
+              />
+            ) : (
+              <p className="break-words text-xs leading-relaxed text-muted-foreground">
+                {citation.chunk_content}
+              </p>
+            )}
           </li>
         ))}
       </ul>

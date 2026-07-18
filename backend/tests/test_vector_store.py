@@ -155,7 +155,7 @@ class TestVectorOperations:
         store: QdrantVectorStore,
         mock_qdrant_client: MagicMock,
     ):
-        mock_qdrant_client.search.return_value = []
+        mock_qdrant_client.query_points.return_value = MagicMock(points=[])
         results = await store.search([0.1] * 384)
         assert results == []
 
@@ -164,10 +164,10 @@ class TestVectorOperations:
         store: QdrantVectorStore,
         mock_qdrant_client: MagicMock,
     ):
-        mock_qdrant_client.search.return_value = []
+        mock_qdrant_client.query_points.return_value = MagicMock(points=[])
         await store.search([0.1] * 384, top_k=10, offset=20)
-        mock_qdrant_client.search.assert_called_once()
-        _, kwargs = mock_qdrant_client.search.call_args
+        mock_qdrant_client.query_points.assert_called_once()
+        _, kwargs = mock_qdrant_client.query_points.call_args
         assert kwargs["offset"] == 20
         assert kwargs["limit"] == 10
 
@@ -251,7 +251,7 @@ class TestErrorHandling:
         store: QdrantVectorStore,
         mock_qdrant_client: MagicMock,
     ):
-        mock_qdrant_client.search.side_effect = RuntimeError("Qdrant error")
+        mock_qdrant_client.query_points.side_effect = RuntimeError("Qdrant error")
         with pytest.raises(VectorStoreOperationError):
             await store.search([0.1] * 384)
 

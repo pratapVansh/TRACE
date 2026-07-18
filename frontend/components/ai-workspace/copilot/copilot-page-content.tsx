@@ -1,17 +1,26 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Menu, Plus, Trash2, X } from "lucide-react";
 
 import {
   ConversationArea,
   type Message,
 } from "@/components/ai-workspace/copilot/conversation-area";
+import { ConversationSidebar } from "@/components/ai-workspace/copilot/conversation-sidebar";
 import { ReferencedDocuments } from "@/components/ai-workspace/copilot/referenced-documents";
 import { SourcePanel } from "@/components/ai-workspace/copilot/source-panel";
+import { SourcePreviewModal } from "@/components/ai-workspace/copilot/source-preview-modal";
 import { PageHeader } from "@/components/common/page-header";
-import { ChatTimeoutError, sendChatMessage } from "@/lib/api/chat";
-import type { Citation } from "@/types/chat";
+import {
+  ChatTimeoutError,
+  clearConversation,
+  fetchMessages,
+  listConversations,
+  renameConversation,
+  streamChatMessage,
+} from "@/lib/api/chat";
+import type { Citation, ConversationItem } from "@/types/chat";
 
 let messageCounter = 0;
 
@@ -27,6 +36,77 @@ export function CopilotPageContent() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [allSources, setAllSources] = useState<string[]>([]);
   const [lastCitations, setLastCitations] = useState<Citation[]>([]);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Persist active conversation across refresh
+  useEffect(() => {
+    if (conversationId) {
+      localStorage.setItem("lastConversationId", conversationId);
+    } else {
+      localStorage.removeItem("lastConversationId");
+    }
+  }, [conversationId]);
+
+  // Load conversation list on mount, restore last opened or most recent
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await listConversations();
+        if (cancelled) return;
+        setConversations(data.conversations);
+
+        const savedId = localStorage.getItem("lastConversationId");
+        const target = savedId
+          ? data.conversations.find((c) => c.id === savedId)
+          : null;
+
+        if (target) {
+          setConversationId(target.id);
+          const msgData = await fetchMessages(target.id);
+          if (cancelled) return;
+          setMessages(
+            msgData.messages.map((m) => ({
+              id: m.id,
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              citations: m.citations ?? undefined,
+            })),
+          );
+        } else if (data.conversations.length > 0) {
+          const latest = data.conversations[0];
+          setConversationId(latest.id);
+          const msgData = await fetchMessages(latest.id);
+          if (cancelled) return;
+          setMessages(
+            msgData.messages.map((m) => ({
+              id: m.id,
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              citations: m.citations ?? undefined,
+            })),
+          );
+        }
+      } catch {
+        // if loading fails, start fresh
+      } finally {
+        if (!cancelled) setLoadingConversations(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     const question = draft.trim();
@@ -39,58 +119,184 @@ export function CopilotPageContent() {
     ]);
     setIsWaiting(true);
 
+    const assistantId = nextId();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: "assistant", content: "" },
+    ]);
+    setStreamingMessageId(assistantId);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let accumulatedCitations: Citation[] = [];
+    let accumulatedSources: string[] = [];
+
     try {
-      const response = await sendChatMessage({
-        question,
-        conversation_id: conversationId,
-      });
-
-      setConversationId(response.conversation_id);
-      setLastCitations(response.citations);
-      setAllSources(response.sources);
-
-      setMessages((prev) => [
-        ...prev,
+      await streamChatMessage(
+        { question, conversation_id: conversationId },
         {
-          id: nextId(),
-          role: "assistant",
-          content: response.answer,
-          citations: response.citations,
+          onMeta(data) {
+            setConversationId(data.conversation_id);
+          },
+          onCitations(data) {
+            accumulatedCitations = data.citations;
+            accumulatedSources = data.sources;
+            setLastCitations(data.citations);
+            setAllSources(data.sources);
+          },
+          onToken(token) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, content: msg.content + token }
+                  : msg,
+              ),
+            );
+          },
+          onDone(data) {
+            const citations = accumulatedCitations;
+            const sources = accumulatedSources;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, citations, confidence: data.confidence, sources }
+                  : msg,
+              ),
+            );
+            setStreamingMessageId(null);
+            // Refresh conversation list to update message_count
+            listConversations().then((data) => {
+              setConversations(data.conversations);
+            }).catch(() => {});
+          },
+          onError(message) {
+            setStreamingMessageId(null);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, content: `Error: ${message}` }
+                  : msg,
+              ),
+            );
+          },
         },
-      ]);
-    } catch (err) {
+        controller.signal,
+      );
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       let message: string;
       if (err instanceof ChatTimeoutError) {
         message =
           "The request timed out. The AI service may be busy or unavailable — please try again.";
-      } else if (
-        err instanceof Error &&
-        err.message === "INSUFFICIENT_CONTEXT"
-      ) {
-        message =
-          "I could not find this information in the uploaded documents.";
       } else {
         message = "Sorry, a server error occurred. Please try again.";
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextId(),
-          role: "assistant",
-          content: message,
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantId
+            ? { ...msg, content: message }
+            : msg,
+        ),
+      );
     } finally {
       setIsWaiting(false);
+      abortRef.current = null;
     }
   }, [draft, isWaiting, conversationId]);
 
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.role === "assistant" && msg.content === ""
+          ? { ...msg, content: "Response cancelled." }
+          : msg,
+      ),
+    );
+    setIsWaiting(false);
+  }, []);
+
+  async function handleDeleteConversation(convId: string) {
+    try {
+      setDeleteConfirmId(null);
+      await clearConversation(convId);
+      if (convId === conversationId) {
+        setMessages([]);
+        setConversationId(null);
+        setAllSources([]);
+        setLastCitations([]);
+      }
+      const data = await listConversations();
+      setConversations(data.conversations);
+      if (data.conversations.length > 0 && convId === conversationId) {
+        const latest = data.conversations[0];
+        setConversationId(latest.id);
+        const msgData = await fetchMessages(latest.id);
+        setMessages(
+          msgData.messages.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            citations: m.citations ?? undefined,
+          })),
+        );
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  async function handleSearchConversations(query: string) {
+    setSearchQuery(query);
+    try {
+      const data = await listConversations({ search: query || undefined });
+      setConversations(data.conversations);
+    } catch {
+      // silently fail
+    }
+  }
+
+  async function handleRenameConversation(convId: string, title: string) {
+    try {
+      await renameConversation(convId, title);
+      setRenameId(null);
+      setRenameValue("");
+      const data = await listConversations({ search: searchQuery || undefined });
+      setConversations(data.conversations);
+    } catch {
+      // silently fail
+    }
+  }
+
   function handleNewConversation() {
+    handleCancel();
     setMessages([]);
     setConversationId(null);
     setAllSources([]);
     setLastCitations([]);
     setDraft("");
+  }
+
+  async function handleSelectConversation(convId: string) {
+    if (convId === conversationId || isWaiting) return;
+    handleCancel();
+    setConversationId(convId);
+    setMessages([]);
+    try {
+      const data = await fetchMessages(convId);
+      setMessages(
+        data.messages.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          citations: m.citations ?? undefined,
+        })),
+      );
+    } catch {
+      setMessages([]);
+    }
   }
 
   return (
@@ -109,28 +315,152 @@ export function CopilotPageContent() {
               <Plus className="size-3.5" strokeWidth={1.75} />
               New conversation
             </button>
-            {conversationId && (
+            {conversationId && deleteConfirmId === null && (
               <button
                 type="button"
-                onClick={async () => {
-                  const { clearAllConversations } = await import(
-                    "@/lib/api/chat"
-                  );
-                  await clearAllConversations();
-                  handleNewConversation();
-                }}
+                onClick={() => setDeleteConfirmId("__all__")}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--danger)]/30 hover:text-[var(--danger)]"
               >
                 <Trash2 className="size-3.5" strokeWidth={1.75} />
                 Clear chat
               </button>
             )}
+            {deleteConfirmId === "__all__" && (
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-1.5">
+                <span className="text-xs text-[var(--danger)]">Delete all conversations?</span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const { clearAllConversations } = await import("@/lib/api/chat");
+                    await clearAllConversations();
+                    setDeleteConfirmId(null);
+                    handleNewConversation();
+                  }}
+                  className="flex size-5 items-center justify-center rounded text-[var(--danger)] hover:text-red-300"
+                >
+                  <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-white"
+                >
+                  <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
           </div>
         }
       />
 
+      {/* Mobile sidebar toggle */}
+      <div className="flex xl:hidden items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMobileSidebarOpen(true)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-white"
+        >
+          <Menu className="size-3.5" strokeWidth={1.75} />
+          Conversations
+        </button>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-[var(--surface)] border-r border-border shadow-xl overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Conversations
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-white"
+              >
+                <X className="size-4" strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="p-3">
+              <ConversationSidebar
+                conversations={conversations}
+                activeConversationId={conversationId}
+                loading={loadingConversations}
+                onSelectConversation={(id) => {
+                  handleSelectConversation(id);
+                  setMobileSidebarOpen(false);
+                }}
+                onNewConversation={() => {
+                  handleNewConversation();
+                  setMobileSidebarOpen(false);
+                }}
+                onDeleteConversation={handleDeleteConversation}
+                onSearch={handleSearchConversations}
+                renameId={renameId}
+                renameValue={renameValue}
+                onRenameStart={(id, title) => {
+                  setRenameId(id);
+                  setRenameValue(title);
+                }}
+                onRenameChange={setRenameValue}
+                onRenameConfirm={() => {
+                  if (renameId && renameValue.trim()) {
+                    handleRenameConversation(renameId, renameValue.trim());
+                  }
+                }}
+                onRenameCancel={() => {
+                  setRenameId(null);
+                  setRenameValue("");
+                }}
+                deleteConfirmId={deleteConfirmId}
+                onDeleteRequest={setDeleteConfirmId}
+                onDeleteCancel={() => setDeleteConfirmId(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-6 xl:grid-cols-12">
-        <div className="flex flex-col gap-6 xl:col-span-8">
+        {/* Sidebar — hidden on smaller screens */}
+        <div className="hidden xl:flex xl:flex-col xl:col-span-3">
+          <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-3">
+            <ConversationSidebar
+              conversations={conversations}
+              activeConversationId={conversationId}
+              loading={loadingConversations}
+              onSelectConversation={handleSelectConversation}
+              onNewConversation={handleNewConversation}
+              onDeleteConversation={handleDeleteConversation}
+              onSearch={handleSearchConversations}
+              renameId={renameId}
+              renameValue={renameValue}
+              onRenameStart={(id, title) => {
+                setRenameId(id);
+                setRenameValue(title);
+              }}
+              onRenameChange={setRenameValue}
+              onRenameConfirm={() => {
+                if (renameId && renameValue.trim()) {
+                  handleRenameConversation(renameId, renameValue.trim());
+                }
+              }}
+              onRenameCancel={() => {
+                setRenameId(null);
+                setRenameValue("");
+              }}
+              deleteConfirmId={deleteConfirmId}
+              onDeleteRequest={setDeleteConfirmId}
+              onDeleteCancel={() => setDeleteConfirmId(null)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 xl:col-span-6">
           <div className="min-h-[600px]">
             <ConversationArea
               messages={messages}
@@ -138,19 +468,31 @@ export function CopilotPageContent() {
               draft={draft}
               onDraftChange={setDraft}
               onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              onCitationClick={setSelectedCitation}
+              streamingMessageId={streamingMessageId}
             />
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 xl:col-span-4">
+        <div className="flex flex-col gap-6 xl:col-span-3">
           <div className="max-h-[300px] overflow-y-auto">
             <ReferencedDocuments sources={allSources} />
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SourcePanel citations={lastCitations} />
+            <SourcePanel
+              citations={lastCitations}
+              onCitationClick={setSelectedCitation}
+            />
           </div>
         </div>
       </div>
+
+      <SourcePreviewModal
+        citation={selectedCitation}
+        open={selectedCitation !== null}
+        onClose={() => setSelectedCitation(null)}
+      />
     </div>
   );
 }

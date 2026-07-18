@@ -1,11 +1,22 @@
+from collections import OrderedDict
 from datetime import datetime
 
-from qdrant_client.models import FieldCondition, Filter, MatchValue, Range
-
+from app.core.config import settings
 from app.core.logging import logger
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk, RetrievalResult
 from app.services.embedding_service import _encode_batch_async
 from app.services.vector_store import VectorStore, VectorStoreOperationError
+
+# Lazy import for qdrant types that may not be available in all environments
+try:
+    from qdrant_client.models import FieldCondition, Filter, MatchValue, Range  # noqa: PLC0415
+    _QD_MODELS_AVAILABLE = True
+except ImportError:
+    FieldCondition = object  # type: ignore[assignment,misc]
+    Filter = object
+    MatchValue = object
+    Range = object
+    _QD_MODELS_AVAILABLE = False
 
 
 def _build_qdrant_filter(filters: RetrievalFilter) -> Filter | None:
@@ -56,9 +67,10 @@ class RetrieverService:
     async def retrieve(
         self,
         query: str,
-        top_k: int = 10,
-        similarity_threshold: float = 0.0,
+        top_k: int = settings.retrieval_top_k,
+        similarity_threshold: float = settings.retrieval_similarity_threshold,
         filters: RetrievalFilter | None = None,
+        dedup_documents: bool = settings.retrieval_dedup_documents,
     ) -> RetrievalResult:
         query_vector = (await _encode_batch_async([query]))[0]
 
@@ -78,6 +90,7 @@ class RetrieverService:
 
         chunks = [
             RetrievedChunk(
+                chunk_id=r.get("id") or r["payload"].get("chunk_id", ""),
                 score=r["score"],
                 document_id=r["payload"].get("document_id", ""),
                 document_name=r["payload"].get("filename", ""),
@@ -89,11 +102,20 @@ class RetrieverService:
             for r in filtered
         ]
 
+        if dedup_documents:
+            seen: dict[str, RetrievedChunk] = OrderedDict()
+            for chunk in chunks:
+                doc_id = chunk.document_id
+                if doc_id not in seen or chunk.score > seen[doc_id].score:
+                    seen[doc_id] = chunk
+            chunks = list(seen.values())
+
         logger.info(
-            "Retrieved %d chunks (requested top_k=%d, threshold=%.2f)",
+            "Retrieved %d chunks (requested top_k=%d, threshold=%.2f, dedup=%s)",
             len(chunks),
             top_k,
             similarity_threshold,
+            dedup_documents,
         )
 
         return RetrievalResult(results=chunks, total=len(chunks))

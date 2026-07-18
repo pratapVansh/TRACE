@@ -5,6 +5,7 @@ from groq import BadRequestError as GroqBadRequestError
 from groq import RateLimitError as GroqRateLimitError
 from groq import APIConnectionError as GroqAPIConnectionError
 from groq import AuthenticationError as GroqAuthenticationError
+from groq import APIStatusError
 
 from app.ai.base import (
     LLMProvider,
@@ -14,6 +15,28 @@ from app.ai.base import (
 )
 from app.core.config import settings
 from app.core.logging import logger
+from app.core.retry import RetryPolicy, async_retry
+
+
+def _is_groq_retryable(exc: Exception) -> bool:
+    if isinstance(exc, GroqBadRequestError):
+        return False
+    if isinstance(exc, GroqAuthenticationError):
+        return False
+    if isinstance(exc, GroqRateLimitError):
+        return True
+    if isinstance(exc, GroqAPIConnectionError):
+        return True
+    if isinstance(exc, APIStatusError):
+        return exc.status_code is None or exc.status_code >= 500 or exc.status_code == 429
+    return True
+
+
+_groq_retry_policy = RetryPolicy(
+    max_retries=settings.groq_max_retries,
+    base_delay_seconds=1.0,
+    max_delay_seconds=30.0,
+)
 
 
 class GroqProvider(LLMProvider):
@@ -42,10 +65,16 @@ class GroqProvider(LLMProvider):
         return self._model
 
     async def initialize(self) -> None:
-        self._client = AsyncGroq(api_key=self._api_key)
+        self._client = AsyncGroq(
+            api_key=self._api_key,
+            timeout=settings.groq_timeout_seconds,
+            max_retries=0,
+        )
         logger.info(
-            "GroqProvider created — model=%s",
+            "GroqProvider created — model=%s, timeout=%ds, max_retries=%d",
             self._model,
+            settings.groq_timeout_seconds,
+            settings.groq_max_retries,
         )
 
         try:
@@ -118,11 +147,20 @@ class GroqProvider(LLMProvider):
         messages.append({"role": "user", "content": prompt})
 
         model = kwargs.pop("model", self._model)
-        try:
-            response = await self._client.chat.completions.create(
+
+        async def _do_generate() -> str:
+            return await self._client.chat.completions.create(
                 model=model,
                 messages=messages,
                 **kwargs,
+            )
+
+        try:
+            response = await async_retry(
+                _do_generate,
+                policy=_groq_retry_policy,
+                is_retryable=_is_groq_retryable,
+                operation_name=f"Groq generate ({model})",
             )
         except GroqRateLimitError as exc:
             logger.warning("Rate limit exceeded for model=%s: %s", model, exc)
@@ -159,12 +197,31 @@ class GroqProvider(LLMProvider):
 
         model = kwargs.pop("model", self._model)
         try:
-            stream = await self._client.chat.completions.create(
-                model=model,
-                messages=messages,
-                stream=True,
-                **kwargs,
+            stream = await async_retry(
+                lambda: self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    **kwargs,
+                ),
+                policy=_groq_retry_policy,
+                is_retryable=_is_groq_retryable,
+                operation_name=f"Groq stream ({model})",
             )
+        except GroqRateLimitError as exc:
+            logger.warning("Rate limit exceeded during stream for model=%s: %s", model, exc)
+            raise LLMGenerationError(f"Groq rate limit exceeded: {exc}") from exc
+        except GroqBadRequestError as exc:
+            logger.error("Bad request during stream for model=%s: %s", model, exc)
+            raise LLMGenerationError(f"Groq bad request: {exc}") from exc
+        except GroqAPIConnectionError as exc:
+            logger.error("Connection lost during stream for model=%s: %s", model, exc)
+            raise LLMConnectionError(f"Groq connection lost: {exc}") from exc
+        except Exception as exc:
+            logger.exception("Unexpected error during streaming for model=%s", model)
+            raise LLMGenerationError(f"Groq streaming failed: {exc}") from exc
+
+        try:
             async for chunk in stream:
                 delta = chunk.choices[0].delta
                 token = getattr(delta, "content", None)

@@ -60,3 +60,44 @@ class LLMProvider(ABC):
     @abstractmethod
     def model_name(self) -> str:
         """Return the model identifier being used."""
+
+
+_STUB_RESPONSE = (
+    "I'm running in offline mode — no LLM provider is configured. "
+    "To enable AI responses, set a GROQ_API_KEY in your environment. "
+    "I've retrieved the relevant documents from your knowledge base."
+)
+
+
+class NullLLMProvider(LLMProvider):
+    """Stub provider for development when no real LLM is configured."""
+
+    async def initialize(self) -> None:
+        pass
+
+    async def health_check(self) -> dict:
+        return {"provider": "null", "model": "none", "status": "offline"}
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        **kwargs,
+    ) -> str:
+        return _STUB_RESPONSE
+
+    async def stream_generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        **kwargs,
+    ) -> AsyncGenerator[str, None]:
+        yield _STUB_RESPONSE
+
+    @property
+    def provider_name(self) -> str:
+        return "null"
+
+    @property
+    def model_name(self) -> str:
+        return "none"
