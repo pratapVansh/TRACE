@@ -20,6 +20,9 @@ class EntityType(str, Enum):
     FAILURE = "Failure"
     CAUSE = "Cause"
     OPERATOR = "Operator"
+    USER = "User"
+    DEPARTMENT = "Department"
+    ROLE = "Role"
 
     @classmethod
     def _missing_(cls, value: object) -> "EntityType | None":

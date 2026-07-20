@@ -138,11 +138,31 @@ class ContextMerger:
                     if fact not in matched_facts:
                         matched_facts.append(fact)
 
-            # M30: compute combined score
+            # Deduplication: if an item with very similar content or exact same doc+page exists, skip
+            is_duplicate = False
+            for existing in items:
+                if existing.document_name == doc_name and existing.page_number == chunk.page_number:
+                    # Same page, see if content overlaps significantly
+                    if len(set(content_lower.split()) & set(existing.content.lower().split())) > 20:
+                        is_duplicate = True
+                        # Merge graph facts into existing
+                        for f in matched_facts:
+                            if f not in existing.graph_facts:
+                                existing.graph_facts.append(f)
+                        # Boost score slightly for duplicate confirmation
+                        existing.score = min(existing.score * 1.05, 1.0)
+                        break
+            if is_duplicate:
+                continue
+
+            # M30: compute combined score with graph boost
             base_score = chunk.score
             fact_confidences = [f.confidence for f in matched_facts if f.confidence is not None]
             max_fact_conf = max(fact_confidences) if fact_confidences else 0.0
-            normalized_score = max(base_score, max_fact_conf * 0.8)
+            
+            # Boost score based on number of connected facts (denser context = higher rank)
+            fact_boost = min(len(matched_facts) * 0.02, 0.1)
+            normalized_score = max(base_score, max_fact_conf * 0.8) + fact_boost
 
             items.append(UnifiedContextItem(
                 content=chunk.content,

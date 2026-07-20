@@ -114,9 +114,6 @@ export function GraphToolbar({
                     {entity.type}
                   </span>
                   <span className="truncate">{entity.name}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                    {(entity.confidence * 100).toFixed(0)}%
-                  </span>
                 </button>
               ))
             ) : noResults ? (

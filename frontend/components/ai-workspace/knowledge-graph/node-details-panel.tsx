@@ -38,15 +38,6 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
 
         <div>
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
-            Confidence
-          </dt>
-          <dd className="mt-0.5 text-white">
-            {(node.confidence * 100).toFixed(0)}%
-          </dd>
-        </div>
-
-        <div>
-          <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Source Document
           </dt>
           <dd className="mt-0.5 text-white/70 break-words">
@@ -122,15 +113,6 @@ function EdgeDetails({ edge }: { edge: SelectedEdge }) {
           </dt>
           <dd className="mt-0.5 font-mono text-xs text-white/70 break-all">
             {edge.to}
-          </dd>
-        </div>
-
-        <div>
-          <dt className="text-muted-foreground text-xs uppercase tracking-wider">
-            Confidence
-          </dt>
-          <dd className="mt-0.5 text-white">
-            {(edge.confidence * 100).toFixed(0)}%
           </dd>
         </div>
 

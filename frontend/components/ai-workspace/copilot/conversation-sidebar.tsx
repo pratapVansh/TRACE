@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Check, MessageSquare, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Archive, ArchiveRestore, Check, MessageSquare, Pencil, Plus, Search, Trash2, X, Bookmark, Pin } from "lucide-react";
 
 import type { ConversationItem } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,10 @@ interface ConversationSidebarProps {
   deleteConfirmId?: string | null;
   onDeleteRequest?: (id: string | null) => void;
   onDeleteCancel?: () => void;
+  onArchiveConversation?: (id: string) => void;
+  onRestoreConversation?: (id: string) => void;
+  archivedConversations?: ConversationItem[];
+  onShowArchived?: () => void;
 }
 
 function formatDate(ts: number): string {
@@ -73,6 +77,10 @@ export function ConversationSidebar({
   deleteConfirmId,
   onDeleteRequest,
   onDeleteCancel,
+  onArchiveConversation,
+  onRestoreConversation,
+  archivedConversations,
+  onShowArchived,
 }: ConversationSidebarProps) {
   const [searchLocal, setSearchLocal] = useState("");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -261,6 +269,41 @@ export function ConversationSidebar({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Handle Bookmark
+                        }}
+                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-blue-400"
+                        title="Bookmark conversation"
+                      >
+                        <Bookmark className="size-3" strokeWidth={1.75} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle Pin
+                        }}
+                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
+                        title="Pin conversation"
+                      >
+                        <Pin className="size-3" strokeWidth={1.75} />
+                      </button>
+                      {onArchiveConversation && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onArchiveConversation(conv.id);
+                          }}
+                          className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-amber-400"
+                          title="Archive conversation"
+                        >
+                          <Archive className="size-3" strokeWidth={1.75} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           onDeleteRequest?.(conv.id);
                         }}
                         className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-[var(--danger)]"
@@ -276,6 +319,20 @@ export function ConversationSidebar({
           </ul>
         )}
       </div>
+
+      {/* Archived section */}
+      {onShowArchived && (archivedConversations ?? []).length > 0 && (
+        <div className="border-t border-border pt-2 mt-2">
+          <button
+            type="button"
+            onClick={onShowArchived}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-[var(--surface-tertiary)] hover:text-white transition-industrial"
+          >
+            <ArchiveRestore className="size-3.5" strokeWidth={1.75} />
+            <span>Archived ({(archivedConversations ?? []).length})</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

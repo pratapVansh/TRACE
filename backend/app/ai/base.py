@@ -36,9 +36,18 @@ class LLMProvider(ABC):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> str:
-        """Generate a completion for the given prompt."""
+        """Generate a completion for the given prompt.
+
+        Args:
+            prompt: The current user prompt.
+            system_prompt: Optional system-level instructions.
+            history: Previous conversation turns as
+                     ``[{"role": "user"|"assistant", "content": str}, ...]``.
+                     Injected between system and current user message.
+        """
         ...
 
     @abstractmethod
@@ -46,9 +55,18 @@ class LLMProvider(ABC):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> AsyncGenerator[str, None]:
-        """Generate a streaming completion. Yields tokens as they arrive."""
+        """Generate a streaming completion. Yields tokens as they arrive.
+
+        Args:
+            prompt: The current user prompt.
+            system_prompt: Optional system-level instructions.
+            history: Previous conversation turns as
+                     ``[{"role": "user"|"assistant", "content": str}, ...]``.
+                     Injected between system and current user message.
+        """
         ...
 
     @property
@@ -82,6 +100,7 @@ class NullLLMProvider(LLMProvider):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> str:
         return _STUB_RESPONSE
@@ -90,6 +109,7 @@ class NullLLMProvider(LLMProvider):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> AsyncGenerator[str, None]:
         yield _STUB_RESPONSE

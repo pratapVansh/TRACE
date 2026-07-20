@@ -58,6 +58,7 @@ class RagService:
         similarity_threshold: float = settings.retrieval_similarity_threshold,
         filters: RetrievalFilter | None = None,
         history: list[dict] | None = None,
+        additional_system_context: str | None = None,
     ) -> RagQueryResponse:
         retrieval = await self._retriever.retrieve(
             query=question,
@@ -78,12 +79,14 @@ class RagService:
 
         prompt = self._prompt_builder.build_prompt(
             question, retrieval.results, history=history,
+            additional_system_context=additional_system_context,
         )
 
         try:
             answer = await self._llm.generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
+                history=prompt.history,
                 temperature=0.1,
                 max_tokens=1024,
             )
@@ -125,6 +128,7 @@ class RagService:
         similarity_threshold: float = settings.retrieval_similarity_threshold,
         filters: RetrievalFilter | None = None,
         history: list[dict] | None = None,
+        additional_system_context: str | None = None,
     ) -> AsyncGenerator[str, None]:
         retrieval = await self._retriever.retrieve(
             query=question,
@@ -155,6 +159,7 @@ class RagService:
 
         prompt = self._prompt_builder.build_prompt(
             question, retrieval.results, history=history,
+            additional_system_context=additional_system_context,
         )
 
         yield f"event: citations\ndata: {json.dumps({'citations': [c.model_dump() for c in citations], 'sources': sources})}\n\n"
@@ -163,6 +168,7 @@ class RagService:
             async for token in self._llm.stream_generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
+                history=prompt.history,
                 temperature=0.1,
                 max_tokens=1024,
             ):
@@ -282,6 +288,7 @@ class GraphRagService:
         similarity_threshold: float = settings.retrieval_similarity_threshold,
         filters: RetrievalFilter | None = None,
         history: list[dict] | None = None,
+        additional_system_context: str | None = None,
         vector_top_k: int = 10,
         graph_top_k: int = 5,
     ) -> GraphRagResponse:
@@ -332,12 +339,14 @@ class GraphRagService:
 
         prompt = self._prompt_builder.build_prompt(
             question, chunks, graph_facts=graph_facts if graph_facts else None, history=history,
+            additional_system_context=additional_system_context,
         )
 
         try:
             answer = await self._llm.generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
+                history=prompt.history,
                 temperature=0.1,
                 max_tokens=1024,
             )
@@ -392,6 +401,7 @@ class GraphRagService:
         similarity_threshold: float = settings.retrieval_similarity_threshold,
         filters: RetrievalFilter | None = None,
         history: list[dict] | None = None,
+        additional_system_context: str | None = None,
         vector_top_k: int = 10,
         graph_top_k: int = 5,
     ) -> AsyncGenerator[str, None]:
@@ -444,6 +454,7 @@ class GraphRagService:
 
         prompt = self._prompt_builder.build_prompt(
             question, chunks, graph_facts=graph_facts if graph_facts else None, history=history,
+            additional_system_context=additional_system_context,
         )
 
         yield f"event: citations\ndata: {json.dumps({'citations': [c.model_dump() for c in citations], 'sources': sources})}\n\n"
@@ -452,6 +463,7 @@ class GraphRagService:
             async for token in self._llm.stream_generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
+                history=prompt.history,
                 temperature=0.1,
                 max_tokens=1024,
             ):

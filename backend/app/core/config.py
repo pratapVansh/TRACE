@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database
-    database_url: str = "postgresql+asyncpg://trace:trace@localhost:5432/trace"
-    database_url_sync: str = "postgresql+psycopg2://trace:trace@localhost:5432/trace"
+    database_url: str = ""
+    database_url_sync: str = ""
 
     # Server
     backend_host: str = "0.0.0.0"
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:3000"
 
     # JWT (Milestone 2+)
-    jwt_secret_key: str = "change-me-in-production"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 
@@ -95,6 +95,20 @@ class Settings(BaseSettings):
     neo4j_connection_timeout_seconds: int = 30
     neo4j_max_connection_lifetime_seconds: int = 3600
 
+    # Observability — OpenTelemetry (optional)
+    otel_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = ""
+
+    # Filesystem workspace sandbox
+    workspace_root: str = ""
+
+    @property
+    def workspace_root_path(self) -> Path:
+        root = Path(self.workspace_root) if self.workspace_root else (ROOT_DIR / "workspace")
+        root = root.resolve()
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
     # Background document processing queue
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0
@@ -124,5 +138,15 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         return self.max_upload_size_mb * 1024 * 1024
 
+
+    @property
+    def get_database_url(self) -> str:
+        from app.core.vault import vault_client
+        return vault_client.get_secret("database/creds/trace", "url", self.database_url)
+
+    @property
+    def get_jwt_secret_key(self) -> str:
+        from app.core.vault import vault_client
+        return vault_client.get_secret("secret/data/trace", "jwt_secret_key", self.jwt_secret_key)
 
 settings = Settings()

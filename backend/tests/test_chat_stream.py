@@ -215,9 +215,10 @@ class TestChatServiceChatStream:
             "11111111-1111-1111-1111-111111111111",
             "00000000-0000-0000-0000-000000000001",
         )
+        conv.user_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
         repo.create_conversation.return_value = conv
         repo.get_messages.return_value = [
-            _make_msg("m1", str(conv.id), "user", "What is P-101?"),
+            _make_msg("m1", str(conv.id), "user", "What is the pump model?"),
             _make_msg("m2", str(conv.id), "assistant", "Hello world"),
         ]
         repo.add_message.return_value = AsyncMock(spec=MessageModel)
@@ -225,7 +226,9 @@ class TestChatServiceChatStream:
         repo.add_message.return_value.role = "assistant"
         repo.add_message.return_value.content = "Hello world"
 
-        svc = ChatService(rag=rag, conversation_repository=repo)
+        db_session = AsyncMock()
+        db_session.commit = AsyncMock()
+        svc = ChatService(rag=rag, conversation_repository=repo, session=db_session)
 
         events = []
         async for event in svc.chat_stream(

@@ -2,11 +2,11 @@
 
 import asyncio
 from collections.abc import Sequence
+from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from uuid import UUID
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -15,12 +15,13 @@ from app.models.document_chunk import DocumentChunk
 from app.repositories.document_chunk_repository import DocumentChunkRepository
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=1)
-_MODEL: SentenceTransformer | None = None
+_MODEL: Any = None
 
 
-def _get_model() -> SentenceTransformer:
+def _get_model() -> Any:
     global _MODEL
     if _MODEL is None:
+        from sentence_transformers import SentenceTransformer
         model_name = settings.embedding_model_name
         logger.info("Loading embedding model: %s", model_name)
         _MODEL = SentenceTransformer(model_name)
@@ -34,8 +35,40 @@ def _encode_batch(texts: list[str]) -> list[list[float]]:
 
 
 async def _encode_batch_async(texts: list[str]) -> list[list[float]]:
+    from app.core.cache import cache_manager
+    import hashlib
+    
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(_EXECUTOR, _encode_batch, texts)
+    
+    # Check cache first
+    results = [None] * len(texts)
+    
+    unique_texts = {}
+    
+    for i, text in enumerate(texts):
+        key = f"embed:{hashlib.md5(text.encode('utf-8')).hexdigest()}"
+        cached = await cache_manager.get(key)
+        if cached:
+            results[i] = cached
+        else:
+            if text not in unique_texts:
+                unique_texts[text] = []
+            unique_texts[text].append(i)
+            
+    hits = len(texts) - sum(len(indices) for indices in unique_texts.values())
+    misses = len(texts) - hits
+    logger.info("Embedding cache metrics — hits=%d misses=%d", hits, misses)
+            
+    if unique_texts:
+        uncached_texts = list(unique_texts.keys())
+        new_embeddings = await loop.run_in_executor(_EXECUTOR, _encode_batch, uncached_texts)
+        for text, emb in zip(uncached_texts, new_embeddings):
+            key = f"embed:{hashlib.md5(text.encode('utf-8')).hexdigest()}"
+            await cache_manager.set(key, emb, ttl=86400) # cache for 1 day
+            for idx in unique_texts[text]:
+                results[idx] = emb
+            
+    return results
 
 
 class EmbeddingService:

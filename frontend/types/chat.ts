@@ -20,6 +20,7 @@ export interface ChatResponse {
 export interface ChatRequest {
   question: string;
   conversation_id?: string | null;
+  session_id?: string | null;
   top_k?: number;
   similarity_threshold?: number;
 }
@@ -30,6 +31,7 @@ export interface ConversationItem {
   message_count: number;
   created_at: number;
   updated_at: number;
+  status?: string;
 }
 
 export interface ConversationsListResponse {
@@ -42,6 +44,8 @@ export interface MessageItem {
   role: string;
   content: string;
   citations: Citation[] | null;
+  tool_outputs?: Record<string, unknown>[] | null;
+  sources?: string[];
   created_at: number;
 }
 
@@ -49,6 +53,49 @@ export interface ConversationMessagesResponse {
   messages: MessageItem[];
   conversation_id: string;
   title: string | null;
+}
+
+// ── Archive ────────────────────────────────────────────────────
+
+export interface ArchiveConversationResponse {
+  id: string;
+  status: string;
+}
+
+export interface ArchiveListResponse {
+  conversations: ConversationItem[];
+  total: number;
+}
+
+// ── Snapshots ──────────────────────────────────────────────────
+
+export interface SnapshotData {
+  working_memory?: Record<string, unknown> | null;
+  tool_outputs?: Record<string, unknown>[] | null;
+  agent_results?: Record<string, unknown>[] | null;
+  timeline?: Record<string, unknown>[] | null;
+}
+
+export interface SaveSnapshotRequest {
+  turn_index: number;
+  role: string;
+  data: SnapshotData;
+}
+
+export interface SnapshotResponse {
+  id: string;
+  conversation_id: string;
+  turn_index: number;
+  role: string;
+  working_memory: Record<string, unknown> | null;
+  tool_outputs: Record<string, unknown>[] | null;
+  agent_results: Record<string, unknown>[] | null;
+  timeline: Record<string, unknown>[] | null;
+  created_at: number;
+}
+
+export interface SnapshotListResponse {
+  snapshots: SnapshotResponse[];
 }
 
 export interface SseCallbacks {

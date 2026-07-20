@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.core.logging import logger
 
 engine = create_async_engine(
-    settings.database_url,
+    settings.get_database_url,
     echo=settings.debug,
     pool_pre_ping=True,
     pool_size=10,

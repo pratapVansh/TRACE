@@ -14,19 +14,97 @@ import { SourcePreviewModal } from "@/components/ai-workspace/copilot/source-pre
 import { PageHeader } from "@/components/common/page-header";
 import {
   ChatTimeoutError,
+  archiveConversation,
   clearConversation,
+  ensureSessionId,
   fetchMessages,
+  fetchSessionConversation,
+  listArchivedConversations,
   listConversations,
   renameConversation,
+  restoreConversation,
+  rotateSessionId,
+  saveConversationSnapshot,
   streamChatMessage,
 } from "@/lib/api/chat";
 import type { Citation, ConversationItem } from "@/types/chat";
+
+const STORAGE_KEY = "lastConversationId";
+
+function getStoredConversationId(): string | null {
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+function setStoredConversationId(id: string | null) {
+  if (id) {
+    localStorage.setItem(STORAGE_KEY, id);
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function getUrlConversationId(): string | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("conv");
+}
+
+function setUrlConversationId(id: string | null) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (id) {
+    url.searchParams.set("conv", id);
+  } else {
+    url.searchParams.delete("conv");
+  }
+  window.history.replaceState(null, "", url.toString());
+}
 
 let messageCounter = 0;
 
 function nextId(): string {
   messageCounter += 1;
   return `msg-${Date.now()}-${messageCounter}`;
+}
+
+function restoreConversationState(
+  msgData: import("@/types/chat").ConversationMessagesResponse,
+  setters: {
+    setMessages: (msgs: import("@/components/ai-workspace/copilot/conversation-area").Message[]) => void;
+    setAllSources: (sources: string[]) => void;
+    setLastCitations: (citations: import("@/types/chat").Citation[]) => void;
+    turnIndexRef: { current: number };
+  },
+) {
+  const messages = msgData.messages.map((m) => ({
+    id: m.id,
+    role: m.role as "user" | "assistant",
+    content: m.content,
+    citations: m.citations ?? undefined,
+    sources: m.sources ?? undefined,
+  }));
+
+  setters.setMessages(messages);
+
+  const allDocNames = new Set<string>();
+  let lastAssistantCitations: import("@/types/chat").Citation[] = [];
+  let assistantCount = 0;
+
+  for (const m of msgData.messages) {
+    if (m.role === "assistant") {
+      assistantCount += 1;
+      if (m.citations && m.citations.length > 0) {
+        lastAssistantCitations = m.citations as import("@/types/chat").Citation[];
+        for (const c of m.citations) {
+          if (c.document_name) allDocNames.add(c.document_name);
+        }
+      }
+    }
+  }
+
+  setters.setAllSources(Array.from(allDocNames));
+  setters.setLastCitations(lastAssistantCitations);
+  setters.turnIndexRef.current = assistantCount;
 }
 
 export function CopilotPageContent() {
@@ -45,28 +123,55 @@ export function CopilotPageContent() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [archivedConversations, setArchivedConversations] = useState<ConversationItem[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [restoreNotice, setRestoreNotice] = useState<"not_found" | "incomplete" | null>(null);
+  const turnIndexRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const hydratedRef = useRef(false);
 
-  // Persist active conversation across refresh
+  // Persist conversation ID to localStorage + URL whenever it changes,
+  // but skip the initial hydration render to avoid clobbering saved IDs.
   useEffect(() => {
-    if (conversationId) {
-      localStorage.setItem("lastConversationId", conversationId);
-    } else {
-      localStorage.removeItem("lastConversationId");
-    }
+    if (!hydratedRef.current) return;
+    setStoredConversationId(conversationId);
+    setUrlConversationId(conversationId);
   }, [conversationId]);
-
-  // Load conversation list on mount, restore last opened or most recent
+  // Load conversation list on mount, restore by session_id or last saved
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
+        // Priority 1: restore via persistent session cookie
+        const sessionId = ensureSessionId();
+        const sessionConv = await fetchSessionConversation(sessionId);
+        if (!cancelled && sessionConv && sessionConv.messages.length > 0) {
+          setConversationId(sessionConv.conversation_id);
+          restoreConversationState(sessionConv, {
+            setMessages, setAllSources, setLastCitations, turnIndexRef,
+          });
+          const lastMsg = sessionConv.messages[sessionConv.messages.length - 1];
+          const endsAbruptly = lastMsg.content.endsWith("...") || lastMsg.content.endsWith("…");
+          if (lastMsg.role === "assistant" && endsAbruptly) {
+            setRestoreNotice("incomplete");
+          }
+          // still fetch the conversation list for the sidebar
+          listConversations().then((d) => {
+            if (!cancelled) setConversations(d.conversations);
+          }).catch(() => {});
+          return;
+        }
+
+        // Priority 2: restore via saved conversationId (legacy)
         const data = await listConversations();
         if (cancelled) return;
         setConversations(data.conversations);
 
-        const savedId = localStorage.getItem("lastConversationId");
+        const urlId = getUrlConversationId();
+        const storedId = getStoredConversationId();
+        const savedId = urlId ?? storedId;
+
         const target = savedId
           ? data.conversations.find((c) => c.id === savedId)
           : null;
@@ -75,32 +180,40 @@ export function CopilotPageContent() {
           setConversationId(target.id);
           const msgData = await fetchMessages(target.id);
           if (cancelled) return;
-          setMessages(
-            msgData.messages.map((m) => ({
-              id: m.id,
-              role: m.role as "user" | "assistant",
-              content: m.content,
-              citations: m.citations ?? undefined,
-            })),
-          );
+          if (msgData.messages.length > 0) {
+            restoreConversationState(msgData, {
+              setMessages,
+              setAllSources,
+              setLastCitations,
+              turnIndexRef,
+            });
+            const lastMsg = msgData.messages[msgData.messages.length - 1];
+            const endsAbruptly = lastMsg.content.endsWith("...") || lastMsg.content.endsWith("…");
+            if (lastMsg.role === "assistant" && endsAbruptly) {
+              setRestoreNotice("incomplete");
+            }
+          }
         } else if (data.conversations.length > 0) {
           const latest = data.conversations[0];
           setConversationId(latest.id);
           const msgData = await fetchMessages(latest.id);
           if (cancelled) return;
-          setMessages(
-            msgData.messages.map((m) => ({
-              id: m.id,
-              role: m.role as "user" | "assistant",
-              content: m.content,
-              citations: m.citations ?? undefined,
-            })),
-          );
+          restoreConversationState(msgData, {
+            setMessages,
+            setAllSources,
+            setLastCitations,
+            turnIndexRef,
+          });
+        } else if (savedId) {
+          setRestoreNotice("not_found");
         }
       } catch {
         // if loading fails, start fresh
       } finally {
-        if (!cancelled) setLoadingConversations(false);
+        if (!cancelled) {
+          setLoadingConversations(false);
+          hydratedRef.current = true;
+        }
       }
     }
 
@@ -111,6 +224,10 @@ export function CopilotPageContent() {
   const handleSubmit = useCallback(async () => {
     const question = draft.trim();
     if (!question || isWaiting) return;
+    if (messages.length > 0) {
+      const last = messages[messages.length - 1];
+      if (last.role === "user" && last.content === question) return;
+    }
 
     setDraft("");
     setMessages((prev) => [
@@ -157,17 +274,33 @@ export function CopilotPageContent() {
           onDone(data) {
             const citations = accumulatedCitations;
             const sources = accumulatedSources;
-            setMessages((prev) =>
-              prev.map((msg) =>
+            setMessages((prev) => {
+              const updated = prev.map((msg) =>
                 msg.id === assistantId
-                  ? { ...msg, citations, confidence: data.confidence, sources }
+                  ? { ...msg, citations, sources }
                   : msg,
-              ),
-            );
+              );
+              return updated;
+            });
             setStreamingMessageId(null);
+            // Save snapshot for this turn
+            const currentConvId = conversationId ?? (data as any).conversation_id ?? "";
+            if (currentConvId) {
+              turnIndexRef.current += 1;
+              saveConversationSnapshot(currentConvId, {
+                turn_index: turnIndexRef.current,
+                role: "assistant",
+                data: {
+                  tool_outputs: null,
+                  timeline: null,
+                  working_memory: null,
+                  agent_results: null,
+                },
+              }).catch(() => {});
+            }
             // Refresh conversation list to update message_count
-            listConversations().then((data) => {
-              setConversations(data.conversations);
+            listConversations().then((convData) => {
+              setConversations(convData.conversations);
             }).catch(() => {});
           },
           onError(message) {
@@ -234,14 +367,12 @@ export function CopilotPageContent() {
         const latest = data.conversations[0];
         setConversationId(latest.id);
         const msgData = await fetchMessages(latest.id);
-        setMessages(
-          msgData.messages.map((m) => ({
-            id: m.id,
-            role: m.role as "user" | "assistant",
-            content: m.content,
-            citations: m.citations ?? undefined,
-          })),
-        );
+        restoreConversationState(msgData, {
+          setMessages,
+          setAllSources,
+          setLastCitations,
+          turnIndexRef,
+        });
       }
     } catch {
       // silently fail
@@ -256,6 +387,37 @@ export function CopilotPageContent() {
     } catch {
       // silently fail
     }
+  }
+
+  async function handleArchiveConversation(convId: string) {
+    try {
+      await archiveConversation(convId);
+      const [activeData, archivedData] = await Promise.all([
+        listConversations(),
+        listArchivedConversations(),
+      ]);
+      setConversations(activeData.conversations);
+      setArchivedConversations(archivedData.conversations);
+      if (convId === conversationId) {
+        handleNewConversation();
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
+  async function loadArchivedConversations() {
+    try {
+      const data = await listArchivedConversations();
+      setArchivedConversations(data.conversations);
+      setShowArchived(true);
+    } catch {
+      // silently fail
+    }
+  }
+
+  function handleShowArchived() {
+    loadArchivedConversations();
   }
 
   async function handleRenameConversation(convId: string, title: string) {
@@ -277,25 +439,31 @@ export function CopilotPageContent() {
     setAllSources([]);
     setLastCitations([]);
     setDraft("");
+    setStoredConversationId(null);
+    setUrlConversationId(null);
+    setRestoreNotice(null);
+    // Rotate session_id so the next request creates a fresh conversation
+    rotateSessionId();
   }
 
   async function handleSelectConversation(convId: string) {
     if (convId === conversationId || isWaiting) return;
     handleCancel();
     setConversationId(convId);
-    setMessages([]);
+    setRestoreNotice(null);
     try {
-      const data = await fetchMessages(convId);
-      setMessages(
-        data.messages.map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          citations: m.citations ?? undefined,
-        })),
-      );
+      const msgData = await fetchMessages(convId);
+      restoreConversationState(msgData, {
+        setMessages,
+        setAllSources,
+        setLastCitations,
+        turnIndexRef,
+      });
     } catch {
       setMessages([]);
+      setAllSources([]);
+      setLastCitations([]);
+      turnIndexRef.current = 0;
     }
   }
 
@@ -387,19 +555,21 @@ export function CopilotPageContent() {
             </div>
             <div className="p-3">
               <ConversationSidebar
-                conversations={conversations}
+                conversations={showArchived ? archivedConversations : conversations}
                 activeConversationId={conversationId}
                 loading={loadingConversations}
                 onSelectConversation={(id) => {
                   handleSelectConversation(id);
                   setMobileSidebarOpen(false);
+                  setShowArchived(false);
                 }}
                 onNewConversation={() => {
                   handleNewConversation();
                   setMobileSidebarOpen(false);
+                  setShowArchived(false);
                 }}
                 onDeleteConversation={handleDeleteConversation}
-                onSearch={handleSearchConversations}
+                onSearch={showArchived ? undefined : handleSearchConversations}
                 renameId={renameId}
                 renameValue={renameValue}
                 onRenameStart={(id, title) => {
@@ -419,6 +589,9 @@ export function CopilotPageContent() {
                 deleteConfirmId={deleteConfirmId}
                 onDeleteRequest={setDeleteConfirmId}
                 onDeleteCancel={() => setDeleteConfirmId(null)}
+                onArchiveConversation={showArchived ? undefined : handleArchiveConversation}
+                archivedConversations={archivedConversations}
+                onShowArchived={handleShowArchived}
               />
             </div>
           </div>
@@ -430,13 +603,19 @@ export function CopilotPageContent() {
         <div className="hidden xl:flex xl:flex-col xl:col-span-3">
           <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-3">
             <ConversationSidebar
-              conversations={conversations}
+              conversations={showArchived ? archivedConversations : conversations}
               activeConversationId={conversationId}
               loading={loadingConversations}
-              onSelectConversation={handleSelectConversation}
-              onNewConversation={handleNewConversation}
+              onSelectConversation={(id) => {
+                handleSelectConversation(id);
+                setShowArchived(false);
+              }}
+              onNewConversation={() => {
+                handleNewConversation();
+                setShowArchived(false);
+              }}
               onDeleteConversation={handleDeleteConversation}
-              onSearch={handleSearchConversations}
+              onSearch={showArchived ? undefined : handleSearchConversations}
               renameId={renameId}
               renameValue={renameValue}
               onRenameStart={(id, title) => {
@@ -456,6 +635,9 @@ export function CopilotPageContent() {
               deleteConfirmId={deleteConfirmId}
               onDeleteRequest={setDeleteConfirmId}
               onDeleteCancel={() => setDeleteConfirmId(null)}
+              onArchiveConversation={showArchived ? undefined : handleArchiveConversation}
+              archivedConversations={archivedConversations}
+              onShowArchived={handleShowArchived}
             />
           </div>
         </div>
@@ -471,6 +653,7 @@ export function CopilotPageContent() {
               onCancel={handleCancel}
               onCitationClick={setSelectedCitation}
               streamingMessageId={streamingMessageId}
+              restoreNotice={restoreNotice}
             />
           </div>
         </div>

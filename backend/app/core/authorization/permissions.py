@@ -20,6 +20,7 @@ class Permission(StrEnum):
     USER_MANAGEMENT = "user_management"
     ROLE_MANAGEMENT = "role_management"
     SYSTEM_SETTINGS = "system_settings"
+    WORKSPACE = "workspace"
 
 
 ALL_PERMISSIONS: frozenset[Permission] = frozenset(Permission)
@@ -40,6 +41,7 @@ ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
             Permission.MAINTENANCE,
             Permission.COMPLIANCE,
             Permission.SOP_LIBRARY,
+            Permission.WORKSPACE,
         }
     ),
     "Operator": frozenset(
@@ -49,6 +51,7 @@ ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
             Permission.SEARCH,
             Permission.COPILOT,
             Permission.MAINTENANCE,
+            Permission.WORKSPACE,
         }
     ),
     "Viewer": frozenset(

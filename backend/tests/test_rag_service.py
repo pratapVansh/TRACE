@@ -154,8 +154,11 @@ class TestPromptBuilderBackwardCompat:
         history = [{"role": "user", "content": "previous question"}]
         result = builder.build_prompt("current Q", sample_chunks, history=history)
 
-        assert "Conversation History" in result.user_prompt
-        assert "previous question" in result.user_prompt
+        # History is no longer embedded in user_prompt text; it is returned
+        # separately via PromptResult.history for injection as distinct messages.
+        assert "Conversation History" not in result.user_prompt
+        assert "previous question" not in result.user_prompt
+        assert result.history == history
 
     def test_build_prompt_custom_system(self, sample_chunks):
         builder = PromptBuilder()
@@ -492,16 +495,18 @@ class TestGraphRagService:
         ]
         result = await svc.query("What is it connected to?", history=history)
 
-        # The LLM must have received the history in the prompt
+        # The LLM must have received the history as a separate kwarg
         call_args_list = svc._llm.generate.call_args_list
         assert len(call_args_list) == 1
-        prompt = call_args_list[0][1]["prompt"] if "prompt" in call_args_list[0][1] else call_args_list[0][0][0]
+        received_history = call_args_list[0].kwargs.get("history", [])
+        assert len(received_history) == 2
+        assert received_history[0] == {"role": "user", "content": "What is P-101?"}
+        assert received_history[1] == {"role": "assistant", "content": "P-101 is a centrifugal pump."}
 
-        # Convert keyword-arg form (prompt=...) to string
+        # History should NOT be embedded in the prompt text
         prompt = call_args_list[0].kwargs.get("prompt", "")
-        assert "Conversation History" in prompt
-        assert "What is P-101?" in prompt
-        assert "P-101 is a centrifugal pump." in prompt
+        assert "Conversation History" not in prompt
+        assert "What is it connected to?" in prompt
         assert result.retrieval_source == "hybrid"
         assert len(result.citations) == 2
 
@@ -510,12 +515,15 @@ class TestGraphRagService:
         await svc.query("current question", history=history)
 
         prompt = svc._llm.generate.call_args[1]["prompt"]
-        count_current = prompt.count("current question")
-        count_previous = prompt.count("previous question")
-        assert count_previous == 1
-        assert count_current == 1  # once in Conversation History, once as Question:
-        assert prompt.index("Conversation History") < prompt.index("previous question")
-        assert prompt.index("Question: current question") > prompt.index("previous question")
+        received_history = svc._llm.generate.call_args[1].get("history", [])
+
+        # Previous question is in the history kwarg, NOT in the prompt text
+        assert "previous question" not in prompt
+        assert len(received_history) == 1
+        assert received_history[0]["content"] == "previous question"
+
+        # Current question appears only once in the prompt (as Question:)
+        assert prompt.count("current question") == 1
 
 
 # ══════════════════════════════════════════════════════════════════════

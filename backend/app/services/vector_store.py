@@ -175,13 +175,14 @@ class VectorStore(ABC):
 
 
 _CLIENT: QdrantClient | None = None
-_CLIENT_LOCK = threading.Lock()
+import asyncio
+_CLIENT_LOCK = asyncio.Lock()
 
 
-def _get_client() -> QdrantClient:
+async def _get_client() -> QdrantClient:
     global _CLIENT
     if _CLIENT is None:
-        with _CLIENT_LOCK:
+        async with _CLIENT_LOCK:
             if _CLIENT is None:
                 _CLIENT = QdrantClient(
                     url=settings.qdrant_url,
@@ -196,7 +197,7 @@ class QdrantVectorStore(VectorStore):
 
     async def connect(self) -> None:
         try:
-            client = _get_client()
+            client = await _get_client()
             retry_sync(
                 client.get_collections,
                 _qdrant_retry_policy,
@@ -210,7 +211,7 @@ class QdrantVectorStore(VectorStore):
             ) from exc
 
     async def health_check(self) -> dict:
-        client = _get_client()
+        client = await _get_client()
         try:
             cluster_info = retry_sync(
                 client.get_collections,
@@ -246,7 +247,7 @@ class QdrantVectorStore(VectorStore):
         }
 
     async def create_collection(self) -> None:
-        client = _get_client()
+        client = await _get_client()
         if await self.collection_exists():
             logger.info(
                 "Collection '%s' already exists", settings.qdrant_collection_name
@@ -276,7 +277,7 @@ class QdrantVectorStore(VectorStore):
             ) from exc
 
     async def delete_collection(self) -> None:
-        client = _get_client()
+        client = await _get_client()
         if not await self.collection_exists():
             return
         try:
@@ -294,7 +295,7 @@ class QdrantVectorStore(VectorStore):
             ) from exc
 
     async def collection_exists(self) -> bool:
-        client = _get_client()
+        client = await _get_client()
         try:
             collections = client.get_collections().collections
             return any(
@@ -311,7 +312,7 @@ class QdrantVectorStore(VectorStore):
         self,
         vectors: list[dict],
     ) -> int:
-        client = _get_client()
+        client = await _get_client()
         total = 0
         for i in range(0, len(vectors), QDRANT_UPSERT_BATCH_SIZE):
             batch = vectors[i : i + QDRANT_UPSERT_BATCH_SIZE]
@@ -343,7 +344,7 @@ class QdrantVectorStore(VectorStore):
         self,
         document_id: UUID,
     ) -> int:
-        client = _get_client()
+        client = await _get_client()
         try:
             result = retry_sync(
                 client.delete,
@@ -375,7 +376,7 @@ class QdrantVectorStore(VectorStore):
         document_id: UUID,
         payload: dict,
     ) -> int:
-        client = _get_client()
+        client = await _get_client()
         try:
             result = retry_sync(
                 client.set_payload,
@@ -407,7 +408,7 @@ class QdrantVectorStore(VectorStore):
         self,
         point_ids: list[str],
     ) -> int:
-        client = _get_client()
+        client = await _get_client()
         try:
             result = retry_sync(
                 client.delete,
@@ -432,7 +433,22 @@ class QdrantVectorStore(VectorStore):
         query_filter: Filter | None = None,
         offset: int = 0,
     ) -> list[dict]:
-        client = _get_client()
+        import time
+        from app.core.observability import metrics
+        start_time = time.perf_counter()
+        from app.core.cache import cache_manager
+        import hashlib
+        import json
+        
+        # Build cache key for query_vector
+        filter_dict = query_filter.dict() if hasattr(query_filter, "dict") else {}
+        cache_key = f"qdrant_search:{hashlib.md5((json.dumps(query_vector) + json.dumps(filter_dict) + str(top_k) + str(offset)).encode()).hexdigest()}"
+        cached_res = await cache_manager.get(cache_key)
+        if cached_res is not None:
+            metrics.record_histogram("vector.query.time", time.perf_counter() - start_time)
+            return cached_res
+
+        client = await _get_client()
         try:
             results = retry_sync(
                 client.query_points,
@@ -447,7 +463,7 @@ class QdrantVectorStore(VectorStore):
                 with_payload=True,
                 with_vectors=False,
             )
-            return [
+            data = [
                 {
                     "id": str(hit.id),
                     "score": hit.score,
@@ -455,13 +471,16 @@ class QdrantVectorStore(VectorStore):
                 }
                 for hit in results.points
             ]
+            await cache_manager.set(cache_key, data, ttl=3600)
+            metrics.record_histogram("vector.query.time", time.perf_counter() - start_time)
+            return data
         except Exception as exc:
             raise VectorStoreOperationError(
                 f"Qdrant search failed: {exc}"
             ) from exc
 
     async def create_fulltext_index(self) -> None:
-        client = _get_client()
+        client = await _get_client()
         for field_name, field_schema in (
             ("content", TextIndexParams(
                 type=PayloadSchemaType.TEXT,
@@ -492,7 +511,7 @@ class QdrantVectorStore(VectorStore):
         query_filter: Filter | None = None,
         offset: int = 0,
     ) -> list[dict]:
-        client = _get_client()
+        client = await _get_client()
         try:
             results = retry_sync(
                 client.query_points,

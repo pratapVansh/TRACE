@@ -402,12 +402,12 @@ class GraphQueryService:
         where_all = f"AND {all_filter}" if all_filter else ""
 
         query = (
-            "MATCH path = (n:Entity {id: $id})-[*1..$depth]-(neighbor:Entity) "
+            f"MATCH path = (n:Entity {{id: $id}})-[*1..{safe_depth}]-(neighbor:Entity) "
             f"WHERE n <> neighbor {where_all} "
             "WITH neighbor, min(length(path)) AS min_depth "
             "RETURN neighbor, min_depth ORDER BY min_depth, neighbor.name"
         )
-        params: dict = {"id": entity_id, "depth": safe_depth}
+        params: dict = {"id": entity_id}
         if rel_types:
             params["rel_types"] = rel_types
 

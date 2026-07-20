@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { AiAgent } from "@/types/ai-workspace";
+import { cn } from "@/lib/utils";
 
 type AgentCardProps = {
   agent: AiAgent;
@@ -7,7 +9,7 @@ type AgentCardProps = {
 
 export function AgentCard({ agent }: AgentCardProps) {
   const Icon = agent.icon;
-  const isComingSoon = agent.status === "coming_soon";
+  const isActive = agent.status === "active";
 
   return (
     <article className="industrial-card flex h-full flex-col p-6 transition-industrial hover:border-[var(--accent-steel)]/20">
@@ -15,8 +17,8 @@ export function AgentCard({ agent }: AgentCardProps) {
         <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-[var(--surface-secondary)] text-[var(--accent-steel-muted)]">
           <Icon className="size-5" strokeWidth={1.75} />
         </div>
-        <Badge variant={isComingSoon ? "warning" : "secondary"}>
-          {isComingSoon ? "Coming soon" : "Planned"}
+        <Badge variant={isActive ? "default" : "warning"}>
+          {isActive ? "Active" : "Coming soon"}
         </Badge>
       </div>
 
@@ -37,13 +39,26 @@ export function AgentCard({ agent }: AgentCardProps) {
         ))}
       </ul>
 
-      <button
-        type="button"
-        disabled
-        className="mt-5 h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] text-sm font-medium text-muted-foreground"
-      >
-        Launch agent
-      </button>
+      {isActive ? (
+        <Link
+          href="/ai-agents/chat"
+          className={cn(
+            "mt-5 flex h-10 w-full items-center justify-center rounded-xl text-sm font-medium transition-industrial",
+            "border border-[var(--accent-steel)]/30 bg-[var(--accent-steel)]/10 text-[var(--accent-steel-muted)]",
+            "hover:bg-[var(--accent-steel)]/20 hover:text-white",
+          )}
+        >
+          Launch agent
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="mt-5 h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] text-sm font-medium text-muted-foreground"
+        >
+          Launch agent
+        </button>
+      )}
     </article>
   );
 }

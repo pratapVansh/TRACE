@@ -9,6 +9,7 @@ from app.schemas.rag import Citation
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     conversation_id: str | None = None
+    session_id: str | None = None
     top_k: int = Field(default=settings.retrieval_top_k, ge=1, le=50)
     similarity_threshold: float = Field(default=settings.retrieval_similarity_threshold, ge=0.0, le=1.0)
 
@@ -16,6 +17,7 @@ class ChatRequest(BaseModel):
 class ChatStreamRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     conversation_id: str | None = None
+    session_id: str | None = None
     top_k: int = Field(default=settings.retrieval_top_k, ge=1, le=50)
     similarity_threshold: float = Field(default=settings.retrieval_similarity_threshold, ge=0.0, le=1.0)
 
@@ -35,6 +37,7 @@ class ConversationItem(BaseModel):
     message_count: int
     created_at: float
     updated_at: float
+    status: str = "active"
 
 
 class ConversationsListResponse(BaseModel):
@@ -47,6 +50,8 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     citations: list[dict] | None = None
+    tool_outputs: list[dict] | None = None
+    sources: list[str] = []
     created_at: float
 
 
@@ -65,6 +70,49 @@ class RenameConversationResponse(BaseModel):
     title: str
 
 
+# ── Archive / Status ───────────────────────────────────────────
+
+class ArchiveConversationResponse(BaseModel):
+    id: str
+    status: str
+
+
+class ArchiveListResponse(BaseModel):
+    conversations: list[ConversationItem]
+    total: int
+
+
+# ── Snapshots ──────────────────────────────────────────────────
+
+class SnapshotData(BaseModel):
+    working_memory: dict | None = None
+    tool_outputs: list[dict] | None = None
+    agent_results: list[dict] | None = None
+    timeline: list[dict] | None = None
+
+
+class SaveSnapshotRequest(BaseModel):
+    turn_index: int
+    role: str
+    data: SnapshotData
+
+
+class SnapshotResponse(BaseModel):
+    id: str
+    conversation_id: str
+    turn_index: int
+    role: str
+    working_memory: dict | None = None
+    tool_outputs: list[dict] | None = None
+    agent_results: list[dict] | None = None
+    timeline: list[dict] | None = None
+    created_at: float
+
+
+class SnapshotListResponse(BaseModel):
+    snapshots: list[SnapshotResponse]
+
+
 class ConversationsQueryParams(BaseModel):
     skip: int = Field(default=0, ge=0)
     limit: int = Field(default=100, ge=1, le=500)
@@ -73,3 +121,21 @@ class ConversationsQueryParams(BaseModel):
 
 class ClearConversationResponse(BaseModel):
     message: str
+
+
+class AddMessageRequest(BaseModel):
+    conversation_id: str
+    role: str = Field(pattern=r"^(user|assistant)$")
+    content: str = Field(min_length=1)
+    citations: list[dict] | None = None
+    tool_outputs: list[dict] | None = None
+
+
+class AddMessageResponse(BaseModel):
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    citations: list[dict] | None = None
+    tool_outputs: list[dict] | None = None
+    created_at: float

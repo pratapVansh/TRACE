@@ -32,6 +32,7 @@ _INDEX_QUERIES = [
     "CREATE INDEX IF NOT EXISTS FOR (n:Failure) ON (n.name)",
     "CREATE INDEX IF NOT EXISTS FOR (n:Cause) ON (n.name)",
     "CREATE INDEX IF NOT EXISTS FOR (n:Operator) ON (n.name)",
+    "CREATE INDEX IF NOT EXISTS FOR (n:Entity) ON (n.user_id)",
 ]
 
 
@@ -49,6 +50,8 @@ class ManagedTransaction:
     async def commit(self) -> None:
         try:
             await self._transaction.commit()
+            from app.core.cache import cache_manager
+            await cache_manager.delete_pattern("neo4j_read:*")
         finally:
             await self._close_session()
 
@@ -100,7 +103,8 @@ class Neo4jGraphStore(GraphStore):
         self._password = (password or settings.neo4j_password).strip()
         self._driver: AsyncDriver | None = None
         self._connected = False
-        self._lock = threading.Lock()
+        import asyncio
+        self._lock = asyncio.Lock()
         self._db_name: str | None = settings.neo4j_database or None
 
         errors: list[str] = []
@@ -160,7 +164,7 @@ class Neo4jGraphStore(GraphStore):
 
     async def _get_driver(self) -> AsyncDriver:
         if self._driver is None:
-            with self._lock:
+            async with self._lock:
                 if self._driver is None:
                     self._driver = AsyncGraphDatabase.driver(
                         self._uri,
@@ -196,7 +200,7 @@ class Neo4jGraphStore(GraphStore):
     async def close(self) -> None:
         driver = self._driver
         if driver is not None:
-            with self._lock:
+            async with self._lock:
                 if self._driver is not None:
                     await self._driver.close()
                     self._driver = None
@@ -293,6 +297,9 @@ class Neo4jGraphStore(GraphStore):
         query: str,
         parameters: dict | None = None,
     ) -> list[dict]:
+        import time
+        from app.core.observability import metrics
+        start_time = time.perf_counter()
         try:
             driver = await self._ensure_connected()
         except GraphStoreConnectionError as exc:
@@ -300,11 +307,26 @@ class Neo4jGraphStore(GraphStore):
                 f"Cannot execute read query — not connected: {exc}"
             ) from exc
 
+        from app.core.cache import cache_manager
+        import hashlib
+        import json
+
+        # Build cache key from query and parameters
+        cache_key = f"neo4j_read:{hashlib.md5((query + json.dumps(parameters or {}, sort_keys=True)).encode()).hexdigest()}"
+        cached_result = await cache_manager.get(cache_key)
+        if cached_result is not None:
+            metrics.record_histogram("graph.query.time", time.perf_counter() - start_time)
+            return cached_result
+
         try:
             async with driver.session(database=self._db_name) as session:
                 result = await session.run(query, parameters or {})
                 records = await result.data()
-                return records if records is not None else []
+                data = records if records is not None else []
+                # Cache for 1 hour
+                await cache_manager.set(cache_key, data, ttl=3600)
+                metrics.record_histogram("graph.query.time", time.perf_counter() - start_time)
+                return data
         except ServiceUnavailable as exc:
             self._connected = False
             raise GraphStoreConnectionError(
@@ -325,6 +347,9 @@ class Neo4jGraphStore(GraphStore):
         query: str,
         parameters: dict | None = None,
     ) -> list[dict]:
+        import time
+        from app.core.observability import metrics
+        start_time = time.perf_counter()
         try:
             driver = await self._ensure_connected()
         except GraphStoreConnectionError as exc:
@@ -337,6 +362,9 @@ class Neo4jGraphStore(GraphStore):
                 result = await session.run(query, parameters or {})
                 records = await result.data()
                 await result.consume()
+                from app.core.cache import cache_manager
+                await cache_manager.delete_pattern("neo4j_read:*")
+                metrics.record_histogram("graph.query.time", time.perf_counter() - start_time)
                 return records if records is not None else []
         except ServiceUnavailable as exc:
             self._connected = False

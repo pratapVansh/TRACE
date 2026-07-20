@@ -1,14 +1,49 @@
 import { authStorage } from "@/lib/auth/storage";
 import { apiClient } from "./client";
 import type {
+  ArchiveConversationResponse,
+  ArchiveListResponse,
   ChatRequest,
   ChatResponse,
   ConversationMessagesResponse,
   ConversationsListResponse,
+  SaveSnapshotRequest,
+  SnapshotListResponse,
+  SnapshotResponse,
   SseCallbacks,
 } from "@/types/chat";
 
 const CHAT_TIMEOUT_MS = 30_000;
+
+// ── Session cookie (survives browser restart) ──────────────────────
+
+const SESSION_COOKIE = "trace_sid";
+
+function getSessionId(): string {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]*)`));
+  if (match) return match[1];
+  return createSessionId();
+}
+
+function createSessionId(): string {
+  const id = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  setSessionId(id);
+  return id;
+}
+
+function setSessionId(id: string): void {
+  document.cookie = `${SESSION_COOKIE}=${id}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
+export function ensureSessionId(): string {
+  const existing = getSessionId();
+  if (existing) return existing;
+  return createSessionId();
+}
+
+export function rotateSessionId(): string {
+  return createSessionId();
+}
 
 export class ChatTimeoutError extends Error {
   constructor() {
@@ -25,6 +60,7 @@ export async function sendChatMessage(
     {
       question: params.question,
       conversation_id: params.conversation_id ?? null,
+      session_id: params.session_id ?? ensureSessionId(),
       top_k: params.top_k ?? 5,
       similarity_threshold: params.similarity_threshold ?? 0.0,
     },
@@ -69,6 +105,7 @@ export async function streamChatMessage(
     body: JSON.stringify({
       question: params.question,
       conversation_id: params.conversation_id ?? null,
+      session_id: params.session_id ?? ensureSessionId(),
       top_k: params.top_k ?? 5,
       similarity_threshold: params.similarity_threshold ?? 0.0,
     }),
@@ -156,12 +193,50 @@ export async function renameConversation(
   return data;
 }
 
+/** Fetch the conversation associated with a persistent session_id. */
+export async function fetchSessionConversation(
+  sessionId: string,
+): Promise<ConversationMessagesResponse | null> {
+  try {
+    const { data } = await apiClient.get<ConversationMessagesResponse>(
+      `/api/chat/session/${sessionId}`,
+    );
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchMessages(
   conversationId: string,
 ): Promise<ConversationMessagesResponse> {
   const { data } = await apiClient.get<ConversationMessagesResponse>(
     `/api/chat/conversations/${conversationId}/messages`,
   );
+  return data;
+}
+
+export async function addMessage(
+  conversationId: string,
+  payload: {
+    role: "user" | "assistant";
+    content: string;
+    citations?: Array<Record<string, unknown>>;
+    tool_outputs?: Array<Record<string, unknown>>;
+  },
+): Promise<{
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  citations: Array<Record<string, unknown>> | null;
+  tool_outputs: Array<Record<string, unknown>> | null;
+  created_at: number;
+}> {
+  const { data } = await apiClient.post("/api/chat/messages", {
+    conversation_id: conversationId,
+    ...payload,
+  });
   return data;
 }
 
@@ -173,4 +248,66 @@ export async function clearConversation(
 
 export async function clearAllConversations(): Promise<void> {
   await apiClient.delete("/api/chat/conversations");
+}
+
+// ── Archive / Restore ─────────────────────────────────────────
+
+export async function archiveConversation(
+  conversationId: string,
+): Promise<ArchiveConversationResponse> {
+  const { data } = await apiClient.patch<ArchiveConversationResponse>(
+    `/api/chat/conversations/${conversationId}/archive`,
+  );
+  return data;
+}
+
+export async function restoreConversation(
+  conversationId: string,
+): Promise<ArchiveConversationResponse> {
+  const { data } = await apiClient.patch<ArchiveConversationResponse>(
+    `/api/chat/conversations/${conversationId}/restore`,
+  );
+  return data;
+}
+
+export async function listArchivedConversations(
+  params?: { skip?: number; limit?: number },
+): Promise<ArchiveListResponse> {
+  const { data } = await apiClient.get<ArchiveListResponse>(
+    "/api/chat/conversations/archived",
+    { params },
+  );
+  return data;
+}
+
+// ── Snapshots ─────────────────────────────────────────────────
+
+export async function saveConversationSnapshot(
+  conversationId: string,
+  payload: SaveSnapshotRequest,
+): Promise<SnapshotResponse> {
+  const { data } = await apiClient.post<SnapshotResponse>(
+    `/api/chat/conversations/${conversationId}/snapshots`,
+    payload,
+  );
+  return data;
+}
+
+export async function getConversationSnapshots(
+  conversationId: string,
+): Promise<SnapshotListResponse> {
+  const { data } = await apiClient.get<SnapshotListResponse>(
+    `/api/chat/conversations/${conversationId}/snapshots`,
+  );
+  return data;
+}
+
+export async function getConversationSnapshot(
+  conversationId: string,
+  turnIndex: number,
+): Promise<SnapshotResponse> {
+  const { data } = await apiClient.get<SnapshotResponse>(
+    `/api/chat/conversations/${conversationId}/snapshots/${turnIndex}`,
+  );
+  return data;
 }

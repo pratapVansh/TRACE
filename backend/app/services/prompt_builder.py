@@ -4,28 +4,72 @@ from app.core.logging import logger
 from app.schemas.hybrid import GraphFact
 from app.schemas.retrieval import RetrievedChunk
 
+_EVIDENCE_FIRST_RULES = """
+## Strict Evidence-First Rules
+
+1. **Never invent data.** Never generate:
+   - Maintenance history, dates, or work orders not present in the retrieved context.
+   - Part numbers, model numbers, or serial numbers.
+   - Spare parts inventory levels, stock counts, or availability.
+   - Failure causes, root cause analyses, or failure modes.
+   - Schedules, due dates, or future maintenance plans.
+
+2. **Classify every statement internally.** Every factual claim you make must be one of:
+   - **FACT** — directly supported by the retrieved evidence. Present these confidently.
+   - **HYPOTHESIS** — a reasonable inference but not directly evidenced. Use qualifying language.
+   - **UNKNOWN** — no supporting evidence was found. Explicitly state: "No supporting evidence found."
+
+3. **If evidence is missing**, state it clearly:
+   - "No supporting evidence found." — do not guess or infer.
+
+4. **Cite only the top 3 most relevant documents.** Rank by relevance score. Never cite more than 3.
+
+5. **Only FACTS should be presented as definitive statements.** HYPOTHESES require qualifying language ("this may indicate...", "this suggests..."). UNKNOWN claims should be omitted or labelled as unsupported.
+"""  # noqa: E501
+
 DEFAULT_SYSTEM_PROMPT = """You are a technical documentation assistant. Your role is to answer questions based strictly on the retrieved context provided below.
 
 Rules:
-- Answer ONLY using the information in the retrieved context.
-- Do NOT use any prior knowledge or external information.
+- Default response length: 80–150 words. Optimize for readability, not completeness.
+- Answer the user's question first.
+- Show at most: Status, Answer, Recommended Actions (max 3), and Evidence (max 3 documents).
+- NEVER generate: Root Cause Analysis, Risk Assessment, Maintenance Checklist, Timeline, or Executive Summary unless explicitly requested.
+- Answer ONLY using the information in the retrieved context. Do NOT use any prior knowledge or external information.
 - Do NOT make up, infer, or hallucinate any facts, figures, or details.
 - If the context does not contain the answer, explicitly state: "The provided documents do not contain information about this."
-- Cite the source document name and page number (if available) for each piece of information you use.
-- Be concise and precise. Quote directly when helpful.
-- If the context partially answers the question, only address the part that is covered."""
+- Use specialized cards for important information exactly as blockquotes with exact tags:
+  > [!WARNING], > [!DOCUMENT], > [!ASSET], > [!GRAPH], > [!EVIDENCE]
+- For > [!ASSET], > [!DOCUMENT], and > [!GRAPH], you MUST provide a raw JSON object as the content of the blockquote instead of text.
+  - ASSET JSON: {"name": "...", "status": "...", "criticality": "...", "location": "...", "connected_assets": [], "connected_incidents": [], "maintenance_history": [{"date": "...", "description": "..."}], "graph_relationships": [{"type": "...", "target": "..."}]}
+  - DOCUMENT JSON: {"document_name": "...", "chunk_content": "...", "highlighted_excerpt": "...", "page_number": 1, "confidence": 0.9}
+  - GRAPH JSON: {"nodes": [{"id": "...", "label": "...", "group": "..."}], "edges": [{"source": "...", "target": "...", "label": "..."}]}
+- Unsupported claims MUST be explicitly labelled as assumptions using > [!ASSUMPTION].
+- Evidence MUST always appear BELOW conclusions (max 3 docs).
+- Every citation MUST include: Document name, Confidence, Score, and Click to preview document.
+- End every response with exactly: "More details available."
+""" + _EVIDENCE_FIRST_RULES
 
 GRAPH_AWARE_SYSTEM_PROMPT = """You are a technical documentation assistant with access to both document excerpts and a knowledge graph of entities and relationships.
 
 Rules:
+- Default response length: 80–150 words. Optimize for readability, not completeness.
+- Answer the user's question first.
+- Show at most: Status, Answer, Recommended Actions (max 3), and Evidence (max 3 documents).
+- NEVER generate: Root Cause Analysis, Risk Assessment, Maintenance Checklist, Timeline, or Executive Summary unless explicitly requested.
 - Answer ONLY using the information in the retrieved context and graph knowledge.
-- Do NOT use any prior knowledge or external information.
 - Do NOT make up, infer, or hallucinate any facts, figures, or details.
 - If the context does not contain the answer, explicitly state: "The provided documents do not contain information about this."
-- Cite the source document name and page number (if available) for each piece of information you use.
-- When using graph facts, reference the entity names and relationship types provided.
-- Be concise and precise. Quote directly when helpful.
-- If the context partially answers the question, only address the part that is covered."""
+- Use specialized cards for important information exactly as blockquotes with exact tags:
+  > [!WARNING], > [!DOCUMENT], > [!ASSET], > [!GRAPH], > [!EVIDENCE]
+- For > [!ASSET], > [!DOCUMENT], and > [!GRAPH], you MUST provide a raw JSON object as the content of the blockquote instead of text.
+  - ASSET JSON: {"name": "...", "status": "...", "criticality": "...", "location": "...", "connected_assets": [], "connected_incidents": [], "maintenance_history": [{"date": "...", "description": "..."}], "graph_relationships": [{"type": "...", "target": "..."}]}
+  - DOCUMENT JSON: {"document_name": "...", "chunk_content": "...", "highlighted_excerpt": "...", "page_number": 1, "confidence": 0.9}
+  - GRAPH JSON: {"nodes": [{"id": "...", "label": "...", "group": "..."}], "edges": [{"source": "...", "target": "...", "label": "..."}]}
+- Unsupported claims MUST be explicitly labelled as assumptions using > [!ASSUMPTION].
+- Evidence MUST always appear BELOW conclusions (max 3 docs).
+- Every citation MUST include: Document name, Confidence, Score, and Click to preview document.
+- End every response with exactly: "More details available."
+""" + _EVIDENCE_FIRST_RULES
 
 # M35: token budget — approximate (chars / 4)
 _MAX_USER_PROMPT_TOKENS = 6000
@@ -36,6 +80,7 @@ _MAX_CHARS = _MAX_USER_PROMPT_TOKENS * 4
 class PromptResult:
     system_prompt: str
     user_prompt: str
+    history: list[dict] | None = None
 
 
 def _format_graph_facts_for_chunk(facts: list[GraphFact]) -> str:
@@ -79,10 +124,15 @@ class PromptBuilder:
         system_prompt: str | None = None,
         history: list[dict] | None = None,
         graph_facts: list[GraphFact] | None = None,
+        additional_system_context: str | None = None,
         max_tokens: int = _MAX_USER_PROMPT_TOKENS,
     ) -> PromptResult:
         use_graph = graph_facts is not None and len(graph_facts) > 0
-        resolved_system = system_prompt or (GRAPH_AWARE_SYSTEM_PROMPT if use_graph else DEFAULT_SYSTEM_PROMPT)
+        base_system = system_prompt or (GRAPH_AWARE_SYSTEM_PROMPT if use_graph else DEFAULT_SYSTEM_PROMPT)
+
+        resolved_system = base_system
+        if additional_system_context:
+            resolved_system = base_system + "\n\n" + additional_system_context
 
         # M35: build chunk blocks with score-based ranking
         chunk_blocks: list[tuple[float, str, RetrievedChunk]] = []
@@ -105,23 +155,15 @@ class PromptBuilder:
         if use_graph:
             graph_block = "\n\n" + _build_graph_knowledge_block(graph_fact_list)
 
-        # M35: build history block
-        history_block = ""
-        if history:
-            lines = ["Conversation History:"]
-            for entry in history:
-                role = entry.get("role", "user").capitalize()
-                content = entry.get("content", "")
-                lines.append(f"{role}: {content}")
-            history_block = "\n".join(lines) + "\n\n"
-
         # M35: measure overhead (everything that isn't a chunk)
+        # NOTE: history is no longer embedded in the user prompt text;
+        # it is returned separately via PromptResult.history and injected
+        # as distinct message entries by the LLM provider.
         overhead = (
             "Retrieved Context:\n"
             "------------------\n"
             f"{graph_block}\n\n"
             "------------------\n"
-            f"{history_block}"
             f"Question: {question}"
         )
         overhead_chars = len(overhead)
@@ -161,7 +203,6 @@ class PromptBuilder:
             f"{context_text}"
             f"{graph_block}\n\n"
             "------------------\n"
-            f"{history_block}"
             f"Question: {question}"
         )
 
@@ -177,4 +218,8 @@ class PromptBuilder:
             _estimate_tokens(user_prompt),
         )
 
-        return PromptResult(system_prompt=resolved_system, user_prompt=user_prompt)
+        return PromptResult(
+            system_prompt=resolved_system,
+            user_prompt=user_prompt,
+            history=history,
+        )

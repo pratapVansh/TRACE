@@ -136,15 +136,24 @@ class GroqProvider(LLMProvider):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> str:
         if self._client is None:
             raise LLMConfigurationError("GroqProvider not initialized — call initialize() first")
 
+        safe_prompt = prompt
+
         messages: list[dict] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        if history:
+            for entry in history:
+                role = entry.get("role", "user")
+                content = entry.get("content", "")
+                if role in ("user", "assistant", "tool"):
+                    messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": safe_prompt})
 
         model = kwargs.pop("model", self._model)
 
@@ -185,15 +194,24 @@ class GroqProvider(LLMProvider):
         self,
         prompt: str,
         system_prompt: str | None = None,
+        history: list[dict] | None = None,
         **kwargs,
     ) -> AsyncGenerator[str, None]:
         if self._client is None:
             raise LLMConfigurationError("GroqProvider not initialized — call initialize() first")
 
+        safe_prompt = prompt
+
         messages: list[dict] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+        if history:
+            for entry in history:
+                role = entry.get("role", "user")
+                content = entry.get("content", "")
+                if role in ("user", "assistant", "tool"):
+                    messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": safe_prompt})
 
         model = kwargs.pop("model", self._model)
         try:

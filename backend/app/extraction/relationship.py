@@ -26,6 +26,9 @@ class RelationshipType(str, Enum):
     FOLLOWS = "FOLLOWS"
     RELATED_TO = "RELATED_TO"
     HAS_COMPONENT = "HAS_COMPONENT"
+    OWNS = "OWNS"
+    WORKS_AT = "WORKS_AT"
+    HAS_ROLE = "HAS_ROLE"
 
 
 def _relationship_id(source: str, type_: RelationshipType, target: str) -> str:

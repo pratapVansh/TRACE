@@ -37,6 +37,9 @@ REL_TYPE_LABEL: dict[RelationshipType, str] = {
     RelationshipType.FOLLOWS: "FOLLOWS",
     RelationshipType.RELATED_TO: "RELATED_TO",
     RelationshipType.HAS_COMPONENT: "HAS_COMPONENT",
+    RelationshipType.OWNS: "OWNS",
+    RelationshipType.WORKS_AT: "WORKS_AT",
+    RelationshipType.HAS_ROLE: "HAS_ROLE",
 }
 
 
