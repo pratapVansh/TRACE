@@ -11,7 +11,7 @@ from app.agents.framework.response import AgentResponse
 from app.agents.framework.tool import ToolResult
 from app.agents.framework.tools.context import ToolContext
 from app.agents.framework.tools.executor import ToolExecutor
-from app.agents.framework.agents.no_evidence import annotate_answer, has_evidence, has_any_evidence, no_evidence_response
+from app.agents.framework.agents.no_evidence import annotate_answer, has_evidence, no_evidence_response
 from app.core.authorization import Permission
 from app.core.authorization.permissions import get_permissions_for_role
 from app.schemas.rag import Citation
@@ -163,8 +163,8 @@ class RootCauseAnalysisAgent(BaseAgent):
             context.working_memory.set_temp("rca_answer", answer)
             context.working_memory.set_temp("rca_confidence", confidence)
 
-        _search_dict = locals().get("search_data") or locals().get("search_results") or locals().get("report_data")
-        _final_conf, _expl = self.evaluate_confidence(True, _search_dict, locals().get("answer", ""))
+        _search_dict = search_data
+        _final_conf, _expl = self.evaluate_confidence(True, _search_dict, answer)
         confidence = _final_conf
         answer = annotate_answer(answer, citations=citations, tools_used=tools_used, confidence=confidence, confidence_explanation=_expl, search_data=_search_dict)
 
@@ -215,20 +215,12 @@ class RootCauseAnalysisAgent(BaseAgent):
             import asyncio
             for target_agent, subtask in tasks:
                 try:
-                    if hasattr(agent_context.orchestrator, "execute_multi"):
-                        resp = await agent_context.orchestrator.execute(
-                            question=subtask, user_id=agent_context.user_id, user_role=agent_context.user_role,
-                            conversation_id=agent_context.conversation_id, agent_id=target_agent,
-                            session=agent_context.session
-                        )
-                        delegated_answers.append(f"[{target_agent}]: {resp.answer}")
-                    else:
-                        resp = await agent_context.orchestrator.execute(
-                            question=subtask, user_id=agent_context.user_id, user_role=agent_context.user_role,
-                            conversation_id=agent_context.conversation_id, agent_ids=[target_agent], mode="single",
-                            session=agent_context.session
-                        )
-                        delegated_answers.append(f"[{target_agent}]: {resp.answer}")
+                    resp = await agent_context.orchestrator.execute_multi(
+                        question=subtask, user_id=agent_context.user_id, user_role=agent_context.user_role,
+                        conversation_id=agent_context.conversation_id, agent_ids=[target_agent], mode="single",
+                        session=agent_context.session
+                    )
+                    delegated_answers.append(f"[{target_agent}]: {resp.answer}")
                 except Exception as exc:
                     logger.error("Delegation to %s failed: %s", target_agent, exc)
 

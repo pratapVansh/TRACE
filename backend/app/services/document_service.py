@@ -29,7 +29,6 @@ from app.schemas.documents import (
 )
 from app.services.document_exceptions import (
     DocumentNotFoundError,
-    DocumentProcessingActiveError,
     DocumentStorageError,
     DuplicateDocumentError,
     EmptyFileError,
@@ -50,6 +49,8 @@ from app.services.processing_status import ProcessingStage, ProcessingStatus
 
 from app.services.document_processing_queue import DocumentProcessingQueueService
 from app.services.qdrant_indexing_service import QdrantIndexingService
+from app.graph.base import GraphStore
+from app.graph.graph_builder import GraphBuilderService
 
 DOCUMENT_STATUS_QUEUED = "queued"
 ALLOWED_DOCUMENT_STATUSES = frozenset(
@@ -96,6 +97,7 @@ class DocumentService:
         audit_service: AuditService,
         processing_queue: DocumentProcessingQueueService | None = None,
         indexing_service: QdrantIndexingService | None = None,
+        graph_store: GraphStore | None = None,
     ) -> None:
         self._session = session
         self._document_repository = document_repository
@@ -103,6 +105,7 @@ class DocumentService:
         self._audit_service = audit_service
         self._processing_queue = processing_queue
         self._indexing_service = indexing_service
+        self._graph_store = graph_store
 
     async def upload_document(
         self,
@@ -168,26 +171,27 @@ class DocumentService:
                 stage=ProcessingStage.UPLOAD.value,
                 max_retries=settings.processing_queue_max_retries,
             )
-            if self._processing_queue is not None:
-                await self._processing_queue.enqueue(document.id, ingestion_job.id)
             response_job_id = ingestion_job.id
             response = to_upload_response(document, document_version, response_job_id)
+
+            await self._audit_service.log(
+                user_id=actor.id,
+                username=actor.full_name,
+                action="document_uploaded",
+                entity_type="document",
+                entity_id=document.id,
+                ip_address=ip_address,
+            )
+            await self._audit_service.flush()
+
+            if self._processing_queue is not None:
+                await self._processing_queue.enqueue(document.id, ingestion_job.id)
+
             await self._session.commit()
         except Exception:
             await self._session.rollback()
             self._storage.delete(stored_uri)
             raise
-
-        await self._audit_service.log(
-            user_id=actor.id,
-            username=actor.full_name,
-            action="document_uploaded",
-            entity_type="document",
-            entity_id=document.id,
-            ip_address=ip_address,
-        )
-        await self._audit_service.flush()
-        await self._session.commit()
 
         return response
 
@@ -369,7 +373,16 @@ class DocumentService:
             ProcessingStatus.PENDING.value,
             ProcessingStatus.PROCESSING.value,
         }:
-            raise DocumentProcessingActiveError()
+            await self._document_repository.update_ingestion_job(
+                latest_job.id,
+                status=ProcessingStatus.FAILED.value,
+                error="Deleted by user",
+                finished_at=datetime.now(UTC),
+            )
+            logger.warning(
+                "Cancelled active ingestion job %s for document %s during deletion",
+                latest_job.id, document_id,
+            )
 
         storage_uris = [version.storage_uri for version in document.versions]
 
@@ -391,6 +404,21 @@ class DocumentService:
             except Exception:
                 logger.warning(
                     "Failed to delete Qdrant vectors for document_id=%s",
+                    document_id,
+                )
+
+        if self._graph_store is not None:
+            try:
+                builder = GraphBuilderService(graph_store=self._graph_store)
+                deleted = await builder.delete_document(str(document_id))
+                if deleted > 0:
+                    logger.info(
+                        "Deleted %d graph nodes for document_id=%s",
+                        deleted, document_id,
+                    )
+            except Exception:
+                logger.warning(
+                    "Failed to delete Neo4j graph nodes for document_id=%s",
                     document_id,
                 )
 

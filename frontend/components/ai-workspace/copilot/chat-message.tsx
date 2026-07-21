@@ -103,7 +103,7 @@ export function ChatMessage({
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="rounded-lg bg-[var(--accent-steel)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--accent-steel)]/80 transition-colors"
+                className="rounded-lg bg-[var(--accent-steel)] px-3 py-1.5 text-xs font-medium text-[var(--accent-foreground)] hover:bg-[var(--accent-steel)]/80 transition-colors"
               >
                 Save & Submit
               </button>

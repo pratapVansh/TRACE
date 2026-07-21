@@ -129,3 +129,13 @@ export async function downloadDocument(
 export async function deleteDocument(documentId: string): Promise<void> {
   await apiClient.delete(`/api/documents/${documentId}`);
 }
+
+export async function bulkDeleteDocuments(
+  documentIds: string[],
+): Promise<{ deleted: number; errors: string[] }> {
+  const { data } = await apiClient.post<{ deleted: number; errors: string[] }>(
+    "/api/documents/bulk-delete",
+    { document_ids: documentIds },
+  );
+  return data;
+}

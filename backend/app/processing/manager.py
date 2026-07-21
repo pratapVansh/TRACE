@@ -2,18 +2,30 @@ import time
 from datetime import timedelta
 from uuid import UUID
 
+from app.core.storage import create_storage_service
+from app.core.storage.base import StorageBackend
 from app.core.logging import logger
 from app.models.document import Document
 from app.models.document_version import DocumentVersion
 from app.processing.base import BaseProcessor
-from app.processing.exceptions import ProcessorNotFoundError
 from app.processing.factory import ProcessingFactory
+from app.processing.exceptions import ProcessorNotFoundError
 from app.processing.models import ProcessingResult
 
 
 class ProcessingManager:
-    def __init__(self, factory: ProcessingFactory | None = None) -> None:
-        self._factory = factory or ProcessingFactory
+    def __init__(
+        self,
+        factory: ProcessingFactory | None = None,
+        storage: StorageBackend | None = None,
+    ) -> None:
+        self._factory = factory
+        self._storage = storage or create_storage_service()
+
+    def _get_factory(self) -> ProcessingFactory:
+        if self._factory is None:
+            self._factory = ProcessingFactory(storage=self._storage)
+        return self._factory
 
     async def process_document(
         self,
@@ -28,8 +40,9 @@ class ProcessingManager:
             document.original_filename,
         )
 
+        factory = self._get_factory()
         try:
-            processor = self._factory.get_processor(extension)
+            processor = factory.get_processor(extension)
         except ProcessorNotFoundError:
             logger.warning(
                 "No processor found for extension=%s document_id=%s",
@@ -56,8 +69,9 @@ class ProcessingManager:
             mime_type,
         )
 
+        factory = self._get_factory()
         try:
-            processor = self._factory.get_processor_for_mime(mime_type)
+            processor = factory.get_processor_for_mime(mime_type)
         except ProcessorNotFoundError:
             logger.warning(
                 "No processor found for mime_type=%s document_id=%s",
@@ -119,7 +133,8 @@ class ProcessingManager:
         version: DocumentVersion,
     ) -> str:
         mime_type = version.mime_type.lower()
-        processor = self._factory.get_processor_for_mime(mime_type)
+        factory = self._get_factory()
+        processor = factory.get_processor_for_mime(mime_type)
         return await processor.extract_text(document, version)
 
     async def extract_metadata(
@@ -128,7 +143,8 @@ class ProcessingManager:
         version: DocumentVersion,
     ) -> dict:
         mime_type = version.mime_type.lower()
-        processor = self._factory.get_processor_for_mime(mime_type)
+        factory = self._get_factory()
+        processor = factory.get_processor_for_mime(mime_type)
         return await processor.extract_metadata(document, version)
 
     async def validate(
@@ -137,5 +153,6 @@ class ProcessingManager:
         version: DocumentVersion,
     ) -> list[str]:
         mime_type = version.mime_type.lower()
-        processor = self._factory.get_processor_for_mime(mime_type)
+        factory = self._get_factory()
+        processor = factory.get_processor_for_mime(mime_type)
         return await processor.validate(document, version)

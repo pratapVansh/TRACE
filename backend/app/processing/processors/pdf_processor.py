@@ -278,11 +278,6 @@ class PdfProcessor(BaseProcessor):
                 page_num, doc_id, exc,
             )
         return ""
-
-    def _resolve_path(self, version: DocumentVersion) -> str:
-        return str(settings.storage_root_path / version.storage_uri)
-
-    @staticmethod
     def _get_pdf_version(doc: fitz.Document) -> str | None:
         try:
             pdf_version = doc.pdf_version

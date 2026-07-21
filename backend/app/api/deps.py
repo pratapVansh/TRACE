@@ -162,6 +162,7 @@ async def get_document_service(
     processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
     audit_service: AuditService = Depends(get_audit_service),
     vector_store: VectorStore = Depends(get_vector_store),
+    graph_store: GraphStore | None = Depends(get_graph_store_optional),
 ) -> DocumentService:
     indexing_service = QdrantIndexingService(vector_store=vector_store)
     return DocumentService(
@@ -171,6 +172,7 @@ async def get_document_service(
         audit_service=audit_service,
         processing_queue=processing_queue,
         indexing_service=indexing_service,
+        graph_store=graph_store,
     )
 
 

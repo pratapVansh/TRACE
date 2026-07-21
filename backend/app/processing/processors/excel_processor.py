@@ -360,11 +360,6 @@ class ExcelProcessor(BaseProcessor):
             metadata=metadata,
             warnings=warnings_list,
         )
-
-    def _resolve_path(self, version: DocumentVersion) -> str:
-        return str(settings.storage_root_path / version.storage_uri)
-
-    @staticmethod
     def _is_encrypted_zip(file_path: str) -> bool:
         try:
             with ZipFile(file_path, "r") as zf:

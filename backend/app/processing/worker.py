@@ -243,8 +243,8 @@ async def run_processing_worker(stop_event: asyncio.Event) -> None:
             async with async_session_factory() as session:
                 repository = ProcessingJobRepository(session)
                 queue = ProcessingQueue(repository)
-                manager = ProcessingManager()
                 storage = create_storage_service()
+                manager = ProcessingManager(storage=storage)
                 doc_repo = DocumentRepository(session)
                 worker = ProcessingWorker(
                     session, repository, queue, manager,

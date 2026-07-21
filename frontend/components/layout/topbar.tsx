@@ -1,11 +1,11 @@
 "use client";
 
-import { Bell, LogOut, Menu, Search, UserRound } from "lucide-react";
+import { LogOut, Menu, Moon, Sun } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/contexts/theme-context";
 import { AUTH_ROUTES } from "@/lib/auth/routes";
 
 type TopbarProps = {
@@ -15,75 +15,68 @@ type TopbarProps = {
 export function Topbar({ onMenuClick }: TopbarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
     await logout();
     router.replace(AUTH_ROUTES.login);
   };
 
+  const initials = user?.full_name
+    ? user.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "U";
+
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-[var(--sidebar)]/95 backdrop-blur-sm">
-      <div className="flex h-16 items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-md">
+      <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <button
           type="button"
           aria-label="Open navigation"
-          className="rounded-xl border border-border p-2 text-muted-foreground transition-industrial hover:bg-[var(--surface)] hover:text-white lg:hidden"
+          className="flex size-8 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] lg:hidden"
           onClick={onMenuClick}
         >
-          <Menu className="size-5" />
+          <Menu className="size-4" />
         </button>
 
-        <div className="hidden min-w-0 flex-1 md:block">
-          <p className="section-label">Operations Console</p>
-          <h1 className="truncate text-lg font-semibold text-white">
-            Industrial Intelligence Dashboard
-          </h1>
-        </div>
+        <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
+          <div className="flex size-6 items-center justify-center rounded-md bg-[var(--accent)] text-white text-[10px] font-bold">
+            T
+          </div>
+          <span className="text-sm font-semibold tracking-tight">TRACE</span>
+        </Link>
 
-        <div className="relative mx-auto hidden w-full max-w-md lg:block">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search documents, assets, tags…"
-            disabled
-            className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] pr-4 pl-10 text-sm text-foreground placeholder:text-muted-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/10"
-            aria-label="Search"
-          />
-        </div>
-
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-10 rounded-xl text-muted-foreground hover:bg-[var(--surface)] hover:text-foreground"
-            disabled
-            aria-label="Notifications"
-          >
-            <Bell className="size-4.5" />
-          </Button>
-
-          <div className="hidden items-center gap-3 rounded-xl border border-border bg-[var(--surface)] px-3 py-2 sm:flex">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-[var(--surface-secondary)] text-[var(--accent-steel-muted)]">
-              <UserRound className="size-4" />
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5">
+            <div className="flex size-7 items-center justify-center rounded-md bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold">
+              {initials}
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate text-sm font-medium leading-tight">
                 {user?.full_name}
               </p>
-              <Badge variant="secondary" className="mt-1">
+              <p className="text-[11px] leading-tight text-[var(--text-muted)]">
                 {user?.role}
-              </Badge>
+              </p>
             </div>
           </div>
 
-          <Button
-            variant="outline"
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+
+          <button
+            type="button"
             onClick={handleLogout}
-            className="h-10 rounded-xl border-border bg-transparent px-3 text-foreground transition-industrial hover:bg-[var(--surface)] sm:px-4"
+            className="flex size-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+            aria-label="Sign out"
           >
             <LogOut className="size-4" />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
+          </button>
         </div>
       </div>
     </header>

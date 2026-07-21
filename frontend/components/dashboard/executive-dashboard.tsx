@@ -14,7 +14,7 @@ import { RecentDocumentsWidget } from "@/components/dashboard/recent-documents-w
 import { RecentSearchesWidget } from "@/components/dashboard/recent-searches-widget";
 import { fetchDashboard, type DashboardApiResponse } from "@/lib/api/dashboard";
 import { EXECUTIVE_DASHBOARD_DATA } from "@/lib/dashboard/mock-data";
-import { useRecentDocuments } from "@/hooks/use-documents";
+import { useDocumentsContext, useRecentDocuments } from "@/hooks/use-documents";
 import type { ExecutiveDashboardData, DashboardKpi } from "@/types/dashboard";
 
 function buildKpis(api: DashboardApiResponse): DashboardKpi[] {
@@ -68,6 +68,7 @@ function buildKpis(api: DashboardApiResponse): DashboardKpi[] {
 }
 
 export function ExecutiveDashboard() {
+  const { queryVersion } = useDocumentsContext();
   const { documents: recentDocuments, isLoading: isDocumentsLoading, total } =
     useRecentDocuments(5);
 
@@ -88,7 +89,7 @@ export function ExecutiveDashboard() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [queryVersion]);
 
   const displayData: ExecutiveDashboardData = useMemo(() => {
     if (!apiData) return EXECUTIVE_DASHBOARD_DATA;

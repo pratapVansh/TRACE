@@ -29,9 +29,9 @@ export function EnterpriseReportRenderer({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
         components={{
-          h1: ({ children }) => <h1 className="text-xl font-bold mt-8 mb-4 text-white border-b border-white/10 pb-2">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-lg font-semibold mt-6 mb-3 text-white/90">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-[15px] font-medium mt-5 mb-2 text-white/80">{children}</h3>,
+          h1: ({ children }) => <h1 className="text-xl font-bold mt-8 mb-4 text-[var(--text-primary)] border-b border-[var(--border)] pb-2">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-lg font-semibold mt-6 mb-3 text-[var(--text-primary)]/90">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-[15px] font-medium mt-5 mb-2 text-[var(--text-primary)]/80">{children}</h3>,
           p: ({ children }) => <p className="leading-relaxed mb-4 text-foreground/90">{children}</p>,
           ul: ({ children, className }) => {
             if (className === "contains-task-list") {
@@ -48,7 +48,7 @@ export function EnterpriseReportRenderer({ content }: { content: string }) {
               <table className="w-full text-sm text-left text-foreground/90 border-collapse">{children}</table>
             </div>
           ),
-          thead: ({ children }) => <thead className="bg-[var(--surface-tertiary)] border-b border-[var(--accent-steel)]/20 text-white/90 uppercase text-[11px] tracking-wider">{children}</thead>,
+          thead: ({ children }) => <thead className="bg-[var(--surface-tertiary)] border-b border-[var(--accent-steel)]/20 text-[var(--text-primary)]/90 uppercase text-[11px] tracking-wider">{children}</thead>,
           tbody: ({ children }) => <tbody className="divide-y divide-border/20">{children}</tbody>,
           th: ({ children }) => <th className="px-4 py-3 font-semibold">{children}</th>,
           td: ({ children }) => <td className="px-4 py-3 align-top leading-relaxed">{children}</td>,
@@ -132,7 +132,7 @@ export function EnterpriseReportRenderer({ content }: { content: string }) {
             </details>
           ),
           summary: ({ children }) => (
-            <summary className="flex cursor-pointer list-none items-center gap-3 p-4 font-medium text-white/90 [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-3 p-4 font-medium text-[var(--text-primary)]/90 [&::-webkit-details-marker]:hidden">
               <ChevronRight className="size-4 text-[var(--accent-steel-muted)] transition-transform group-open:rotate-90 shrink-0" />
               <div className="flex-1">{children}</div>
             </summary>

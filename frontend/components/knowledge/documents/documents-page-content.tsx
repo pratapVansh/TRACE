@@ -36,6 +36,9 @@ export function DocumentsPageContent() {
     null,
   );
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { canAccess } = usePermissions();
   const canModify = canAccess(PERMISSIONS.DOCUMENTS_UPLOAD);
@@ -57,6 +60,7 @@ export function DocumentsPageContent() {
 
   const {
     actionError,
+    setActionError,
     previewDocument,
     previewUrl,
     previewText,
@@ -65,6 +69,7 @@ export function DocumentsPageContent() {
     handlePreview,
     handleDownload,
     handleDelete,
+    handleBulkDelete,
   } = useDocumentActions();
 
   useEffect(() => {
@@ -175,9 +180,19 @@ export function DocumentsPageContent() {
             showDepartment={false}
             canDelete={canModify}
             canEdit={canModify}
+            selectedIds={selectedIds}
+            onSelectionChange={canModify ? setSelectedIds : undefined}
             onPreview={handlePreview}
             onDownload={handleDownload}
-            onDelete={handleDelete}
+            onDelete={async (doc) => {
+              setDeletingId(doc.id);
+              try {
+                await handleDelete(doc);
+              } finally {
+                setDeletingId(null);
+              }
+            }}
+            deletingId={deletingId}
             onEdit={setEditingDocument}
           />
           <DocumentPagination
@@ -189,6 +204,39 @@ export function DocumentsPageContent() {
           />
         </div>
       )}
+
+      {canModify && selectedIds.size > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center px-4 pb-4 pointer-events-none">
+          <div className="flex items-center gap-4 rounded-2xl border border-border bg-[var(--surface-primary)]/95 px-6 py-3 shadow-2xl backdrop-blur-lg pointer-events-auto">
+            <span className="text-sm text-muted-foreground">
+              <strong className="text-white">{selectedIds.size}</strong> document(s) selected
+            </span>
+            <div className="h-6 w-px bg-border" />
+            <button
+              disabled={isBulkDeleting}
+              onClick={async () => {
+                setIsBulkDeleting(true);
+                const ids = [...selectedIds];
+                setSelectedIds(new Set());
+                try {
+                  await handleBulkDelete(ids);
+                } finally {
+                  setIsBulkDeleting(false);
+                }
+              }}
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[var(--danger)]/15 px-4 text-sm font-medium text-[var(--danger)] transition-industrial hover:bg-[var(--danger)]/25 disabled:opacity-50"
+            >
+              {isBulkDeleting ? "Deleting…" : <>Delete selected ({selectedIds.size})</>}
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="inline-flex h-9 items-center rounded-xl px-3 text-sm text-muted-foreground transition-industrial hover:text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <DocumentPreviewDialog
         open={previewDocument !== null}

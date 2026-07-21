@@ -258,9 +258,6 @@ class PptxProcessor(BaseProcessor):
             warnings=warnings_list,
         )
 
-    def _resolve_path(self, version: DocumentVersion) -> str:
-        return str(settings.storage_root_path / version.storage_uri)
-
     def _extract_slide_content(self, slide, parts: list[str]) -> None:
         for shape in slide.shapes:
             if shape.shape_type == MSO_SHAPE_TYPE.TABLE:

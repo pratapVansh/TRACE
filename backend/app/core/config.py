@@ -37,13 +37,22 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 100
     allowed_upload_extensions: str = "pdf,docx,pptx,xlsx,txt,png,jpg,jpeg"
 
+    # Cloudinary (alternative to local storage)
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+    cloudinary_folder: str = "trace_documents"
+    cloudinary_upload_preset: str = "trueTone-uploads"
+    cloudinary_image_quality: str = "auto"
+    cloudinary_image_format: str = "auto"
+
     # Security
     security_headers_hsts_enabled: bool = False  # Enable only in production
 
     # Rate limiting
     auth_rate_limit_max: int = 10
     auth_rate_limit_window_seconds: int = 60
-    upload_rate_limit_max: int = 20
+    upload_rate_limit_max: int = 300
     upload_rate_limit_window_seconds: int = 60
     chat_rate_limit_max: int = 10
     chat_rate_limit_window_seconds: int = 60
@@ -52,6 +61,8 @@ class Settings(BaseSettings):
     rag_rate_limit_max: int = 10
     rag_rate_limit_window_seconds: int = 60
     global_rate_limit_enabled: bool = True
+    global_rate_limit_max: int = 500
+    global_rate_limit_window_seconds: int = 60
 
     # Chunking & Embeddings (Milestone 6+)
     chunk_size: int = 512

@@ -21,6 +21,7 @@ import type {
   SelectedNode,
 } from "@/types/knowledge-graph";
 import { StatCard } from "@/components/operations/stat-card";
+import { useDocumentsContext } from "@/contexts/documents-context";
 
 async function getGraphErrorMessage(err: unknown): Promise<string> {
   const msg = await getApiErrorMessage(err, "");
@@ -39,6 +40,7 @@ async function getGraphErrorMessage(err: unknown): Promise<string> {
 const PAGE_SIZE = 50;
 
 export function KnowledgeGraphPageContent() {
+  const { queryVersion } = useDocumentsContext();
   const [nodes, setNodes] = useState<GraphNodeData[]>([]);
   const [edges, setEdges] = useState<GraphEdgeData[]>([]);
   const [selection, setSelection] = useState<GraphSelection>(null);
@@ -167,7 +169,7 @@ export function KnowledgeGraphPageContent() {
     }
     load();
     return () => { cancelled = true; };
-  }, [loadKey]);
+  }, [loadKey, queryVersion]);
 
   const handleSelection = useCallback((sel: GraphSelection) => {
     setSelection(sel);

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+
 import { AgentChatContent } from "@/components/ai-workspace/agents/agent-chat-content";
+import { ProtectedPage } from "@/components/layout/protected-page";
+import { PERMISSIONS } from "@/types/permissions";
 
 export const metadata: Metadata = {
   title: "Multi-Agent System",
@@ -8,5 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default function AgentChatPage() {
-  return <AgentChatContent />;
+  return (
+    <ProtectedPage permission={PERMISSIONS.AI_AGENTS}>
+      <AgentChatContent />
+    </ProtectedPage>
+  );
 }

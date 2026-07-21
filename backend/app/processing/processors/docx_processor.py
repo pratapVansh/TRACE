@@ -183,16 +183,12 @@ class DocxProcessor(BaseProcessor):
             warnings=warnings_list,
         )
 
-    def _resolve_path(self, version: DocumentVersion) -> str:
-        return str(settings.storage_root_path / version.storage_uri)
-
     def _extract_headers_footers(
         self,
         doc: docx.Document,
         parts: list[str],
         extract_header: bool = True,
     ) -> None:
-        label = "Header" if extract_header else "Footer"
         for i, section in enumerate(doc.sections):
             element = section.header if extract_header else section.footer
             if not element:

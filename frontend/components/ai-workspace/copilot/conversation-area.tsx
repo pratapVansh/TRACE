@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SendHorizonal, X, Sparkles, FileText, FileClock, Bolt } from "lucide-react";
+import { SendHorizonal, Sparkles, Loader2 } from "lucide-react";
 
 import { ChatMessage } from "@/components/ai-workspace/copilot/chat-message";
 import { TypingIndicator } from "@/components/ai-workspace/copilot/typing-indicator";
-import { SuggestedPrompts } from "@/components/ai-workspace/copilot/suggested-prompts";
 import { cn } from "@/lib/utils";
 import type { Citation } from "@/types/chat";
 
@@ -38,6 +37,7 @@ const SUGGESTED_PROMPTS = [
   { id: "1", label: "Summarize recent incidents", prompt: "Summarize all safety incidents from the past 30 days." },
   { id: "2", label: "Find maintenance guides", prompt: "Find maintenance procedures for the hydraulic press." },
   { id: "3", label: "Check compliance", prompt: "What are the latest compliance requirements for handling hazardous waste?" },
+  { id: "4", label: "Analyze asset", prompt: "Give me an overview of pump P-101 and its maintenance history." },
 ];
 
 export function ConversationArea({
@@ -71,84 +71,56 @@ export function ConversationArea({
   }, [disabled, isWaiting, messages.length]);
 
   return (
-    <div className="flex h-full flex-col bg-background/50 overflow-hidden relative">
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl space-y-6 pb-24">
+    <div className="flex h-full flex-col relative">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-6 px-4 pt-8 pb-36 sm:px-6">
           {messages.length === 0 && !isWaiting && (
-            <div className="flex h-full min-h-[500px] flex-col items-center justify-center pt-12">
+            <div className="flex min-h-[60vh] flex-col items-center justify-center">
               {restoreNotice === "not_found" ? (
-                <>
-                  <div className="mb-6 flex size-16 items-center justify-center rounded-2xl bg-[var(--surface-tertiary)] border border-[var(--accent-steel)]/20">
-                    <FileClock className="size-8 text-muted-foreground" strokeWidth={1.5} />
+                <div className="text-center">
+                  <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-[var(--bg-tertiary)]">
+                    <Sparkles className="size-6 text-[var(--text-muted)]" strokeWidth={1.5} />
                   </div>
-                  <h2 className="mb-2 text-xl font-bold text-white tracking-tight">Conversation not found</h2>
-                  <p className="mb-2 text-center text-sm text-muted-foreground max-w-[420px]">
+                  <h2 className="mb-1 text-lg font-semibold">Conversation not found</h2>
+                  <p className="mb-4 text-sm text-[var(--text-secondary)]">
                     The previous conversation was deleted or is no longer available.
                   </p>
-                  <p className="text-center text-xs text-muted-foreground/60 max-w-[420px]">
-                    Start a new conversation below.
-                  </p>
-                </>
+                </div>
               ) : restoreNotice === "incomplete" ? (
-                <>
-                  <div className="mb-6 flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                    <span className="text-2xl text-amber-400">&#9888;</span>
+                <div className="text-center">
+                  <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-500/10">
+                    <span className="text-xl text-amber-400">!</span>
                   </div>
-                  <h2 className="mb-2 text-xl font-bold text-white tracking-tight">Response interrupted</h2>
-                  <p className="mb-2 text-center text-sm text-muted-foreground max-w-[420px]">
-                    The last response was cut off before it completed. You can ask your question again to continue.
+                  <h2 className="mb-1 text-lg font-semibold">Response interrupted</h2>
+                  <p className="mb-4 text-sm text-[var(--text-secondary)]">
+                    The last response was cut off. Ask your question again to continue.
                   </p>
-                </>
+                </div>
               ) : (
                 <>
-                  <div className="mb-10 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-steel)] to-[var(--surface-tertiary)] shadow-lg shadow-[var(--accent-steel)]/20">
-                    <Sparkles className="size-8 text-white" strokeWidth={1.5} />
+                  <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-[var(--accent-muted)]">
+                    <Sparkles className="size-7 text-[var(--accent)]" strokeWidth={1.5} />
                   </div>
-                  <h2 className="mb-2 text-2xl font-bold text-white tracking-tight">How can I help you today?</h2>
-                  <p className="mb-12 text-center text-sm text-muted-foreground max-w-[400px]">
-                    Ask me about procedures, compliance documents, or past incidents. I can search through our indexed knowledge base and provide cited answers.
+                  <h2 className="mb-2 text-xl font-semibold tracking-tight">
+                    Ask TRACE anything
+                  </h2>
+                  <p className="mb-8 text-center text-sm text-[var(--text-secondary)] max-w-sm">
+                    Search documents, explore assets, analyze operations, and get AI-powered insights.
                   </p>
 
-                  <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <Bolt className="size-4" /> Quick Actions
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {SUGGESTED_PROMPTS.map(p => (
-                          <button 
-                            key={p.id}
-                            onClick={() => {
-                              onDraftChange(p.prompt);
-                              setTimeout(() => onSubmit(), 100);
-                            }}
-                            className="text-left p-4 rounded-xl border border-white/5 bg-[var(--surface-secondary)] hover:bg-[var(--surface-tertiary)] hover:border-[var(--accent-steel)]/30 transition-all group shadow-sm"
-                          >
-                            <p className="text-sm font-medium text-white/90 group-hover:text-white mb-1">{p.label}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{p.prompt}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <FileClock className="size-4" /> Recently Viewed
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {[1, 2].map(i => (
-                          <div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-[var(--surface-secondary)] hover:bg-[var(--surface-tertiary)] transition-all cursor-pointer shadow-sm">
-                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-steel)]/10 text-[var(--accent-steel)]">
-                              <FileText className="size-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white/90">Safety Protocol V{i}.0</p>
-                              <p className="text-xs text-muted-foreground">Updated {i} days ago</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="flex w-full max-w-lg flex-wrap justify-center gap-2">
+                    {SUGGESTED_PROMPTS.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          onDraftChange(p.prompt);
+                          setTimeout(() => onSubmit(), 100);
+                        }}
+                        className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-all hover:border-[var(--accent)]/30 hover:bg-[var(--accent-muted)] hover:text-[var(--accent)]"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
                   </div>
                 </>
               )}
@@ -172,29 +144,30 @@ export function ConversationArea({
           ))}
 
           {isWaiting && !streamingMessageId && (
-            <div className="py-4">
-              <TypingIndicator />
+            <div className="flex items-center gap-2 py-2">
+              <Loader2 className="size-4 animate-spin text-[var(--accent)]" />
+              <span className="text-sm text-[var(--text-muted)]">Thinking...</span>
             </div>
           )}
 
-          <div ref={bottomRef} className="h-px w-full" />
+          <div ref={bottomRef} className="h-px" />
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/90 to-transparent pt-10 pb-6 px-4">
-        <div className="mx-auto max-w-4xl relative">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/95 to-transparent pt-12 pb-4">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <form
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
             }}
-            className="relative flex items-end gap-2 bg-[var(--surface-secondary)] border border-[var(--accent-steel)]/20 rounded-2xl shadow-xl shadow-black/20 focus-within:border-[var(--accent-steel)]/50 focus-within:ring-1 focus-within:ring-[var(--accent-steel)]/30 transition-all p-2"
+            className="relative flex items-end gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] shadow-lg shadow-black/10 transition-all focus-within:border-[var(--accent)]/40 focus-within:ring-1 focus-within:ring-[var(--accent)]/20"
           >
             <textarea
               ref={inputRef}
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
-              placeholder="Ask about assets, procedures, compliance, or incidents… (Enter to send, Shift+Enter for new line)"
+              placeholder="Ask TRACE about your documents, assets, and operations..."
               disabled={disabled}
               rows={1}
               onKeyDown={(e) => {
@@ -203,43 +176,43 @@ export function ConversationArea({
                   onSubmit();
                 }
               }}
-              className="max-h-48 min-h-[44px] w-full resize-none bg-transparent py-3 pl-4 pr-12 text-[15px] text-foreground placeholder:text-muted-foreground outline-none leading-relaxed"
+              className="max-h-48 min-h-[52px] w-full resize-none bg-transparent py-4 pl-5 pr-14 text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none leading-relaxed"
               onInput={(e) => {
                 const el = e.currentTarget;
                 el.style.height = "auto";
-                el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+                el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
               }}
             />
-            <div className="absolute right-3 bottom-3 flex items-center">
+            <div className="absolute right-2 bottom-2">
               {isWaiting ? (
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="flex size-9 items-center justify-center rounded-xl bg-[var(--surface-tertiary)] hover:bg-red-500/20 text-red-400 transition-colors"
+                  className="flex size-9 items-center justify-center rounded-xl bg-[var(--bg-tertiary)] hover:bg-[var(--danger)]/15 text-[var(--text-secondary)] hover:text-[var(--danger)] transition-colors"
                   title="Stop generating"
                 >
-                  <X className="size-4" strokeWidth={2} />
+                  <Loader2 className="size-4 animate-spin" strokeWidth={2} />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={disabled || !draft.trim()}
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-xl transition-all shadow-sm",
+                    "flex size-9 items-center justify-center rounded-xl transition-all",
                     draft.trim() && !disabled
-                      ? "bg-[var(--accent-steel)] text-white hover:bg-[var(--accent-steel)]/90"
-                      : "bg-[var(--surface-tertiary)] text-white/30"
+                      ? "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-sm"
+                      : "bg-[var(--bg-tertiary)] text-[var(--text-muted)]",
                   )}
                   title="Send message"
                 >
-                  <SendHorizonal className="size-4" strokeWidth={1.75} />
+                  <SendHorizonal className="size-4" strokeWidth={1.5} />
                 </button>
               )}
             </div>
           </form>
-          <div className="text-center mt-3 text-[11px] text-muted-foreground/60">
+          <p className="mt-2.5 text-center text-[11px] text-[var(--text-muted)]/60">
             AI responses can be inaccurate. Please verify critical information.
-          </div>
+          </p>
         </div>
       </div>
     </div>

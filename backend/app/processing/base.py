@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from app.core.storage import create_storage_service
+from app.core.storage.base import StorageBackend
 from app.models.document import Document
 from app.models.document_version import DocumentVersion
 from app.processing.models import ProcessingResult
@@ -10,6 +12,12 @@ class BaseProcessor(ABC):
     name: str
     supported_extensions: frozenset[str] = frozenset()
     supported_mime_types: frozenset[str] = frozenset()
+
+    def __init__(self, storage: StorageBackend | None = None) -> None:
+        self._storage = storage or create_storage_service()
+
+    def _resolve_path(self, version: DocumentVersion) -> str:
+        return self._storage.resolve_path(version.storage_uri)
 
     def supports(self, extension: str) -> bool:
         return extension.lower() in self.supported_extensions

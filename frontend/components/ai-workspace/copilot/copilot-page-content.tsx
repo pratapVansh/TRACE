@@ -8,8 +8,6 @@ import {
   type Message,
 } from "@/components/ai-workspace/copilot/conversation-area";
 import { ConversationSidebar } from "@/components/ai-workspace/copilot/conversation-sidebar";
-import { ReferencedDocuments } from "@/components/ai-workspace/copilot/referenced-documents";
-import { SourcePanel } from "@/components/ai-workspace/copilot/source-panel";
 import { SourcePreviewModal } from "@/components/ai-workspace/copilot/source-preview-modal";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -598,10 +596,10 @@ export function CopilotPageContent() {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-12">
+      <div className="flex gap-0">
         {/* Sidebar — hidden on smaller screens */}
-        <div className="hidden xl:flex xl:flex-col xl:col-span-3">
-          <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-3">
+        <div className="hidden xl:flex xl:w-72 xl:shrink-0">
+          <div className="w-full border-r border-[var(--border)] p-3">
             <ConversationSidebar
               conversations={showArchived ? archivedConversations : conversations}
               activeConversationId={conversationId}
@@ -642,8 +640,8 @@ export function CopilotPageContent() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 xl:col-span-6">
-          <div className="min-h-[600px]">
+        <div className="flex min-w-0 flex-1">
+          <div className="h-[calc(100vh-7rem)] w-full">
             <ConversationArea
               messages={messages}
               isWaiting={isWaiting}
@@ -654,18 +652,6 @@ export function CopilotPageContent() {
               onCitationClick={setSelectedCitation}
               streamingMessageId={streamingMessageId}
               restoreNotice={restoreNotice}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 xl:col-span-3">
-          <div className="max-h-[300px] overflow-y-auto">
-            <ReferencedDocuments sources={allSources} />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <SourcePanel
-              citations={lastCitations}
-              onCitationClick={setSelectedCitation}
             />
           </div>
         </div>

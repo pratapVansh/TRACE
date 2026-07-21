@@ -69,7 +69,7 @@ export function UploadDocumentsPageContent() {
             entry.id === item.id
               ? {
                   ...entry,
-                  status: "complete",
+                  status: "processing",
                   progress: 100,
                   message: "Upload complete — queued for ingestion",
                 }
@@ -78,8 +78,14 @@ export function UploadDocumentsPageContent() {
         );
 
         window.setTimeout(() => {
-          setQueue((current) => current.filter((entry) => entry.id !== item.id));
-        }, 2500);
+          setQueue((current) =>
+            current.map((entry) =>
+              entry.id === item.id
+                ? { ...entry, status: "complete" as const, message: "Upload complete — queued for ingestion" }
+                : entry,
+            ),
+          );
+        }, 1500);
       } catch (error) {
         setQueue((current) =>
           current.map((entry) =>
@@ -151,9 +157,33 @@ export function UploadDocumentsPageContent() {
     [baseId, processPendingUploads],
   );
 
-  const isUploading = queue.some(
-    (item) => item.status === "queued" || item.status === "uploading",
+  const queued = queue.filter((i) => i.status === "queued").length;
+  const uploading = queue.filter((i) => i.status === "uploading").length;
+  const completed = queue.filter((i) => i.status === "complete").length;
+  const failed = queue.filter((i) => i.status === "failed").length;
+  const totalFiles = queue.length;
+  const overallProgress = totalFiles > 0
+    ? Math.round(((completed + failed) / totalFiles) * 100)
+    : 0;
+
+  const retryUpload = useCallback(
+    async (item: UploadQueueItem) => {
+      pendingUploadsRef.current.push({ ...item, status: "queued", progress: 0, message: "Waiting for upload slot" });
+      setQueue((current) =>
+        current.map((entry) =>
+          entry.id === item.id
+            ? { ...entry, status: "queued", progress: 0, message: "Waiting for upload slot" }
+            : entry,
+        ),
+      );
+      void processPendingUploads();
+    },
+    [processPendingUploads],
   );
+
+  const removeFromQueue = useCallback((id: string) => {
+    setQueue((current) => current.filter((entry) => entry.id !== id));
+  }, []);
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:gap-8">
@@ -167,13 +197,51 @@ export function UploadDocumentsPageContent() {
 
       <UploadDropZone
         onFilesSelected={handleFilesSelected}
-        disabled={isUploading}
         accept={UPLOAD_ACCEPT_ATTRIBUTE}
       />
 
+      {totalFiles > 0 ? (
+        <div className="rounded-xl border border-border bg-[var(--surface-secondary)]/60 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {uploading > 0 ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 animate-pulse rounded-full bg-[var(--accent-steel)]" />
+                  Uploading {uploading} file{uploading > 1 ? "s" : ""}…
+                </span>
+              ) : completed > 0 ? (
+                <span className="flex items-center gap-1.5 text-[var(--success)]">
+                  Completed {completed} of {totalFiles}
+                </span>
+              ) : (
+                <span>{totalFiles} file{totalFiles > 1 ? "s" : ""} in queue</span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {completed + failed}/{totalFiles}
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface)]">
+            <div
+              className="h-full rounded-full bg-[var(--accent-steel)] transition-all duration-500"
+              style={{ width: `${overallProgress}%` }}
+            />
+          </div>
+          {failed > 0 ? (
+            <p className="mt-1.5 text-xs text-[var(--danger)]">
+              {failed} file{failed > 1 ? "s" : ""} failed
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="xl:col-span-7">
-          <UploadQueue items={queue} />
+          <UploadQueue
+            items={queue}
+            onRetry={retryUpload}
+            onRemove={removeFromQueue}
+          />
         </div>
         <div className="xl:col-span-5">
           <SupportedFileTypes fileTypes={SUPPORTED_FILE_TYPES} />

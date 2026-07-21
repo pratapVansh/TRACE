@@ -186,10 +186,10 @@ class ChatService:
                 lines = [
                     "Previously Retrieved Evidence:",
                     "------------------",
-                    "The following documents were cited in the previous assistant response. "
-                    "Use them as context for the current question without re-retrieving if applicable.",
+                    "The following documents were cited in a previous turn and are provided for continuity only. "
+                    "Do NOT use them as evidence for the current question unless they also appear in the CURRENTLY retrieved context below.",
                 ]
-                for i, c in enumerate(last_evidence[:10], 1):
+                for i, c in enumerate(last_evidence[:5], 1):
                     doc = c.get("document_name", "Unknown")
                     excerpt = c.get("chunk_content", "") or c.get("highlighted_excerpt", "") or ""
                     lines.append(f"[{i}] {doc}: {excerpt[:200]}")
@@ -220,13 +220,21 @@ class ChatService:
         context_parts = [p for p in [memory_context, user_graph_context, evidence_context, snapshot_context] if p]
         combined_context = "\n\n".join(context_parts)
 
+        # Strip evidence content from previous assistant messages in history
+        # to prevent the LLM from reusing old citations instead of current retrieval.
+        limited_history = []
+        for m in reversed(history_dicts):
+            limited_history.insert(0, m)
+            if len(limited_history) >= 6:
+                break
+
         try:
             rag_response = await self._rag.query(
                 question=question,
                 top_k=top_k,
                 similarity_threshold=similarity_threshold,
                 filters=filters,
-                history=history_dicts,
+                history=limited_history,
                 additional_system_context=combined_context or None,
             )
         except Exception as exc:
@@ -237,7 +245,7 @@ class ChatService:
                     top_k=top_k,
                     similarity_threshold=similarity_threshold,
                     filters=filters,
-                    history=history_dicts,
+                    history=limited_history,
                     additional_system_context=combined_context or None,
                 )
             else:
@@ -348,10 +356,10 @@ class ChatService:
                 lines = [
                     "Previously Retrieved Evidence:",
                     "------------------",
-                    "The following documents were cited in the previous assistant response. "
-                    "Use them as context for the current question without re-retrieving if applicable.",
+                    "The following documents were cited in a previous turn and are provided for continuity only. "
+                    "Do NOT use them as evidence for the current question unless they also appear in the CURRENTLY retrieved context below.",
                 ]
-                for i, c in enumerate(last_evidence[:10], 1):
+                for i, c in enumerate(last_evidence[:5], 1):
                     doc = c.get("document_name", "Unknown")
                     excerpt = c.get("chunk_content", "") or c.get("highlighted_excerpt", "") or ""
                     lines.append(f"[{i}] {doc}: {excerpt[:200]}")
@@ -382,6 +390,12 @@ class ChatService:
         context_parts = [p for p in [memory_context, user_graph_context, evidence_context, snapshot_context] if p]
         combined_context = "\n\n".join(context_parts)
 
+        limited_history = []
+        for m in reversed(history_dicts):
+            limited_history.insert(0, m)
+            if len(limited_history) >= 6:
+                break
+
         full_answer = ""
         citations_data: list[dict] | None = None
 
@@ -390,7 +404,7 @@ class ChatService:
             top_k=top_k,
             similarity_threshold=similarity_threshold,
             filters=filters,
-            history=history_dicts,
+            history=limited_history,
             additional_system_context=combined_context or None,
         ):  # GraphRagService.query_stream (falls back to semantic if hybrid fails)
             yield event

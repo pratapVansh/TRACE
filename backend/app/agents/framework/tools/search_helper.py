@@ -12,6 +12,7 @@ conversation.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from app.agents.framework.tool import ToolResult
@@ -43,8 +44,8 @@ async def search_hybrid(
     graph_query_augment: str = "",
     doc_query_augment: str = "",
     entity_type: str | None = None,
-    graph_item_fn: callable | None = None,
-    doc_item_fn: callable | None = None,
+    graph_item_fn: Callable[[Any], dict] | None = None,
+    doc_item_fn: Callable[[Any], dict] | None = None,
     cache: RetrievalCacheEntry | None = None,
 ) -> HybridSearchResult:
     """Search graph entities and/or documents for *query*.

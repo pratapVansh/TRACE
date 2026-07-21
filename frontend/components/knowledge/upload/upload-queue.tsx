@@ -1,22 +1,25 @@
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Trash2, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { UploadQueueItem } from "@/types/knowledge";
 
 type UploadQueueProps = {
   items: UploadQueueItem[];
+  onRetry?: (item: UploadQueueItem) => void;
+  onRemove?: (id: string) => void;
 };
 
 const STATUS_LABEL = {
   queued: "Queued",
   uploading: "Uploading",
-  processing: "Processing",
+  processing: "Indexing…",
   complete: "Complete",
   failed: "Failed",
 } as const;
 
-export function UploadQueue({ items }: UploadQueueProps) {
+export function UploadQueue({ items, onRetry, onRemove }: UploadQueueProps) {
   const activeCount = items.filter(
     (item) => item.status === "queued" || item.status === "uploading",
   ).length;
@@ -51,14 +54,37 @@ export function UploadQueue({ items }: UploadQueueProps) {
                     {item.fileType.toUpperCase()} · {item.fileSize}
                   </p>
                 </div>
-                <Badge
-                  variant={
-                    item.status === "complete"
-                      ? "success"
-                      : item.status === "failed"
-                        ? "default"
-                        : "default"
-                  }
+                <div className="flex items-center gap-2">
+                  {item.status === "failed" && onRetry ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-white"
+                      onClick={() => onRetry(item)}
+                      aria-label={`Retry ${item.fileName}`}
+                    >
+                      <RefreshCw className="size-3.5" />
+                    </Button>
+                  ) : null}
+                  {(item.status === "queued" || item.status === "failed") && onRemove ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-[var(--danger)]"
+                      onClick={() => onRemove(item.id)}
+                      aria-label={`Remove ${item.fileName}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  ) : null}
+                  <Badge
+                    variant={
+                      item.status === "complete"
+                        ? "success"
+                        : item.status === "failed"
+                          ? "warning"
+                          : "secondary"
+                    }
                   className={cn(
                     item.status === "failed" &&
                       "border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger)]",
@@ -67,8 +93,9 @@ export function UploadQueue({ items }: UploadQueueProps) {
                   {STATUS_LABEL[item.status]}
                 </Badge>
               </div>
+            </div>
 
-              {item.status !== "failed" && item.status !== "complete" ? (
+              {item.status !== "failed" && item.status !== "complete" && item.status !== "processing" ? (
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">

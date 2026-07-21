@@ -45,48 +45,48 @@ export function DocumentPreview({ data }: { data: string | DocumentData }) {
         <div className="flex w-full items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             {getDocIcon(doc.document_name)}
-            <span className="font-semibold text-white/90 truncate max-w-[200px] sm:max-w-[300px]">
+            <span className="font-semibold text-[var(--text-primary)]/90 truncate max-w-[200px] sm:max-w-[300px]">
               {doc.document_name}
             </span>
             {doc.page_number && (
-              <span className="text-xs text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded">p.{doc.page_number}</span>
+              <span className="text-xs text-muted-foreground bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded">p.{doc.page_number}</span>
             )}
           </div>
           <ExternalLink className="size-4 text-muted-foreground" />
         </div>
         {doc.highlighted_excerpt && (
           <div 
-            className="text-left text-sm text-foreground/80 line-clamp-2 w-full pl-6 [&>mark]:bg-sky-500/20 [&>mark]:text-sky-300 [&>mark]:rounded-sm [&>mark]:px-0.5"
+            className="text-left text-sm text-foreground/80 line-clamp-2 w-full pl-6 [&>mark]:bg-[var(--accent)]/20 [&>mark]:text-[var(--accent)] [&>mark]:rounded-sm [&>mark]:px-0.5"
             dangerouslySetInnerHTML={{ __html: doc.highlighted_excerpt }}
           />
         )}
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--accent-steel)]/20 bg-[var(--surface-primary)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-[var(--accent-steel)]/10 px-6 py-4 bg-[var(--surface-secondary)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg)]/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[var(--accent-steel)]/10 px-6 py-4 bg-[var(--bg-secondary)]">
               <div className="flex items-center gap-3">
                 {getDocIcon(doc.document_name)}
-                <h3 className="font-semibold text-white">{doc.document_name}</h3>
+                <h3 className="font-semibold text-[var(--text-primary)]">{doc.document_name}</h3>
                 {doc.page_number && <span className="text-sm text-muted-foreground">Page {doc.page_number}</span>}
-                {doc.confidence && <span className="text-sm text-sky-400">Match: {(doc.confidence * 100).toFixed(0)}%</span>}
+                {doc.confidence && <span className="text-sm text-[var(--accent)]">Match: {(doc.confidence * 100).toFixed(0)}%</span>}
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                className="p-1.5 rounded-md hover:bg-[var(--bg-tertiary)] text-muted-foreground hover:text-[var(--text-primary)] transition-colors"
               >
                 <X className="size-5" />
               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-6 bg-[var(--surface-primary)]">
-              <div className="flex items-center gap-2 mb-4 text-sm font-medium text-sky-400">
+            <div className="flex-1 overflow-y-auto p-6 bg-[var(--bg-secondary)]">
+              <div className="flex items-center gap-2 mb-4 text-sm font-medium text-[var(--accent)]">
                 <Search className="size-4" />
                 Retrieved Context
               </div>
               <div 
-                className="prose prose-invert max-w-none text-foreground/90 leading-relaxed [&>mark]:bg-sky-500/20 [&>mark]:text-sky-300 [&>mark]:rounded-sm [&>mark]:px-1 [&>mark]:font-medium whitespace-pre-wrap font-mono text-sm"
+                className="prose max-w-none text-foreground/90 leading-relaxed [&>mark]:bg-[var(--accent)]/20 [&>mark]:text-[var(--accent)] [&>mark]:rounded-sm [&>mark]:px-1 [&>mark]:font-medium whitespace-pre-wrap font-mono text-sm"
                 dangerouslySetInnerHTML={{ __html: doc.highlighted_excerpt || doc.chunk_content || "No content preview available." }}
               />
             </div>

@@ -49,7 +49,7 @@ function StatementClassifications({ statements }: { statements: { text: string; 
           </span>
         )}
         {unknowns.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-400/10">
+          <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] bg-[var(--bg-tertiary)]">
             <HelpCircle className="size-3" strokeWidth={1.75} />
             {unknowns.length} Unknown
           </span>
@@ -196,7 +196,7 @@ export function AgentChatContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 lg:gap-8">
-      <div className="industrial-card flex h-full min-h-[600px] flex-col overflow-hidden">
+      <div className="industrial-card flex h-full min-h-[600px] max-h-[calc(100vh-10rem)] flex-col overflow-hidden">
         <div className="border-b border-border px-5 py-4">
           <p className="section-label">AI Workspace</p>
           <h3 className="mt-1 text-lg font-semibold text-white">

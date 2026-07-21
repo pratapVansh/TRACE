@@ -153,8 +153,8 @@ class KnowledgeGraphAgent(BaseAgent):
             wm.set_temp("final_answer", answer)
             wm.set_temp("confidence", confidence)
 
-        _search_dict = locals().get("search_data") or locals().get("search_results") or locals().get("report_data")
-        _final_conf, _expl = self.evaluate_confidence(True, _search_dict, locals().get("answer", ""))
+        _search_dict = {"documents": []}  # graph agent scores its own confidence internally
+        _final_conf, _expl = self.evaluate_confidence(True, _search_dict, answer)
         confidence = _final_conf
         answer = annotate_answer(answer, graph_citations=citations, tools_used=tools_used, confidence=confidence, confidence_explanation=_expl, search_data=_search_dict)
         return AgentResponse(

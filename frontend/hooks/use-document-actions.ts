@@ -22,7 +22,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export function useDocumentActions() {
-  const { deleteDocument, fetchDocumentBlob } = useDocumentsContext();
+  const { deleteDocument, bulkDeleteDocuments, fetchDocumentBlob } = useDocumentsContext();
   const [actionError, setActionError] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<KnowledgeDocument | null>(
     null,
@@ -129,6 +129,38 @@ export function useDocumentActions() {
     [deleteDocument],
   );
 
+  const handleBulkDelete = useCallback(
+    async (documentIds: string[]) => {
+      if (
+        !window.confirm(
+          `Delete ${documentIds.length} document(s)? This permanently removes them from the repository.`,
+        )
+      ) {
+        return { deleted: 0, errors: [] as string[] };
+      }
+
+      setActionError(null);
+
+      try {
+        const result = await bulkDeleteDocuments(documentIds);
+        if (result.errors.length > 0) {
+          setActionError(
+            `Deleted ${result.deleted} document(s). Errors: ${result.errors.join(", ")}`,
+          );
+        }
+        return result;
+      } catch (deleteError) {
+        setActionError(
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Failed to delete documents.",
+        );
+        return { deleted: 0, errors: ["Request failed"] };
+      }
+    },
+    [bulkDeleteDocuments],
+  );
+
   return {
     actionError,
     setActionError,
@@ -140,5 +172,6 @@ export function useDocumentActions() {
     handlePreview,
     handleDownload,
     handleDelete,
+    handleBulkDelete,
   };
 }

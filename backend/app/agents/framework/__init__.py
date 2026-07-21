@@ -76,6 +76,7 @@ from app.agents.framework.agents import (
     ComplianceGapTool,
     ComplianceRecommendationTool,
     ComplianceSearchTool,
+    ConversationAgent,
     DocumentAnalysisAgent,
     DocumentComparisonTool,
     DocumentMetadataTool,
@@ -100,7 +101,9 @@ from app.agents.framework.agents import (
     ReportGenerationTool,
     RootCauseAnalysisAgent,
     RootCauseTool,
+    SearchAgent,
     SimilarIncidentTool,
+    WorkspaceAgent,
 )
 
 __all__ = [
@@ -126,6 +129,7 @@ __all__ = [
     "ComplianceRecommendationTool",
     "ComplianceSearchTool",
     "ContextSummarizer",
+    "ConversationAgent",
     "ConversationMemory",
     "CurrentTimeTool",
     "DocumentAnalysisAgent",
@@ -163,6 +167,7 @@ __all__ = [
     "RootCauseAnalysisAgent",
     "RootCauseTool",
     "RoutingPlan",
+    "SearchAgent",
     "SimilarIncidentTool",
     "SimpleSummarizer",
     "SystemInfoTool",
@@ -176,4 +181,5 @@ __all__ = [
     "ToolMetadata",
     "ToolResult",
     "WorkingMemory",
+    "WorkspaceAgent",
 ]

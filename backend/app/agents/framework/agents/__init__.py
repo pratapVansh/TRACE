@@ -56,7 +56,10 @@ from app.agents.framework.agents.graph_tools import (
     GraphSearchTool,
     GraphStatisticsTool,
 )
+from app.agents.framework.agents.conversation_agent import ConversationAgent
 from app.agents.framework.agents.maintenance_agent import MaintenanceAgent
+from app.agents.framework.agents.search_agent import SearchAgent
+from app.agents.framework.agents.workspace_agent import WorkspaceAgent
 from app.agents.framework.agents.maintenance_tools import (
     MaintenanceChecklistTool,
     MaintenanceHistoryTool,
@@ -87,6 +90,7 @@ __all__ = [
     "AssetSummaryTool",
     "ComplianceAgent",
     "ComplianceCheckTool",
+    "ConversationAgent",
     "ComplianceGapTool",
     "ComplianceRecommendationTool",
     "ComplianceSearchTool",
@@ -114,5 +118,7 @@ __all__ = [
     "ReportGenerationTool",
     "RootCauseAnalysisAgent",
     "RootCauseTool",
+    "SearchAgent",
     "SimilarIncidentTool",
+    "WorkspaceAgent",
 ]

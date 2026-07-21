@@ -1,8 +1,10 @@
 from urllib.parse import quote
+import uuid
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import Response
+from pydantic import BaseModel
 
 from app.api.authorization import require_permission
 from app.api.deps import _extract_ip, get_document_service
@@ -276,3 +278,37 @@ async def delete_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete stored document files",
         ) from exc
+
+
+class BulkDeleteRequest(BaseModel):
+    document_ids: list[uuid.UUID]
+
+
+class BulkDeleteResponse(BaseModel):
+    deleted: int
+    errors: list[str]
+
+
+@router.post("/bulk-delete", status_code=status.HTTP_200_OK)
+async def bulk_delete_documents(
+    request: Request,
+    body: BulkDeleteRequest,
+    current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.DOCUMENTS_UPLOAD)),
+    document_service: DocumentService = Depends(get_document_service),
+) -> BulkDeleteResponse:
+    deleted = 0
+    errors: list[str] = []
+    for doc_id in body.document_ids:
+        try:
+            await document_service.delete_document(
+                doc_id, actor=current_user, ip_address=_extract_ip(request),
+            )
+            deleted += 1
+        except DocumentNotFoundError:
+            errors.append(f"Document {doc_id} not found")
+        except DocumentProcessingActiveError:
+            # Already auto-cancels active jobs, but guard against edge case
+            errors.append(f"Document {doc_id} is being processed")
+        except DocumentStorageError as exc:
+            errors.append(f"Storage error for {doc_id}: {exc}")
+    return BulkDeleteResponse(deleted=deleted, errors=errors)

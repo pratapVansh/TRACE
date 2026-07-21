@@ -22,7 +22,7 @@ export function SourcePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg)]/80 p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -37,7 +37,7 @@ export function SourcePreviewModal({
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Source preview
             </p>
-            <h3 className="mt-1 truncate text-lg font-semibold text-white">
+            <h3 className="mt-1 truncate text-lg font-semibold text-[var(--text-primary)]">
               {citation.document_name}
             </h3>
           </div>
@@ -75,7 +75,7 @@ export function SourcePreviewModal({
                 Highlighted excerpt
               </p>
               <div
-                className="rounded-xl border border-border bg-[var(--surface-secondary)] p-4 text-sm leading-relaxed text-white"
+                className="rounded-xl border border-border bg-[var(--bg-secondary)] p-4 text-sm leading-relaxed text-[var(--text-primary)]"
                 dangerouslySetInnerHTML={{
                   __html: citation.highlighted_excerpt,
                 }}

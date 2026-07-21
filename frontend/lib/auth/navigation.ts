@@ -1,18 +1,12 @@
 import {
-  BookOpen,
   Bot,
-  ClipboardList,
   Cog,
-  Cpu,
   LayoutDashboard,
   Network,
-  ScrollText,
+  FileText,
   Search,
   Settings,
-  Shield,
-  Upload,
-  UserCog,
-  Users,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -33,25 +27,24 @@ export type NavSection = {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: "Operations",
+    title: "Home",
     items: [
       {
         href: APP_ROUTES.dashboard,
-        label: "Overview",
+        label: "Dashboard",
         icon: LayoutDashboard,
         permission: PERMISSIONS.DASHBOARD,
       },
+    ],
+  },
+  {
+    title: "Knowledge",
+    items: [
       {
         href: APP_ROUTES.documents,
         label: "Documents",
-        icon: ClipboardList,
+        icon: FileText,
         permission: PERMISSIONS.DOCUMENTS_READ,
-      },
-      {
-        href: APP_ROUTES.documentsUpload,
-        label: "Upload Documents",
-        icon: Upload,
-        permission: PERMISSIONS.DOCUMENTS_UPLOAD,
       },
       {
         href: APP_ROUTES.search,
@@ -62,7 +55,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "Intelligence",
+    title: "AI",
     items: [
       {
         href: APP_ROUTES.copilot,
@@ -79,19 +72,13 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         href: APP_ROUTES.aiAgents,
         label: "AI Agents",
-        icon: Cpu,
+        icon: Cog,
         permission: PERMISSIONS.AI_AGENTS,
-      },
-      {
-        href: APP_ROUTES.sopLibrary,
-        label: "SOP Library",
-        icon: BookOpen,
-        permission: PERMISSIONS.SOP_LIBRARY,
       },
     ],
   },
   {
-    title: "Asset & Maintenance",
+    title: "Operations",
     items: [
       {
         href: APP_ROUTES.assets,
@@ -100,32 +87,15 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: PERMISSIONS.ASSETS_READ,
       },
       {
-        href: APP_ROUTES.assetHierarchy,
-        label: "Asset Hierarchy",
-        icon: Network,
-        permission: PERMISSIONS.ASSETS_READ,
-      },
-      {
         href: APP_ROUTES.maintenance,
         label: "Maintenance",
-        icon: ClipboardList,
+        icon: Cog,
         permission: PERMISSIONS.MAINTENANCE,
       },
-    ],
-  },
-  {
-    title: "Governance",
-    items: [
       {
         href: APP_ROUTES.compliance,
-        label: "Compliance Center",
-        icon: Shield,
-        permission: PERMISSIONS.COMPLIANCE,
-      },
-      {
-        href: APP_ROUTES.auditLogs,
-        label: "Audit Logs",
-        icon: ScrollText,
+        label: "Compliance",
+        icon: ShieldCheck,
         permission: PERMISSIONS.COMPLIANCE,
       },
     ],
@@ -134,20 +104,8 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "Administration",
     items: [
       {
-        href: APP_ROUTES.settingsUsers,
-        label: "Users",
-        icon: Users,
-        permission: PERMISSIONS.USER_MANAGEMENT,
-      },
-      {
-        href: APP_ROUTES.settingsRoles,
-        label: "Roles & Permissions",
-        icon: UserCog,
-        permission: PERMISSIONS.ROLE_MANAGEMENT,
-      },
-      {
         href: APP_ROUTES.settings,
-        label: "System Settings",
+        label: "Settings",
         icon: Settings,
         permission: PERMISSIONS.SYSTEM_SETTINGS,
       },

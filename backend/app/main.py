@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.ai.base import LLMConnectionError, LLMConfigurationError
 from app.ai.groq_provider import GroqProvider
@@ -395,7 +396,10 @@ def create_app() -> FastAPI:
     dependencies = []
     if settings.global_rate_limit_enabled:
         from app.middleware.rate_limit import RateLimiter
-        dependencies.append(Depends(RateLimiter(max_requests=100, window_seconds=60)))
+        dependencies.append(Depends(RateLimiter(
+            max_requests=settings.global_rate_limit_max,
+            window_seconds=settings.global_rate_limit_window_seconds,
+        )))
 
     app = FastAPI(
         title=settings.app_name,

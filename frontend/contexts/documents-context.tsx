@@ -17,6 +17,7 @@ import {
   listDocuments,
   updateDocument as updateDocumentRequest,
   uploadDocument as uploadDocumentRequest,
+  bulkDeleteDocuments as bulkDeleteDocumentsRequest,
   type DocumentListParams,
   type UpdateDocumentPayload,
 } from "@/lib/api/documents";
@@ -54,6 +55,7 @@ type DocumentsContextValue = {
     payload: UpdateDocumentPayload,
   ) => Promise<KnowledgeDocument>;
   deleteDocument: (documentId: string) => Promise<void>;
+  bulkDeleteDocuments: (documentIds: string[]) => Promise<{ deleted: number; errors: string[] }>;
   fetchDocumentBlob: (documentId: string, download?: boolean) => Promise<Blob>;
   queryVersion: number;
   invalidateQueries: () => void;
@@ -117,6 +119,15 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     [invalidateQueries],
   );
 
+  const bulkDeleteDocuments = useCallback(
+    async (documentIds: string[]) => {
+      const result = await bulkDeleteDocumentsRequest(documentIds);
+      invalidateQueries();
+      return result;
+    },
+    [invalidateQueries],
+  );
+
   const fetchDocumentBlob = useCallback(
     async (documentId: string, download = false) => {
       return downloadDocument(documentId, { download });
@@ -130,11 +141,13 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
       uploadDocument,
       updateDocument,
       deleteDocument,
+      bulkDeleteDocuments,
       fetchDocumentBlob,
       queryVersion,
       invalidateQueries,
     }),
     [
+      bulkDeleteDocuments,
       deleteDocument,
       fetchDocumentBlob,
       fetchDocuments,

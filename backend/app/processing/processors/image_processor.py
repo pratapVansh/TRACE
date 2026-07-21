@@ -194,11 +194,6 @@ class ImageProcessor(BaseProcessor):
             processing_time=timedelta(seconds=processing_time),
             warnings=warnings,
         )
-
-    def _resolve_path(self, version: DocumentVersion) -> str:
-        return str(settings.storage_root_path / version.storage_uri)
-
-    @staticmethod
     def _get_file_size(file_path: str) -> int | None:
         try:
             return Path(file_path).stat().st_size
