@@ -19,13 +19,13 @@ async def get_metrics(
     - ``prometheus`` — plaintext Prometheus exposition format
     """
     if format == "prometheus":
-        return PlainTextResponse(await metrics.prometheus_output())
+        return PlainTextResponse(metrics.prometheus_output())
 
-    return await metrics.snapshot()
+    return metrics.snapshot()
 
 
 @router.post("/reset")
 async def reset_metrics():
     """Clear all accumulated metrics (for testing)."""
-    await metrics.reset()
+    metrics.reset()
     return {"status": "ok", "message": "Metrics reset"}

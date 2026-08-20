@@ -73,6 +73,7 @@ export function ExecutiveDashboard() {
 
   const [apiData, setApiData] = useState<DashboardApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,9 +82,15 @@ export function ExecutiveDashboard() {
       .then((data) => {
         if (!cancelled) {
           setApiData(data);
+          setLoadFailed(false);
         }
       })
-      .catch(() => {})
+      // Swallowing this rendered an empty dashboard that looked like "no data
+      // yet" while /api/dashboard was in fact returning 500 on every call.
+      // Surface the failure instead of silently falling back to placeholders.
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -168,6 +175,16 @@ export function ExecutiveDashboard() {
         facilityName={displayData.facilityName}
         lastUpdated={displayData.lastUpdated}
       />
+
+      {loadFailed && (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+        >
+          Could not load dashboard data. The figures below are unavailable, not
+          zero — check that the backend is reachable and try refreshing.
+        </div>
+      )}
 
       {displayData.kpis.length > 0 ? (
         <DashboardKpiGrid kpis={kpis} />

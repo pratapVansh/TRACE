@@ -18,17 +18,15 @@ export interface RegisterRequest {
   full_name: string;
 }
 
+/**
+ * Auth response body. The refresh token is intentionally absent — it is
+ * delivered as an httpOnly cookie and never exposed to JavaScript.
+ */
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 }
 
 export interface MessageResponse {
   message: string;
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
 }

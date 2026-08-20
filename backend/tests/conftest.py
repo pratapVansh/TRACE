@@ -21,6 +21,22 @@ from app.schemas.documents import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _clear_result_cache():
+    """Isolate tests from the process-wide result cache.
+
+    ``cache_manager`` is a module-level singleton with an in-memory LRU, so
+    a cached value (e.g. ``QdrantVectorStore.search`` keyed on the query
+    vector) leaked into later tests — they were served a previous test's
+    result instead of exercising their own mocks.
+    """
+    from app.core.cache import cache_manager
+
+    cache_manager._local_cache.cache.clear()
+    yield
+    cache_manager._local_cache.cache.clear()
+
+
 @pytest.fixture
 def engineer_user() -> UserMeResponse:
     return UserMeResponse(

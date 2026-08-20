@@ -19,6 +19,8 @@ export const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  // Required so the httpOnly refresh cookie reaches /api/auth/*.
+  withCredentials: true,
 });
 
 type RefreshQueueItem = {
@@ -46,19 +48,15 @@ function processRefreshQueue(error: unknown, token: string | null): void {
 }
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = authStorage.getRefreshToken();
-  if (!refreshToken) {
-    throw new Error("Missing refresh token");
-  }
+  // The refresh token travels as an httpOnly cookie — JS neither reads nor
+  // sends it explicitly, so this request carries no body.
+  const { data } = await axios.post<{ access_token: string }>(
+    `${API_URL}/api/auth/refresh`,
+    {},
+    { withCredentials: true },
+  );
 
-  const { data } = await axios.post<{
-    access_token: string;
-    refresh_token: string;
-  }>(`${API_URL}/api/auth/refresh`, {
-    refresh_token: refreshToken,
-  });
-
-  authStorage.setTokens(data.access_token, data.refresh_token);
+  authStorage.setAccessToken(data.access_token);
   return data.access_token;
 }
 

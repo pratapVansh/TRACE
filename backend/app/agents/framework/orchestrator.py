@@ -113,7 +113,7 @@ class AIOrchestrator:
             memory_manager=mgr,
         )
 
-        agent = self._select_agent(question, agent_id, user_role=user_role)
+        agent = await self._select_agent(question, agent_id, user_role=user_role)
         metrics.increment(f"agent.{agent.agent_id}.invocations")
 
         # Let the agent enrich the context before execution

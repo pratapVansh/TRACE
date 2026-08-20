@@ -23,7 +23,6 @@ import type { LoginRequest, RegisterRequest, User } from "@/types/auth";
 interface AuthContextValue {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (payload: LoginRequest) => Promise<void>;
@@ -37,67 +36,56 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 interface ResolvedAuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
 }
 
-async function resolveInitialAuthState(): Promise<ResolvedAuthState> {
-  const accessToken = authStorage.getAccessToken();
-  const refreshToken = authStorage.getRefreshToken();
+const SIGNED_OUT: ResolvedAuthState = { user: null, accessToken: null };
 
-  if (!accessToken || !refreshToken) {
+/**
+ * Restore the session on page load.
+ *
+ * The access token lives in memory, so it is always gone after a reload.
+ * The httpOnly refresh cookie is the only surviving credential — exchange
+ * it for a fresh access token. The session hint avoids firing a guaranteed
+ * 401 for visitors who were never signed in.
+ */
+async function resolveInitialAuthState(): Promise<ResolvedAuthState> {
+  if (!authStorage.hasSessionHint()) {
     authStorage.clearTokens();
-    return { user: null, accessToken: null, refreshToken: null };
+    return SIGNED_OUT;
   }
 
   try {
+    const tokens = await refreshRequest();
+    authStorage.setAccessToken(tokens.access_token);
     const user = await getCurrentUserRequest();
-    authStorage.setTokens(accessToken, refreshToken);
-    return { user, accessToken, refreshToken };
+    return { user, accessToken: tokens.access_token };
   } catch {
-    try {
-      const tokens = await refreshRequest(refreshToken);
-      authStorage.setTokens(tokens.access_token, tokens.refresh_token);
-      const user = await getCurrentUserRequest();
-      return {
-        user,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-      };
-    } catch {
-      authStorage.clearTokens();
-      return { user: null, accessToken: null, refreshToken: null };
-    }
+    // Cookie missing, expired, or already revoked.
+    authStorage.clearTokens();
+    return SIGNED_OUT;
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const applyTokens = useCallback((nextAccessToken: string, nextRefreshToken: string) => {
-    authStorage.setTokens(nextAccessToken, nextRefreshToken);
+  const applyAccessToken = useCallback((nextAccessToken: string) => {
+    authStorage.setAccessToken(nextAccessToken);
     setAccessToken(nextAccessToken);
-    setRefreshToken(nextRefreshToken);
   }, []);
 
   const clearAuth = useCallback(() => {
     authStorage.clearTokens();
     setUser(null);
     setAccessToken(null);
-    setRefreshToken(null);
   }, []);
 
   const refresh = useCallback(async () => {
-    const storedRefreshToken = authStorage.getRefreshToken();
-    if (!storedRefreshToken) {
-      throw new Error("No refresh token available");
-    }
-
-    const tokens = await refreshRequest(storedRefreshToken);
-    applyTokens(tokens.access_token, tokens.refresh_token);
-  }, [applyTokens]);
+    const tokens = await refreshRequest();
+    applyAccessToken(tokens.access_token);
+  }, [applyAccessToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setUser(state.user);
       setAccessToken(state.accessToken);
-      setRefreshToken(state.refreshToken);
       setIsLoading(false);
     });
 
@@ -118,11 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (payload: LoginRequest) => {
       const tokens = await loginRequest(payload);
-      applyTokens(tokens.access_token, tokens.refresh_token);
+      applyAccessToken(tokens.access_token);
       const currentUser = await getCurrentUserRequest();
       setUser(currentUser);
     },
-    [applyTokens],
+    [applyAccessToken],
   );
 
   const register = useCallback(async (payload: RegisterRequest) => {
@@ -130,11 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    const storedRefreshToken = authStorage.getRefreshToken();
     try {
-      if (storedRefreshToken) {
-        await logoutRequest(storedRefreshToken);
-      }
+      // The httpOnly cookie identifies the session; the server revokes it
+      // and expires the cookie.
+      await logoutRequest();
     } catch {
       // Session may already be invalid — still clear local state.
     } finally {
@@ -146,7 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       accessToken,
-      refreshToken,
       isLoading,
       isAuthenticated: Boolean(user && accessToken),
       login,
@@ -154,16 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refresh,
     }),
-    [
-      user,
-      accessToken,
-      refreshToken,
-      isLoading,
-      login,
-      register,
-      logout,
-      refresh,
-    ],
+    [user, accessToken, isLoading, login, register, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,6 @@
 """Vector store abstraction and Qdrant implementation."""
 
+import re
 import threading
 from abc import ABC, abstractmethod
 from uuid import UUID
@@ -18,6 +19,7 @@ try:
         Distance,
         FieldCondition,
         Filter,
+        MatchText,
         MatchValue,
         PayloadSchemaType,
         PointStruct,
@@ -34,6 +36,7 @@ except ImportError:
     Distance = object
     FieldCondition = object
     Filter = object
+    MatchText = object
     MatchValue = object
     PayloadSchemaType = object
     PointStruct = object
@@ -172,6 +175,33 @@ class VectorStore(ABC):
     ) -> list[dict]:
         """Combine vector similarity and keyword BM25 search with RRF fusion."""
         ...
+
+
+# Keyword matching is a filter, not a ranker, so results are re-scored
+# locally; fetch a wider set than requested to rank across it.
+FULLTEXT_OVERFETCH = 3
+
+# Re-exported so keyword search and graph entity lookup tokenize queries
+# identically; ``tests/test_query_terms.py`` also reaches them through here.
+from app.core.query_terms import (  # noqa: E402
+    MAX_QUERY_TERMS,
+    MIN_QUERY_TERM_LEN,
+    _extract_query_terms,
+    _term_rank,
+)
+
+def _term_coverage(terms: list[str], content: str) -> float:
+    """Fraction of query *terms* present in *content*, as a 0-1 score.
+
+    Qdrant returns a uniform score for filter-only queries, so without this
+    every keyword hit would tie and the fusion step would order them
+    arbitrarily.
+    """
+    if not terms:
+        return 0.0
+    haystack = (content or "").casefold()
+    matched = sum(1 for term in terms if term.casefold() in haystack)
+    return matched / len(terms)
 
 
 _CLIENT: QdrantClient | None = None
@@ -371,6 +401,41 @@ class QdrantVectorStore(VectorStore):
                 f"Failed to delete vectors for document {document_id}: {exc}"
             ) from exc
 
+    async def count_vectors_by_document(
+        self,
+        document_id: UUID,
+    ) -> int:
+        """Number of vectors currently stored for a document.
+
+        Lets callers tell "already indexed" apart from "chunked in Postgres
+        but missing from Qdrant" — the state left behind when the collection
+        is recreated or the cluster is replaced while the relational rows
+        survive.
+        """
+        client = await _get_client()
+        try:
+            result = retry_sync(
+                client.count,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant count_vectors_by_document",
+                collection_name=settings.qdrant_collection_name,
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="document_id",
+                            match=MatchValue(value=str(document_id)),
+                        ),
+                    ],
+                ),
+                exact=True,
+            )
+            return int(getattr(result, "count", 0))
+        except Exception as exc:
+            raise VectorStoreOperationError(
+                f"Failed to count vectors for document {document_id}: {exc}"
+            ) from exc
+
     async def update_document_payload(
         self,
         document_id: UUID,
@@ -511,30 +576,70 @@ class QdrantVectorStore(VectorStore):
         query_filter: Filter | None = None,
         offset: int = 0,
     ) -> list[dict]:
+        """Keyword search over the ``content`` full-text payload index.
+
+        This previously issued ``query_points(query=<raw string>,
+        using="fulltext")``. ``using`` names a *vector* in the collection and
+        no such vector is configured — ``create_collection`` defines a single
+        unnamed dense vector — so the server rejected every call with HTTP
+        400. ``hybrid_search`` catches that and falls back to vector-only
+        results, so hybrid retrieval silently was never hybrid.
+
+        Qdrant's ``MatchText`` ANDs the tokens it is given, which means
+        passing a whole question matches nothing: "Why did pump P-101 fail?"
+        requires "why" and "did" to appear too. The query is therefore split
+        into terms combined with ``should`` (OR) for recall, and results are
+        ranked by how many distinct query terms each chunk contains, since a
+        filter-only query assigns every hit the same score.
+        """
+        terms = _extract_query_terms(query_text)
+        if not terms:
+            return []
+
+        text_condition = Filter(
+            should=[
+                FieldCondition(key="content", match=MatchText(text=term))
+                for term in terms
+            ]
+        )
+        # Preserve any caller-supplied filter (document scoping, permissions)
+        # by requiring it alongside the keyword match.
+        combined = (
+            Filter(must=[query_filter, text_condition])
+            if query_filter is not None
+            else text_condition
+        )
+
         client = await _get_client()
         try:
-            results = retry_sync(
-                client.query_points,
+            points, _ = retry_sync(
+                client.scroll,
                 _qdrant_retry_policy,
                 _is_qdrant_retryable,
                 "Qdrant fulltext_search",
                 collection_name=settings.qdrant_collection_name,
-                query=query_text,
-                using="fulltext",
-                query_filter=query_filter,
-                limit=top_k,
-                offset=offset,
+                scroll_filter=combined,
+                # Over-fetch so ranking happens across the whole match set
+                # rather than an arbitrary page of it.
+                limit=(top_k + offset) * FULLTEXT_OVERFETCH,
                 with_payload=True,
                 with_vectors=False,
             )
-            return [
-                {"id": str(point.id), "score": point.score, "payload": point.payload}
-                for point in results.points
-            ]
         except Exception as exc:
             raise VectorStoreOperationError(
                 f"Qdrant fulltext search failed: {exc}"
             ) from exc
+
+        scored = [
+            {
+                "id": str(point.id),
+                "score": _term_coverage(terms, (point.payload or {}).get("content", "")),
+                "payload": point.payload,
+            }
+            for point in points
+        ]
+        scored.sort(key=lambda hit: hit["score"], reverse=True)
+        return scored[offset : offset + top_k]
 
     async def hybrid_search(
         self,
@@ -547,16 +652,30 @@ class QdrantVectorStore(VectorStore):
         fetch_k = top_k * limit_factor
 
         vector_results: list[dict] = []
+        vector_failed = False
         try:
             vector_results = await self.search(query_vector, fetch_k, query_filter)
         except VectorStoreOperationError as exc:
+            vector_failed = True
             logger.warning("Vector search in hybrid mode failed: %s", exc)
 
         text_results: list[dict] = []
+        text_failed = False
         try:
             text_results = await self.fulltext_search(query_text, fetch_k, query_filter)
         except VectorStoreOperationError as exc:
+            text_failed = True
             logger.warning("Full-text search in hybrid mode failed: %s", exc)
+
+        # One arm failing is a degradation: the other still answers the query.
+        # Both failing is an outage, and returning an empty list would be
+        # indistinguishable from "nothing matched" — the caller would report
+        # no results found while the store was simply unreachable.
+        if vector_failed and text_failed:
+            raise VectorStoreOperationError(
+                "Hybrid search failed: neither vector nor keyword search could "
+                "reach the vector store"
+            )
 
         if not vector_results and not text_results:
             return []

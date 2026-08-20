@@ -23,17 +23,18 @@ export async function registerRequest(
   return data;
 }
 
-export async function refreshRequest(refreshToken: string): Promise<TokenResponse> {
-  const { data } = await apiClient.post<TokenResponse>("/api/auth/refresh", {
-    refresh_token: refreshToken,
-  });
+/**
+ * Rotate the session. The refresh token is sent automatically as an
+ * httpOnly cookie, so no argument (and no request body) is needed.
+ */
+export async function refreshRequest(): Promise<TokenResponse> {
+  const { data } = await apiClient.post<TokenResponse>("/api/auth/refresh", {});
   return data;
 }
 
-export async function logoutRequest(refreshToken: string): Promise<MessageResponse> {
-  const { data } = await apiClient.post<MessageResponse>("/api/auth/logout", {
-    refresh_token: refreshToken,
-  });
+/** Revokes the refresh token server-side and expires the cookie. */
+export async function logoutRequest(): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>("/api/auth/logout", {});
   return data;
 }
 

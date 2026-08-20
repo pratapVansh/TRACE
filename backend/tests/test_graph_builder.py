@@ -112,7 +112,9 @@ class TestMergeRelQuery:
             assert f"MERGE (src)-[r:{label}" in q
 
     def test_label_map_contains_all_types(self):
-        assert len(REL_TYPE_LABEL) == 20
+        # Derived from the enum rather than a hardcoded count, so adding a
+        # relationship type does not require editing this assertion.
+        assert len(REL_TYPE_LABEL) == len(RelationshipType)
         for rtype in RelationshipType:
             assert rtype in REL_TYPE_LABEL
             assert REL_TYPE_LABEL[rtype] == rtype.value

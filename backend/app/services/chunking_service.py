@@ -468,27 +468,41 @@ class ChunkingService:
 
 
 def _merge_tiny_chunks(chunks: list[dict]) -> list[dict]:
-    """Merge chunks below *chunk_min_size* into a neighbouring chunk."""
+    """Merge chunks below *chunk_min_size* into a neighbouring chunk.
+
+    Merging stops once the receiving chunk reaches ``chunk_size``. Without
+    that ceiling a run of short chunks — which is exactly what a spec sheet
+    or a table produces — all collapsed into a single chunk several times
+    the configured size. The embedding model silently truncates anything
+    past its input window, so the overflow never reached the index and that
+    content became unsearchable.
+    """
     if not chunks:
         return chunks
 
     min_size = settings.chunk_min_size
+    max_size = settings.chunk_size
+
+    def _absorb(target: dict, source: dict) -> None:
+        target["content"] = target["content"] + "\n" + source["content"]
+        target["token_count"] = _count_tokens(target["content"])
+        target["_merged"] = True
+
+    def _has_room(target: dict, source: dict) -> bool:
+        return target["token_count"] + source["token_count"] <= max_size
 
     merged: list[dict] = [chunks[0]]
     for chunk in chunks[1:]:
-        if chunk["token_count"] < min_size and merged:
-            prev = merged[-1]
-            prev["content"] = prev["content"] + "\n" + chunk["content"]
-            prev["token_count"] = _count_tokens(prev["content"])
-            prev["_merged"] = True
+        prev = merged[-1]
+        if chunk["token_count"] < min_size and _has_room(prev, chunk):
+            _absorb(prev, chunk)
         else:
             merged.append(chunk)
 
+    # A short leading chunk has no predecessor to join, so it folds forward.
     if len(merged) > 1 and merged[0]["token_count"] < min_size:
-        second = merged[1]
-        merged[0]["content"] = merged[0]["content"] + "\n" + second["content"]
-        merged[0]["token_count"] = _count_tokens(merged[0]["content"])
-        merged[0]["_merged"] = True
-        merged.pop(1)
+        if _has_room(merged[0], merged[1]):
+            _absorb(merged[0], merged[1])
+            merged.pop(1)
 
     return merged

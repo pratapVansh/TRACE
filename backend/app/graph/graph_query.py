@@ -18,6 +18,7 @@ from app.schemas.graph import (
     TypeCount,
 )
 from app.core.logging import logger
+from app.core.query_terms import _extract_query_terms
 
 
 def _extract_properties(obj: object) -> dict:
@@ -224,39 +225,45 @@ class GraphQueryService:
     ) -> tuple[list[EntityResponse], int]:
         """Search entities by name with case-insensitive matching (M32).
 
-        Uses three match strategies with priority ordering:
-        1. Exact match (toLower = toLower)
-        2. Word-level match (query word appears as a word boundary)
-        3. Substring match (CONTAINS)
+        Matching is term-based: the query is reduced to keyword terms and an
+        entity matches when its name contains *any* of them, ranked by an
+        exact hit first, then by how many distinct terms it covers.
+
+        Matching ``CONTAINS`` against the whole query string instead meant a
+        natural-language question found nothing — no entity is named "Why did
+        pump P-101 have oil leakage?" — so only bare terms typed into the
+        entity browser ever returned rows, and the graph arm of hybrid
+        retrieval silently contributed no facts to any real question.
         """
+        terms = _extract_query_terms(query) or [query]
         type_filter = "AND n.type = $entity_type" if entity_type else ""
+        # Any-term match, scored by coverage so the closest names sort first.
+        match_expr = """(toLower(n.name) = toLower($query)
+               OR any(t IN $terms WHERE toLower(n.name) CONTAINS toLower(t)))"""
+        score_expr = """CASE WHEN toLower(n.name) = toLower($query) THEN 0 ELSE 1 END AS exact_rank,
+              size([t IN $terms WHERE toLower(n.name) CONTAINS toLower(t)]) AS coverage"""
         cypher = f"""
             MATCH (n:Entity)
-            WHERE (toLower(n.name) = toLower($query)
-               OR toLower(n.name) CONTAINS toLower($query))
+            WHERE {match_expr}
               {type_filter}
-            WITH n
-            ORDER BY
-              CASE WHEN toLower(n.name) = toLower($query) THEN 0 ELSE 1 END,
-              n.name
+            WITH n, {score_expr}
+            ORDER BY exact_rank, coverage DESC, n.name
             SKIP $skip
             LIMIT $limit
             WITH collect(n) AS nodes
-            MATCH (all:Entity)
-            WHERE (toLower(all.name) = toLower($query)
-               OR toLower(all.name) CONTAINS toLower($query))
+            MATCH (n:Entity)
+            WHERE {match_expr}
               {type_filter}
             RETURN nodes, count(*) AS total
         """
         count_cypher = (
             "MATCH (n:Entity) "
-            "WHERE (toLower(n.name) = toLower($query) "
-            "   OR toLower(n.name) CONTAINS toLower($query)) "
+            f"WHERE {match_expr} "
             f"{type_filter} "
             "RETURN count(n) AS total"
         )
 
-        params = {"query": query, "skip": skip, "limit": limit}
+        params = {"query": query, "terms": terms, "skip": skip, "limit": limit}
         if entity_type:
             params["entity_type"] = entity_type
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from app.api.deps import get_auth_service, get_current_user, _extract_ip
 from app.core.config import settings
@@ -8,9 +8,14 @@ auth_rate_limiter = RateLimiter(
     max_requests=settings.auth_rate_limit_max,
     window_seconds=settings.auth_rate_limit_window_seconds,
 )
+from app.core.security.cookies import (
+    clear_refresh_cookie,
+    read_refresh_cookie,
+    set_refresh_cookie,
+)
 from app.schemas.auth import (
+    AccessTokenResponse,
     LoginRequest,
-    LoginResponse,
     LogoutResponse,
     RefreshTokenRequest,
     RegisterRequest,
@@ -58,15 +63,18 @@ async def register(
     return RegisterResponse()
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=AccessTokenResponse)
 async def login(
     request: Request,
+    response: Response,
     payload: LoginRequest,
     auth_service: AuthService = Depends(get_auth_service),
     _rate_limit: None = Depends(auth_rate_limiter),
-) -> LoginResponse:
+) -> AccessTokenResponse:
     try:
-        return await auth_service.login_user(payload, ip_address=_extract_ip(request))
+        tokens = await auth_service.login_user(payload, ip_address=_extract_ip(request))
+        set_refresh_cookie(response, tokens.refresh_token)
+        return AccessTokenResponse(access_token=tokens.access_token)
     except InvalidCredentialsError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,15 +87,29 @@ async def login(
         ) from exc
 
 
-@router.post("/refresh", response_model=LoginResponse)
+@router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh(
     request: Request,
-    payload: RefreshTokenRequest,
+    response: Response,
+    payload: RefreshTokenRequest | None = None,
     auth_service: AuthService = Depends(get_auth_service),
     _rate_limit: None = Depends(auth_rate_limiter),
-) -> LoginResponse:
+) -> AccessTokenResponse:
+    # Prefer the httpOnly cookie; the body remains supported for non-browser
+    # clients (scripts, tests) that cannot hold cookies.
+    token = read_refresh_cookie(request) or (payload.refresh_token if payload else None)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+        )
+
     try:
-        return await auth_service.refresh_tokens(payload)
+        tokens = await auth_service.refresh_tokens(
+            RefreshTokenRequest(refresh_token=token)
+        )
+        set_refresh_cookie(response, tokens.refresh_token)
+        return AccessTokenResponse(access_token=tokens.access_token)
     except InvalidRefreshTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -110,12 +132,24 @@ async def get_me(
 @router.post("/logout", response_model=LogoutResponse)
 async def logout(
     request: Request,
-    payload: RefreshTokenRequest,
+    response: Response,
+    payload: RefreshTokenRequest | None = None,
     current_user: UserMeResponse = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> LogoutResponse:
+    token = read_refresh_cookie(request) or (payload.refresh_token if payload else None)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+        )
+
     try:
-        await auth_service.logout_user(current_user, payload, ip_address=_extract_ip(request))
+        await auth_service.logout_user(
+            current_user,
+            RefreshTokenRequest(refresh_token=token),
+            ip_address=_extract_ip(request),
+        )
     except InvalidRefreshTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -127,4 +161,5 @@ async def logout(
             detail="Already revoked token",
         ) from exc
 
+    clear_refresh_cookie(response)
     return LogoutResponse()

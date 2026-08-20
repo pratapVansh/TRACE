@@ -70,14 +70,23 @@ class TestRelationshipIdentity:
 
 class TestRelationshipTypeEnum:
     def test_all_types_present(self):
-        expected = {
+        """The core relationship types must never be removed.
+
+        Asserted as a subset so the enum can grow (it has since gained
+        FOLLOWS, OWNS, OPERATES, INSPECTS, etc.) without breaking here.
+        """
+        required = {
             "CONNECTED_TO", "PART_OF", "LOCATED_IN", "HAS_PROCEDURE",
             "MAINTAINED_BY", "USES", "REFERENCES", "DEPENDS_ON",
             "INPUT_TO", "OUTPUT_TO",
             "HAS_FAILURE", "CAUSED_BY", "PERFORMED_BY",
         }
         actual = {t.name for t in RelationshipType}
-        assert actual == expected
+        assert required <= actual, f"missing core types: {required - actual}"
+
+    def test_type_names_match_values(self):
+        for rtype in RelationshipType:
+            assert rtype.name == rtype.value
 
     def test_type_values(self):
         assert RelationshipType.CONNECTED_TO.value == "CONNECTED_TO"

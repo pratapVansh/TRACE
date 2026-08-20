@@ -182,14 +182,115 @@ class TestVectorOperations:
         assert count == 3
         mock_qdrant_client.delete.assert_called_once()
 
-    async def test_fulltext_search(
+    async def test_fulltext_search_empty(
         self,
         store: QdrantVectorStore,
         mock_qdrant_client: MagicMock,
     ):
-        mock_qdrant_client.query_points.return_value = MagicMock(points=[])
+        mock_qdrant_client.scroll.return_value = ([], None)
         results = await store.fulltext_search("test query")
         assert results == []
+
+    async def test_fulltext_search_uses_scroll_not_a_named_vector(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """Regression: the old implementation queried a vector that never existed.
+
+        It issued ``query_points(query=<raw text>, using="fulltext")``. ``using``
+        names a vector in the collection, and ``create_collection`` defines a
+        single *unnamed* dense vector — so a real server answered every call
+        with HTTP 400 and ``hybrid_search`` quietly degraded to vector-only.
+        The previous test mocked ``query_points`` and asserted an empty list,
+        which passed no matter what was sent.
+        """
+        mock_qdrant_client.scroll.return_value = ([], None)
+
+        await store.fulltext_search("Why did pump P-101 fail?")
+
+        mock_qdrant_client.query_points.assert_not_called()
+        mock_qdrant_client.scroll.assert_called_once()
+        assert "using" not in mock_qdrant_client.scroll.call_args.kwargs
+
+    async def test_fulltext_search_ors_terms_for_recall(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """MatchText ANDs its tokens, so a whole question must not be one clause.
+
+        Passing the full question as a single MatchText requires every word —
+        including "why" and "did" — to appear in the chunk, which matches
+        nothing. Terms go into ``should`` instead.
+        """
+        mock_qdrant_client.scroll.return_value = ([], None)
+
+        await store.fulltext_search("Why did pump P-101 fail?")
+
+        scroll_filter = mock_qdrant_client.scroll.call_args.kwargs["scroll_filter"]
+        assert scroll_filter.should, "terms must be OR-ed, not AND-ed"
+        matched = {c.match.text for c in scroll_filter.should}
+        assert "P-101" in matched
+        assert "why" not in {m.casefold() for m in matched}
+
+    async def test_fulltext_search_ranks_by_term_coverage(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """A filter-only query scores every hit identically, so we re-rank."""
+        mock_qdrant_client.scroll.return_value = (
+            [
+                MagicMock(id="a", payload={"content": "Pump P-102 was serviced."}),
+                MagicMock(id="b", payload={"content": "Pump P-101 failed on the seal."}),
+            ],
+            None,
+        )
+
+        results = await store.fulltext_search("pump P-101 seal")
+
+        assert "P-101" in results[0]["payload"]["content"]
+        assert results[0]["score"] > results[1]["score"]
+
+    async def test_fulltext_search_without_usable_terms(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """An all-stopword query must not build a filter that matches everything."""
+        results = await store.fulltext_search("what is the of and")
+
+        assert results == []
+        mock_qdrant_client.scroll.assert_not_called()
+
+    async def test_fulltext_search_preserves_caller_filter(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """A document/permission filter must still constrain keyword results."""
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        caller = Filter(
+            must=[FieldCondition(key="document_id", match=MatchValue(value="doc-1"))]
+        )
+        mock_qdrant_client.scroll.return_value = ([], None)
+
+        await store.fulltext_search("P-101", query_filter=caller)
+
+        sent = mock_qdrant_client.scroll.call_args.kwargs["scroll_filter"]
+        assert caller in sent.must
+
+    async def test_fulltext_search_wraps_server_errors(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        mock_qdrant_client.scroll.side_effect = RuntimeError("boom")
+
+        with pytest.raises(VectorStoreOperationError):
+            await store.fulltext_search("P-101")
 
     async def test_update_document_payload(
         self,
@@ -205,6 +306,68 @@ class TestVectorOperations:
 
 @pytest.mark.asyncio
 class TestHybridSearch:
+    async def test_outage_raises_instead_of_returning_empty(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """Both arms failing is an outage, not "no documents matched".
+
+        Returning an empty list made an unreachable vector store look
+        identical to a query with no hits: the caller reported "no results
+        found" and nothing surfaced that the backend was down.
+        """
+        mock_qdrant_client.query_points.side_effect = RuntimeError("connection refused")
+        mock_qdrant_client.scroll.side_effect = RuntimeError("connection refused")
+
+        with pytest.raises(VectorStoreOperationError, match="neither vector nor keyword"):
+            await store.hybrid_search([0.1] * 384, "pump P-101")
+
+    async def test_keyword_failure_alone_degrades_to_vector(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """One arm down is a degradation — the other still answers."""
+        mock_qdrant_client.query_points.return_value = MagicMock(
+            points=[
+                MagicMock(id="a", score=0.9, payload={"chunk_id": "a", "content": "vector match"})
+            ]
+        )
+        mock_qdrant_client.scroll.side_effect = RuntimeError("index missing")
+
+        results = await store.hybrid_search([0.1] * 384, "pump P-101")
+
+        assert len(results) == 1
+        assert results[0]["payload"]["content"] == "vector match"
+
+    async def test_vector_failure_alone_degrades_to_keyword(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        mock_qdrant_client.query_points.side_effect = RuntimeError("vector index rebuilding")
+        mock_qdrant_client.scroll.return_value = (
+            [MagicMock(id="b", payload={"chunk_id": "b", "content": "P-101 seal failure"})],
+            None,
+        )
+
+        results = await store.hybrid_search([0.1] * 384, "P-101")
+
+        assert len(results) == 1
+        assert "P-101" in results[0]["payload"]["content"]
+
+    async def test_empty_results_are_not_an_error(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        """A genuine no-match must stay an empty list, not raise."""
+        mock_qdrant_client.query_points.return_value = MagicMock(points=[])
+        mock_qdrant_client.scroll.return_value = ([], None)
+
+        assert await store.hybrid_search([0.1] * 384, "nonexistent") == []
+
     async def test_hybrid_search(
         self,
         store: QdrantVectorStore,

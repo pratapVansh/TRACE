@@ -16,6 +16,10 @@ class DashboardResponse(BaseModel):
     conversation_count: int
     pending_jobs: int
     recent_uploads: list[RecentUploadItem]
-    qdrant_connected: bool
-    neo4j_connected: bool
-    db_connected: bool
+    # Live-connection flags are read from app.state by the route after the
+    # service builds the response — the service has no access to it. They are
+    # defaulted rather than required so constructing the response without them
+    # is not a validation error; the route always overwrites them.
+    qdrant_connected: bool = False
+    neo4j_connected: bool = False
+    db_connected: bool = False

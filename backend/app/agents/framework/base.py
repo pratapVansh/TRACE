@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -62,11 +63,52 @@ class BaseAgent(ABC):
     def can_handle(self, task: str) -> float:
         """Return a confidence score (0.0 – 1.0) for a given task.
 
-        Default implementation checks ``supported_tasks``.
-        Subclasses may override with custom logic (e.g. LLM-based
-        intent matching).
+        ``supported_tasks`` holds topic keywords and short phrases
+        ("asset", "maintenance history"), while *task* is normally a whole
+        user question. Testing ``task in self.supported_tasks`` therefore
+        only matched when the question was character-for-character a task
+        label — never, in practice — so every agent scored 0.0 and
+        keyword-based routing silently did nothing.
+
+        Scoring is by keyword coverage instead: how much of the question's
+        vocabulary this agent claims, scaled so an agent matching several
+        distinct labels outranks one matching a single generic word.
+
+        Subclasses may override with custom logic (e.g. LLM-based intent
+        matching).
         """
-        return 1.0 if task in self.supported_tasks else 0.0
+        if not self.supported_tasks:
+            return 0.0
+
+        haystack = task.casefold()
+        if not haystack.strip():
+            return 0.0
+
+        matched = [
+            label
+            for label in self.supported_tasks
+            if label and self._label_matches(label.casefold(), haystack)
+        ]
+        if not matched:
+            return 0.0
+
+        # Saturates rather than scaling linearly: three matching labels is a
+        # strong signal, thirty is not ten times stronger.
+        score = 1.0 - (0.6 ** len(matched))
+        # Longer labels ("maintenance history") are far more discriminating
+        # than single generic words ("unit"), so they carry the score up.
+        if any(" " in label for label in matched):
+            score = min(score + 0.15, 1.0)
+        return round(min(score, 1.0), 4)
+
+    @staticmethod
+    def _label_matches(label: str, haystack: str) -> bool:
+        """Whether *label* occurs in *haystack* on word boundaries.
+
+        Substring matching alone would let "unit" fire on "united" and
+        "part" on "particular", pulling questions to the wrong agent.
+        """
+        return re.search(rf"(?<!\w){re.escape(label)}(?!\w)", haystack) is not None
 
     async def prepare_context(self, context: AgentContext) -> AgentContext:
         """Enrich the execution context before ``execute()`` is called.

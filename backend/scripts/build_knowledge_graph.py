@@ -6,9 +6,12 @@ and relationships, and persists them to Neo4j via GraphBuilderService.
 
 import asyncio
 import re
+import sys
 from collections import defaultdict
 
 from sqlalchemy import select
+
+sys.path.insert(0, ".")
 
 from app.db.session import async_session_factory
 from app.models.document import Document

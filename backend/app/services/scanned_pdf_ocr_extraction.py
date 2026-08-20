@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import fitz
 
+from app.core.config import settings
 from app.services.document_processing_exceptions import (
     ImageOcrExtractionError,
     PdfTextExtractionError,
@@ -12,7 +13,9 @@ from app.services.pdf_text_extraction import ExtractedPage, extract_pdf_text
 
 
 EXTRACTION_METHOD = "pymupdf+tesseract"
-RENDER_DPI = 200
+# Tesseract is trained on ~300 DPI scans; rendering below that measurably
+# costs accuracy on small type, which is most of a spec sheet.
+RENDER_DPI = settings.ocr_render_dpi
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +24,15 @@ class ScannedPdfOcrResult:
     full_text: str
     page_count: int
     has_text: bool
+    confidence: float | None = None
+
+    @property
+    def is_low_confidence(self) -> bool:
+        """True when the mean page confidence fell below the configured floor."""
+        return (
+            self.confidence is not None
+            and self.confidence < settings.ocr_min_confidence
+        )
 
 
 def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
@@ -44,15 +56,21 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
 
     try:
         pages: list[ExtractedPage] = []
+        confidences: list[float] = []
         for page_index in range(document.page_count):
             page = document[page_index]
             try:
                 image_bytes = _render_page_to_png(page)
-                ocr_result = extract_image_text(image_bytes)
+                # The page was rendered here, so the render DPI is known
+                # exactly — PyMuPDF's PNG metadata reports 96 regardless.
+                ocr_result = extract_image_text(image_bytes, source_dpi=RENDER_DPI)
             except ImageOcrExtractionError as exc:
                 raise ScannedPdfOcrExtractionError(
                     f"Failed to OCR scanned PDF page {page_index + 1}",
                 ) from exc
+
+            if ocr_result.confidence is not None:
+                confidences.append(ocr_result.confidence)
 
             pages.append(
                 ExtractedPage(
@@ -67,6 +85,7 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
             full_text=full_text,
             page_count=document.page_count,
             has_text=bool(full_text.strip()),
+            confidence=(sum(confidences) / len(confidences)) if confidences else None,
         )
     finally:
         document.close()

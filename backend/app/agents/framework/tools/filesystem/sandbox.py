@@ -31,14 +31,22 @@ class WorkspaceSandbox:
                     pass
             current = current.parent
 
-    def _prevent_unsafe_operations(self, path: Path) -> None:
-        """Prevent modifying critical workspace files like .git or system files."""
+    def _prevent_unsafe_operations(
+        self, path: Path, *, allow_root: bool = False
+    ) -> None:
+        """Prevent modifying critical workspace files like .git or system files.
+
+        ``allow_root`` is set by read-only callers. Targeting the workspace
+        root is destructive for a delete/move/write, but it is the normal
+        case for listing or searching the workspace, so the root guard must
+        not apply to those.
+        """
         if ".git" in path.parts:
             raise PathTraversalError("Unsafe operation: cannot modify .git directory.")
-        if path == self._root:
+        if path == self._root and not allow_root:
             raise PathTraversalError("Unsafe operation: cannot target workspace root.")
 
-    def resolve(self, path: str | Path) -> Path:
+    def resolve(self, path: str | Path, *, allow_root: bool = False) -> Path:
         candidate = Path(path)
         if not candidate.is_absolute():
             candidate = self._root / candidate
@@ -51,7 +59,7 @@ class WorkspaceSandbox:
                 f"Path '{candidate}' is outside the workspace root '{self._root}'."
             )
 
-        self._prevent_unsafe_operations(candidate)
+        self._prevent_unsafe_operations(candidate, allow_root=allow_root)
         return candidate
 
     def resolve_parent(self, path: str | Path) -> Path:
@@ -75,7 +83,7 @@ class WorkspaceSandbox:
         return resolved
 
     def relativize(self, path: str | Path) -> str:
-        resolved = self.resolve(path)
+        resolved = self.resolve(path, allow_root=True)
         try:
             return str(resolved.relative_to(self._root))
         except ValueError:

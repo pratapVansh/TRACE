@@ -134,6 +134,23 @@ async def create_conversation(
     return await chat_service.create_conversation(user_id=str(current_user.id))
 
 
+# Declared before "/conversations/{conversation_id}": FastAPI matches routes in
+# declaration order, so the parameterised route would otherwise swallow
+# "archived" and fail parsing it as a conversation id.
+@router.get("/conversations/archived", response_model=ArchiveListResponse)
+async def list_archived_conversations(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    current_user: UserMeResponse = Depends(
+        require_permission(PERMISSIONS.COPILOT),
+    ),
+    chat_service: ChatService = Depends(get_chat_service),
+) -> ArchiveListResponse:
+    return await chat_service.list_archived(
+        user_id=str(current_user.id), skip=skip, limit=limit,
+    )
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationItem)
 async def get_conversation(
     conversation_id: str,
@@ -251,20 +268,6 @@ async def restore_conversation(
     return await chat_service.restore_conversation(
         user_id=str(current_user.id),
         conversation_id=conversation_id,
-    )
-
-
-@router.get("/conversations/archived", response_model=ArchiveListResponse)
-async def list_archived_conversations(
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=500),
-    current_user: UserMeResponse = Depends(
-        require_permission(PERMISSIONS.COPILOT),
-    ),
-    chat_service: ChatService = Depends(get_chat_service),
-) -> ArchiveListResponse:
-    return await chat_service.list_archived(
-        user_id=str(current_user.id), skip=skip, limit=limit,
     )
 
 

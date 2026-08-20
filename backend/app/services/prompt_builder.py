@@ -116,6 +116,13 @@ def _estimate_tokens(text: str) -> int:
     return len(text) // 4
 
 
+def _format_source(chunk: RetrievedChunk) -> str:
+    source = chunk.document_name
+    if chunk.page_number is not None:
+        source += f" (page {chunk.page_number})"
+    return source
+
+
 class PromptBuilder:
     def build_prompt(
         self,
@@ -137,11 +144,8 @@ class PromptBuilder:
         # M35: build chunk blocks with score-based ranking
         chunk_blocks: list[tuple[float, str, RetrievedChunk]] = []
         for chunk in chunks:
-            source = chunk.document_name
-            if chunk.page_number is not None:
-                source += f" (page {chunk.page_number})"
             block = (
-                f"Source: {source}\n"
+                f"Source: {_format_source(chunk)}\n"
                 f"    Content: {chunk.content}"
             )
             chunk_blocks.append((chunk.score, block, chunk))
@@ -181,14 +185,8 @@ class PromptBuilder:
             else:
                 # M35: truncate chunk content to fit within remaining budget
                 remaining = available_chars - used_chars
-                if remaining > 60:
-                    source_line = f"[{i}] Source: {source}"
-                    truncated_content = chunk.content[:max(remaining - len(source_line) - 30, 0)]
-                    truncated_block = f"{source_line}\n    Content: {truncated_content}...[truncated]"
-                    selected_blocks.append(truncated_block)
-                    used_chars += len(truncated_block)
-                elif not selected_blocks and remaining > 0:
-                    source_line = f"[{i}] Source: {source}"
+                if remaining > 60 or (not selected_blocks and remaining > 0):
+                    source_line = f"[{i}] Source: {_format_source(chunk)}"
                     truncated_content = chunk.content[:max(remaining - len(source_line) - 30, 0)]
                     truncated_block = f"{source_line}\n    Content: {truncated_content}...[truncated]"
                     selected_blocks.append(truncated_block)

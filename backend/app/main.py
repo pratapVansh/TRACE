@@ -14,9 +14,11 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.db.session import close_database_connection, verify_database_connection
 from app.middleware.correlation import setup_correlation_middleware
+from app.core.security.startup_validation import validate_security_configuration
 from app.middleware.security_headers import setup_security_headers_middleware
 from app.graph.base import GraphStoreConnectionError, GraphStoreConfigurationError
 from app.graph.neo4j_graph_store import Neo4jGraphStore
+from app.services import reranker_service
 from app.services.vector_store import QdrantVectorStore, VectorStoreConnectionError
 from app.tasks.document_processing_worker import run_document_processing_worker
 
@@ -24,6 +26,11 @@ from app.tasks.document_processing_worker import run_document_processing_worker
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s", settings.app_name)
+
+    # Fail fast on insecure security config (e.g. an empty JWT signing key)
+    # before the app accepts any traffic.
+    validate_security_configuration(settings)
+
     db_ok = await verify_database_connection()
     if not db_ok:
         logger.warning(
@@ -46,6 +53,16 @@ async def lifespan(app: FastAPI):
         logger.info("Qdrant not configured — skipping vector store initialization")
     app.state.qdrant_connected = qdrant_ok
     app.state.qdrant_store = qdrant_store
+
+    # Load the reranker before serving traffic. Lazily, this costs seconds
+    # from a warm cache and minutes when the weights still need downloading,
+    # and it lands entirely on the first user query — which then blocks every
+    # concurrent query behind the single scoring worker.
+    app.state.reranker_ready = await reranker_service.warmup()
+    if settings.rerank_enabled and not app.state.reranker_ready:
+        logger.warning(
+            "Reranker unavailable — retrieval will return unreranked results"
+        )
 
     llm_provider: GroqProvider | None = None
     if settings.llm_provider == "groq" and settings.groq_api_key:

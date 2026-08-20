@@ -1,6 +1,10 @@
+import functools
+import ssl
 import threading
 import time
 from typing import Any
+
+import certifi
 
 from neo4j import (
     AsyncDriver,
@@ -23,6 +27,30 @@ from app.core.config import settings
 from app.core.logging import logger
 
 _VALID_URI_PREFIXES = ("bolt://", "bolt+s://", "bolt+ssc://", "neo4j://", "neo4j+s://", "neo4j+ssc://")
+
+# Schemes that ask for a verified TLS connection. The driver builds its own
+# SSL context for these, which trusts only the OS certificate store.
+_VERIFIED_TLS_SCHEMES = {"neo4j+s://": "neo4j://", "bolt+s://": "bolt://"}
+
+
+@functools.lru_cache(maxsize=1)
+def _verified_ssl_context() -> ssl.SSLContext:
+    """An SSL context trusting the OS store *and* the certifi bundle.
+
+    Neo4j Aura serves a chain rooted at "SSL.com Root Certification Authority
+    RSA" and includes that root in the chain it sends. OpenSSL rejects such a
+    chain as "self-signed certificate in certificate chain" unless the root is
+    in its trust store, and the Windows store does not carry it by default
+    (Windows installs roots on demand through CryptoAPI, which OpenSSL never
+    calls). The result is that ``neo4j+s://`` fails on a stock Windows Python
+    while the identical URL works from curl.
+
+    Loading both sources is a superset of the driver's own context, so a
+    private CA that only lives in the OS store keeps working.
+    """
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=certifi.where())
+    return context
 
 _INDEX_QUERIES = [
     "CREATE INDEX IF NOT EXISTS FOR (n:Entity) ON (n.id)",
@@ -166,13 +194,33 @@ class Neo4jGraphStore(GraphStore):
         if self._driver is None:
             async with self._lock:
                 if self._driver is None:
+                    uri, extra = self._tls_driver_args()
                     self._driver = AsyncGraphDatabase.driver(
-                        self._uri,
+                        uri,
                         auth=basic_auth(self._username, self._password),
                         connection_timeout=settings.neo4j_connection_timeout_seconds,
                         max_connection_lifetime=settings.neo4j_max_connection_lifetime_seconds,
+                        **extra,
                     )
         return self._driver
+
+    def _tls_driver_args(self) -> tuple[str, dict[str, Any]]:
+        """Resolve the driver URI and any TLS keyword arguments.
+
+        ``ssl_context`` cannot be combined with a ``+s``/``+ssc`` URI — the
+        driver raises ConfigurationError — so a verified-TLS scheme is
+        downgraded to its base scheme and the encryption is reapplied through
+        the context instead. ``+ssc`` (verification deliberately off) and the
+        plain schemes are passed through untouched.
+        """
+        lowered = self._uri.lower()
+        for scheme, base_scheme in _VERIFIED_TLS_SCHEMES.items():
+            if lowered.startswith(scheme):
+                return (
+                    base_scheme + self._uri[len(scheme):],
+                    {"ssl_context": _verified_ssl_context()},
+                )
+        return self._uri, {}
 
     async def connect(self) -> None:
         try:

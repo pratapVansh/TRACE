@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk, RetrievalResult
 from app.services.embedding_service import _encode_batch_async
+from app.services.reranker_service import candidate_count, rerank
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 # Lazy import for qdrant types that may not be available in all environments
@@ -76,19 +77,22 @@ class RetrieverService:
 
         qdrant_filter = _build_qdrant_filter(filters) if filters else None
 
+        # Over-fetch so the reranker has candidates to reorder, and search
+        # both keyword and vector space: exact identifiers (asset tags, part
+        # numbers) are precisely what embeddings blur together.
+        fetch_k = candidate_count(top_k)
         try:
-            results = await self._vector_store.search(
+            results = await self._vector_store.hybrid_search(
                 query_vector=query_vector,
-                top_k=top_k,
+                query_text=query,
+                top_k=fetch_k,
                 query_filter=qdrant_filter,
             )
         except VectorStoreOperationError as exc:
             logger.error("Retrieval search failed: %s", exc)
             raise
 
-        filtered = [r for r in results if r["score"] >= similarity_threshold]
-
-        chunks = [
+        candidates = [
             RetrievedChunk(
                 chunk_id=r.get("id") or r["payload"].get("chunk_id", ""),
                 score=r["score"],
@@ -99,8 +103,15 @@ class RetrieverService:
                 chunk_index=r["payload"].get("chunk_index"),
                 metadata=r["payload"].get("metadata") or {},
             )
-            for r in filtered
+            for r in results
         ]
+
+        # Rerank first, then threshold. The fused score coming out of hybrid
+        # search is an RRF ranking weight, not a similarity, so filtering on
+        # it against ``similarity_threshold`` would discard everything.
+        # Reranking replaces it with a calibrated 0-1 relevance.
+        reranked = await rerank(query, candidates, top_k=top_k)
+        chunks = [c for c in reranked if c.score >= similarity_threshold]
 
         if dedup_documents:
             seen: dict[str, RetrievedChunk] = OrderedDict()

@@ -15,6 +15,7 @@ from app.services.hybrid_retriever import (
     HybridRetriever,
     VectorRetriever,
 )
+from app.services.reranker_service import candidate_count
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 
@@ -111,7 +112,7 @@ class TestVectorRetriever:
         mock_vector_store: AsyncMock,
     ) -> None:
         mock_encode.return_value = [[0.1, 0.2, 0.3]]
-        mock_vector_store.search.return_value = [
+        mock_vector_store.hybrid_search.return_value = [
             {"score": 0.92, "payload": {
                 "document_id": "doc1", "filename": "proc.pdf",
                 "content": "P-101 pump info", "page_number": 5,
@@ -128,8 +129,11 @@ class TestVectorRetriever:
         assert results[0].document_name == "proc.pdf"
         assert results[0].chunk_index == 2
         mock_encode.assert_called_once_with(["pump"])
-        mock_vector_store.search.assert_called_once_with(
-            query_vector=[0.1, 0.2, 0.3], top_k=5,
+        # Over-fetched so the reranker has candidates to reorder.
+        mock_vector_store.hybrid_search.assert_called_once_with(
+            query_vector=[0.1, 0.2, 0.3],
+            query_text="pump",
+            top_k=candidate_count(5),
         )
 
     @patch("app.services.hybrid_retriever._encode_batch_async")
@@ -139,7 +143,7 @@ class TestVectorRetriever:
         mock_vector_store: AsyncMock,
     ) -> None:
         mock_encode.return_value = [[0.1, 0.2, 0.3]]
-        mock_vector_store.search.return_value = []
+        mock_vector_store.hybrid_search.return_value = []
         retriever = VectorRetriever(vector_store=mock_vector_store)
         results = await retriever.retrieve("unknown")
         assert results == []
@@ -151,7 +155,7 @@ class TestVectorRetriever:
         mock_vector_store: AsyncMock,
     ) -> None:
         mock_encode.return_value = [[0.1, 0.2, 0.3]]
-        mock_vector_store.search.side_effect = VectorStoreOperationError("Qdrant down")
+        mock_vector_store.hybrid_search.side_effect = VectorStoreOperationError("Qdrant down")
         retriever = VectorRetriever(vector_store=mock_vector_store)
         with pytest.raises(VectorStoreOperationError):
             await retriever.retrieve("pump")
@@ -163,7 +167,7 @@ class TestVectorRetriever:
         mock_vector_store: AsyncMock,
     ) -> None:
         mock_encode.return_value = [[0.1, 0.2, 0.3]]
-        mock_vector_store.search.return_value = [
+        mock_vector_store.hybrid_search.return_value = [
             {"score": 0.5, "payload": {}},
         ]
         retriever = VectorRetriever(vector_store=mock_vector_store)
@@ -497,7 +501,7 @@ class TestContextMerger:
     def test_merge_combined_score_with_graph(
         self,
     ) -> None:
-        """M30: merged items get score = max(vector_score, max_fact_conf * 0.8)."""
+        """Merged score = relevance + a bounded boost per supporting fact."""
         chunks = [
             RetrievedChunk(score=0.70, document_id="d1", document_name="a.pdf",
                            content="P-101 is running.", metadata={}),
@@ -509,8 +513,52 @@ class TestContextMerger:
         merger = ContextMerger()
         result = merger.merge("test", chunks, facts, top_k=10)
 
-        # max(0.70, 0.95*0.8) = max(0.70, 0.76) = 0.76
-        assert result.items[0].score == 0.76
+        # 0.70 relevance + 1 fact * 0.02 boost
+        assert result.items[0].score == pytest.approx(0.72)
+        assert result.items[0].source == "merged"
+
+    def test_extraction_confidence_does_not_replace_relevance(
+        self,
+    ) -> None:
+        """A confidently-extracted entity must not promote an irrelevant chunk.
+
+        Extraction confidence says the entity was read correctly; it says
+        nothing about whether the passage answers the question. Letting it
+        override the retrieval score ranked barely-relevant chunks top purely
+        because a clean entity happened to sit in the same document.
+        """
+        chunks = [
+            RetrievedChunk(score=0.20, document_id="d1", document_name="a.pdf",
+                           content="Unrelated boilerplate.", metadata={}),
+        ]
+        facts = [
+            GraphFact(entity_name="P-101", entity_type="Pump",
+                      confidence=0.99, source_document="a.pdf"),
+        ]
+        merger = ContextMerger()
+        result = merger.merge("test", chunks, facts, top_k=10)
+
+        # Boosted by the supporting fact, but nowhere near 0.99.
+        assert result.items[0].score == pytest.approx(0.22)
+
+    def test_merge_fact_boost_is_capped(
+        self,
+    ) -> None:
+        """The per-fact boost saturates at 0.1 so graph density cannot dominate."""
+        chunks = [
+            RetrievedChunk(score=0.50, document_id="d1", document_name="a.pdf",
+                           content="P-101 is running.", metadata={}),
+        ]
+        facts = [
+            GraphFact(entity_name="P-101", entity_type="Pump",
+                      confidence=0.10, source_document="a.pdf")
+            for _ in range(20)
+        ]
+        merger = ContextMerger()
+        result = merger.merge("test", chunks, facts, top_k=10)
+
+        # max(0.50, 0.10*0.8) = 0.50, boost capped at 0.1 → 0.60
+        assert result.items[0].score == pytest.approx(0.60)
 
 
 # ══════════════════════════════════════════════════════════════════════

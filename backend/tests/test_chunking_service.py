@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.core.config import settings
 from app.services.chunking_service import (
     ChunkingService,
     _build_page_map,
@@ -133,6 +134,45 @@ class TestMergeTinyChunks:
 
     def test_merge_empty_list(self) -> None:
         assert _merge_tiny_chunks([]) == []
+
+    def test_merging_never_exceeds_chunk_size(self) -> None:
+        """A long run of short chunks must not collapse into one oversized chunk.
+
+        Spec sheets and tables produce exactly this shape. Merging without a
+        ceiling built a single chunk several times ``chunk_size``; the
+        embedding model then truncated it at its input window and the
+        overflow silently never reached the index.
+        """
+        chunks = [
+            {"chunk_index": i, "content": "word " * 30, "token_count": 30}
+            for i in range(40)
+        ]
+
+        result = _merge_tiny_chunks(chunks)
+
+        assert len(result) > 1
+        assert max(c["token_count"] for c in result) <= settings.chunk_size
+
+    def test_tiny_chunk_is_kept_when_predecessor_is_full(self) -> None:
+        """A tiny chunk that does not fit stays separate rather than overflowing."""
+        chunks = [
+            {"chunk_index": 0, "content": "A", "token_count": settings.chunk_size},
+            {"chunk_index": 1, "content": "tiny", "token_count": 5},
+        ]
+
+        result = _merge_tiny_chunks(chunks)
+
+        assert len(result) == 2
+
+    def test_tiny_leading_chunk_is_kept_when_successor_is_full(self) -> None:
+        chunks = [
+            {"chunk_index": 0, "content": "tiny", "token_count": 5},
+            {"chunk_index": 1, "content": "B", "token_count": settings.chunk_size},
+        ]
+
+        result = _merge_tiny_chunks(chunks)
+
+        assert len(result) == 2
 
     def test_merge_single_chunk_tiny(self) -> None:
         chunks = [{"chunk_index": 0, "content": "tiny", "token_count": 5}]

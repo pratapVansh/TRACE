@@ -6,7 +6,20 @@ from starlette.responses import Response
 from app.core.config import settings
 
 
+def _build_connect_src() -> str:
+    """Build the CSP ``connect-src`` directive from configured origins.
+
+    Previously hardcoded to ``http://localhost:3000``/``:8000``, which
+    silently broke any non-local deployment. Derived from
+    ``BACKEND_CORS_ORIGINS`` so it follows the environment.
+    """
+    origins = [origin for origin in settings.cors_origins if origin and origin != "*"]
+    return " ".join(["'self'", *dict.fromkeys(origins)])
+
+
 def setup_security_headers_middleware(app: FastAPI) -> None:
+    connect_src = _build_connect_src()
+
     @app.middleware("http")
     async def security_headers_middleware(request: Request, call_next) -> Response:
         response = await call_next(request)
@@ -24,7 +37,7 @@ def setup_security_headers_middleware(app: FastAPI) -> None:
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: blob:; "
             "font-src 'self' data:; "
-            "connect-src 'self' http://localhost:3000 http://localhost:8000; "
+            f"connect-src {connect_src}; "
             "frame-ancestors 'none'; "
             "form-action 'self'; "
             "base-uri 'self'"

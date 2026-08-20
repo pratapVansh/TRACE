@@ -38,8 +38,22 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
+    """Internal token pair returned by ``AuthService``.
+
+    This is *not* the API response body — the route layer moves
+    ``refresh_token`` into an httpOnly cookie and returns
+    ``AccessTokenResponse`` so the long-lived token never reaches JS.
+    """
+
     access_token: str
     refresh_token: str
+    token_type: str = "bearer"
+
+
+class AccessTokenResponse(BaseModel):
+    """Public auth response body. Deliberately omits the refresh token."""
+
+    access_token: str
     token_type: str = "bearer"
 
 

@@ -496,7 +496,9 @@ class TestMemoryCreateSchema:
 
 class TestSystemPromptContent:
     def test_prompt_contains_instructions(self):
-        assert "should_remember" in _EXTRACTION_SYSTEM_PROMPT
+        # The prompt deliberately does not ask for a per-item
+        # "should_remember" flag; it asks for an empty array instead.
+        # See TestShouldRememberDefault for the parser's matching behaviour.
         assert "title" in _EXTRACTION_SYSTEM_PROMPT
         assert "summary" in _EXTRACTION_SYSTEM_PROMPT
         assert "importance" in _EXTRACTION_SYSTEM_PROMPT
@@ -505,3 +507,64 @@ class TestSystemPromptContent:
         assert "entities" in _EXTRACTION_SYSTEM_PROMPT
         assert "relationships" in _EXTRACTION_SYSTEM_PROMPT
         assert "JSON array" in _EXTRACTION_SYSTEM_PROMPT
+
+
+class TestShouldRememberDefault:
+    """The parser must treat a missing ``should_remember`` as True.
+
+    The system prompt does not ask the LLM for that field, so filtering on
+    ``item.get("should_remember")`` discarded *every* extracted memory and
+    silently disabled long-term memory extraction.
+    """
+
+    @staticmethod
+    def _llm_returning(payload: list[dict]) -> AsyncMock:
+        llm = AsyncMock()
+        llm.generate = AsyncMock(return_value=json.dumps(payload))
+        return llm
+
+    async def test_item_without_flag_is_kept(self):
+        llm = self._llm_returning([
+            {
+                "title": "Pump P-101 vibration",
+                "summary": "Elevated vibration noted",
+                "content": "P-101 showed elevated vibration on 12 Jul.",
+                "importance": 0.8,
+                "confidence": 0.9,
+                "category": "asset_knowledge",
+            }
+        ])
+
+        results = await LLMMemoryExtractor(llm).extract("some conversation")
+
+        assert len(results) == 1
+        assert results[0].title == "Pump P-101 vibration"
+        assert results[0].should_remember is True
+
+    async def test_explicit_false_is_still_honoured(self):
+        llm = self._llm_returning([
+            {
+                "title": "Chit-chat",
+                "summary": "Nothing useful",
+                "content": "Hello there.",
+                "should_remember": False,
+            }
+        ])
+
+        assert await LLMMemoryExtractor(llm).extract("some conversation") == []
+
+    async def test_explicit_true_is_kept(self):
+        llm = self._llm_returning([
+            {
+                "title": "Valve V-220",
+                "summary": "Seal replaced",
+                "content": "Seal replaced on V-220.",
+                "should_remember": True,
+            }
+        ])
+
+        assert len(await LLMMemoryExtractor(llm).extract("some conversation")) == 1
+
+    async def test_empty_array_yields_no_memories(self):
+        llm = self._llm_returning([])
+        assert await LLMMemoryExtractor(llm).extract("some conversation") == []

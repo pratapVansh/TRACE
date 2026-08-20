@@ -7,10 +7,11 @@ from sqlalchemy import DateTime, Float, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.base import Base
 from app.models.mixins import TimestampMixin
 
 
-class InvestigationRecord(TimestampMixin):
+class InvestigationRecord(Base, TimestampMixin):
     __tablename__ = "investigations"
 
     id: Mapped[uuid.UUID] = mapped_column(

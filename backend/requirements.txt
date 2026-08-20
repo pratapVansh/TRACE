@@ -28,3 +28,5 @@ sentence-transformers>=3.0.0
 qdrant-client>=1.11.0
 groq>=0.14.0
 neo4j>=6.0.0
+# Imported directly by the Neo4j TLS trust store (app/graph/neo4j_graph_store.py).
+certifi>=2024.2.2

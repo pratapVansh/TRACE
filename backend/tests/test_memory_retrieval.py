@@ -128,10 +128,18 @@ class TestChatServiceMemoryRetrieval:
         conv.user_id = uuid.UUID("00000000-0000-0000-0000-000000000001")
         repo.get_conversation.return_value = conv
         repo.create_conversation.return_value = conv
+        # ``citations`` must be a real list: an auto-created MagicMock is
+        # truthy but iterates empty, which makes ChatService emit the
+        # "Previously Retrieved Evidence" header with no evidence under it.
         repo.get_messages.return_value = [
-            MagicMock(role="user", content="prior question"),
-            MagicMock(role="assistant", content="prior answer"),
+            MagicMock(role="user", content="prior question", citations=[]),
+            MagicMock(role="assistant", content="prior answer", citations=[]),
         ]
+        # ChatService also builds a "Previously Retrieved Evidence" block from
+        # conversation snapshots. Left unstubbed, AsyncMock returns a truthy
+        # MagicMock and that block gets assembled out of mock reprs, so these
+        # tests could not tell an empty memory context from a populated one.
+        repo.get_snapshots.return_value = []
         return repo
 
     @pytest.fixture

@@ -31,11 +31,39 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 
+    # Refresh-token cookie.
+    # The long-lived refresh token is delivered as an httpOnly cookie so it is
+    # unreadable from JavaScript (XSS cannot exfiltrate it). Scoped to the auth
+    # routes so it is not attached to ordinary API calls.
+    refresh_cookie_name: str = "trace_refresh_token"
+    refresh_cookie_path: str = "/api/auth"
+    # Must be True whenever the API is served over HTTPS.
+    refresh_cookie_secure: bool = False
+    # "lax" blocks cross-site POSTs (our CSRF defence for /auth/refresh).
+    # A frontend on a different registrable domain needs "none" + secure=True.
+    refresh_cookie_samesite: str = "lax"
+    refresh_cookie_domain: str = ""
+
     # Document storage (Milestone 4+)
     storage_backend: str = "local"
     storage_root: str = "./storage"
     max_upload_size_mb: int = 100
     allowed_upload_extensions: str = "pdf,docx,pptx,xlsx,txt,png,jpg,jpeg"
+
+    # OCR (Tesseract)
+    # tesseract_cmd: absolute path to the tesseract binary. Leave empty to rely
+    # on PATH. Windows installs land outside PATH by default, e.g.
+    #   C:/Program Files/Tesseract-OCR/tesseract.exe
+    tesseract_cmd: str = ""
+    # Language(s) passed to Tesseract. Multiple langs are joined with "+"
+    # (e.g. "eng+deu"); the traineddata for each must be installed.
+    ocr_language: str = "eng"
+    # Render resolution for OCR of scanned PDF pages. Tesseract is trained on
+    # ~300 DPI; lower values measurably reduce accuracy on small type.
+    ocr_render_dpi: int = 300
+    # Mean word confidence (0-1) below which an extraction is flagged as
+    # low-quality in document metadata rather than silently trusted.
+    ocr_min_confidence: float = 0.5
 
     # Security
     security_headers_hsts_enabled: bool = False  # Enable only in production
@@ -86,6 +114,23 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 15
     retrieval_similarity_threshold: float = 0.25
     retrieval_dedup_documents: bool = True
+
+    # Reranking.
+    # Bi-encoder retrieval scores a query and a chunk independently, so it
+    # ranks on rough topical similarity. A cross-encoder reads the pair
+    # together and is markedly better at telling a chunk that answers the
+    # question from one that merely shares its vocabulary.
+    rerank_enabled: bool = True
+    rerank_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    # Candidates pulled from the vector store before reranking. Reranking can
+    # only reorder what retrieval already found, so the fetch must be wider
+    # than the final cut.
+    rerank_candidate_multiplier: int = 4
+    rerank_max_candidates: int = 60
+    # Budget for one scoring call. Reranking is a quality improvement, not a
+    # correctness requirement, so exceeding this drops back to retrieval
+    # order rather than making the user wait.
+    rerank_timeout_seconds: float = 10.0
 
     # Neo4j graph store (Milestone 9)
     neo4j_uri: str = ""

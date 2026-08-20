@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from PIL import Image
 
+from app.processing.ocr.engine import OcrResult
 from app.models.document import Document
 from app.models.document_version import DocumentVersion
 from app.models.ingestion_job import IngestionJob
@@ -86,8 +87,8 @@ def processor(mock_storage: MagicMock, mock_repository: AsyncMock) -> ImageOcrEx
 
 @pytest.mark.asyncio
 @patch(
-    "app.services.image_ocr_extraction.pytesseract.image_to_string",
-    return_value="P-101",
+    "app.services.image_ocr_extraction.OcrEngine.ocr_image",
+    return_value=OcrResult(text="P-101", confidence=0.9),
 )
 async def test_image_ocr_processor_extracts_and_persists_text(
     _mock_ocr,
@@ -130,8 +131,8 @@ async def test_image_ocr_processor_skips_non_image_documents(
 
 @pytest.mark.asyncio
 @patch(
-    "app.services.image_ocr_extraction.pytesseract.image_to_string",
-    return_value="",
+    "app.services.image_ocr_extraction.OcrEngine.ocr_image",
+    return_value=OcrResult(text="", confidence=0.9),
 )
 async def test_image_ocr_processor_marks_empty_ocr_for_review(
     _mock_ocr,

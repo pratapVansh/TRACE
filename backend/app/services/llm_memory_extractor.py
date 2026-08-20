@@ -110,7 +110,11 @@ class LLMMemoryExtractor:
         for item in items:
             if not isinstance(item, dict):
                 continue
-            if not item.get("should_remember"):
+            # Absence means "remember", matching MemoryExtraction's default and
+            # the system prompt, which asks for an empty array (not a per-item
+            # flag) when there is nothing worth storing. Without the default
+            # every extraction was silently dropped.
+            if not item.get("should_remember", True):
                 continue
             try:
                 results.append(MemoryExtraction(**item))

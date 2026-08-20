@@ -554,7 +554,7 @@ class ListDirectoryTool(FrameworkTool):
         start = time.perf_counter()
         sandbox = _sandbox_from_tool(self)
         try:
-            resolved = sandbox.resolve(path_str)
+            resolved = sandbox.resolve(path_str, allow_root=True)
         except PathTraversalError as exc:
             return ToolResult(data=None, error=str(exc))
 
@@ -641,7 +641,7 @@ class SearchFilesTool(FrameworkTool):
         start = time.perf_counter()
         sandbox = _sandbox_from_tool(self)
         try:
-            resolved_base = sandbox.resolve(start_path)
+            resolved_base = sandbox.resolve(start_path, allow_root=True)
         except PathTraversalError as exc:
             return ToolResult(data=None, error=str(exc))
 
@@ -705,7 +705,7 @@ class FileMetadataTool(FrameworkTool):
         start = time.perf_counter()
         sandbox = _sandbox_from_tool(self)
         try:
-            resolved = sandbox.resolve(path_str)
+            resolved = sandbox.resolve(path_str, allow_root=True)
         except PathTraversalError as exc:
             return ToolResult(data=None, error=str(exc))
 

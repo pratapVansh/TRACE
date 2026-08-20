@@ -1,5 +1,6 @@
 import asyncio
 
+from app.core.config import settings
 from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
@@ -82,6 +83,21 @@ class ImageOcrExtractionProcessor:
         else:
             metadata["ocr_no_text"] = True
             metadata["extraction_note"] = "OCR completed but no readable text was detected"
+
+        # Record how much to trust the text. A confident-looking but wrong
+        # transcription is worse than no text at all, because it is indexed
+        # and answered from as if it were accurate.
+        if result.confidence is not None:
+            metadata["ocr_confidence"] = round(result.confidence, 4)
+            metadata["ocr_language"] = result.language
+            if result.is_low_confidence:
+                metadata["ocr_low_confidence"] = True
+                metadata["extraction_note"] = (
+                    f"OCR confidence {result.confidence:.0%} is below the "
+                    f"{settings.ocr_min_confidence:.0%} threshold — text may be unreliable"
+                )
+            else:
+                metadata.pop("ocr_low_confidence", None)
 
         await self._document_repository.update_document(
             context.document.id,

@@ -250,7 +250,10 @@ class TestNeo4jGraphStoreHealthCheck:
         mock_driver = AsyncMock()
         mock_server_info = MagicMock()
         mock_server_info.agent = "Neo4j/5.20.0"
-        mock_server_info.server = "neo4j@localhost:7687"
+        # health_check reports ``ServerInfo.address`` (the driver's real API).
+        # Setting ``.server`` instead left ``.address`` as an auto-created
+        # MagicMock, which stringifies to a repr rather than an address.
+        mock_server_info.address = "neo4j@localhost:7687"
         mock_driver.get_server_info = AsyncMock(return_value=mock_server_info)
         mock_driver_factory.return_value = mock_driver
 

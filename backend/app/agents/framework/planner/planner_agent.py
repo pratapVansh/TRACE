@@ -1,13 +1,18 @@
 import json
 import logging
+import re
 from typing import Any
 
 from app.ai.base import LLMProvider
-from app.agents.framework.base import BaseAgent
+from app.agents.framework.base import BaseAgent, check_agent_permissions
 from app.agents.framework.planner.schemas import ExecutionPlan, ExecutionStep
 from app.agents.framework.registry import AgentRegistry
 
 logger = logging.getLogger(__name__)
+
+# Matches a fenced block anywhere in the response, with or without a
+# language tag.
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 
 _SYSTEM_PROMPT = """You are a planning agent for an industrial asset management system.
 Your job is to analyse user requests and create an execution plan — a DAG of steps
@@ -105,8 +110,17 @@ class PlannerAgent:
             return self._fallback_plan(question)
 
     def _build_agents_list(self, user_role: str = "") -> list[dict[str, Any]]:
+        """List the agents the planner may choose from.
+
+        Agents the caller lacks permission for are withheld rather than
+        offered and rejected later: planning around an agent the user cannot
+        run produces a plan that dies partway through instead of a working
+        plan built from what they can actually use.
+        """
         agents = []
         for agent in self._registry.list_agents():
+            if user_role and check_agent_permissions(agent, user_role) is not None:
+                continue
             agents.append({
                 "agent_id": agent.agent_id,
                 "name": agent.name,
@@ -139,6 +153,7 @@ class PlannerAgent:
         cleaned = _extract_json(raw)
         data = json.loads(cleaned)
         steps = [ExecutionStep(**s) for s in data.get("steps", [])]
+        steps = self._resolve_agent_ids(steps)
         return ExecutionPlan(
             goal=data.get("goal", question),
             steps=steps,
@@ -146,6 +161,29 @@ class PlannerAgent:
             estimated_complexity=data.get("estimated_complexity", "moderate"),
             requires_supervision=data.get("requires_supervision", False),
         )
+
+    def _resolve_agent_ids(self, steps: list[ExecutionStep]) -> list[ExecutionStep]:
+        """Drop agent ids the LLM invented so they fail routing, not execution.
+
+        Nothing constrained the planner's ``agent_id`` to the registry, so a
+        plausible-looking hallucination ("safety_agent") reached the executor
+        and only failed once that step ran — after the steps before it had
+        already done their work. Clearing the id here lets the step fall back
+        to normal selection instead.
+        """
+        known = {agent.agent_id for agent in self._registry.list_agents()}
+        for step in steps:
+            if step.agent_id is not None and step.agent_id not in known:
+                logger.warning(
+                    "Planner proposed unknown agent_id %r for step %s — "
+                    "clearing it so the step falls back to agent selection",
+                    step.agent_id,
+                    step.step_id,
+                )
+                step.agent_id = None
+            if step.fallback_agent_id is not None and step.fallback_agent_id not in known:
+                step.fallback_agent_id = None
+        return steps
 
     def _fallback_plan(self, question: str) -> ExecutionPlan:
         """Produce a safe single-agent plan when LLM is unavailable."""
@@ -175,19 +213,63 @@ class PlannerAgent:
 
 
 def _extract_json(text: str) -> str:
-    """Extract a JSON object from LLM output that may contain markdown fences."""
+    """Pull a JSON object out of LLM output.
+
+    Models routinely wrap the object in a markdown fence and introduce it
+    with a sentence ("Here is the plan:"). The previous implementation only
+    unwrapped a fence when it was the very first thing in the response, so
+    any preamble made ``json.loads`` fail and quietly collapsed a full
+    multi-agent plan into the single-agent fallback.
+
+    A fenced block is preferred when present; otherwise the first balanced
+    ``{...}`` span is taken, ignoring braces inside strings.
+    """
     text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        start = 0
-        for i, line in enumerate(lines):
-            if line.strip().startswith("```"):
-                start = i + 1
-                break
-        end = len(lines)
-        for i in range(len(lines) - 1, start - 1, -1):
-            if lines[i].strip().startswith("```"):
-                end = i
-                break
-        text = "\n".join(lines[start:end])
-    return text.strip()
+
+    fenced = _FENCE_RE.search(text)
+    if fenced:
+        candidate = fenced.group(1).strip()
+        if candidate:
+            return candidate
+
+    span = _balanced_object(text)
+    return span if span is not None else text
+
+
+def _balanced_object(text: str) -> str | None:
+    """Return the first complete ``{...}`` span, or ``None`` if there is none.
+
+    Brace counting is string-aware: a ``{`` or ``}`` inside a JSON string
+    value (a description, a prompt template) must not change the depth, or
+    the span closes early and yields invalid JSON.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+
+    for i in range(start, len(text)):
+        char = text[i]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+
+    return None

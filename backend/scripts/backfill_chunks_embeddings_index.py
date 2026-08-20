@@ -27,6 +27,36 @@ from app.services.qdrant_indexing_service import QdrantIndexingService
 from app.services.vector_store import QdrantVectorStore
 
 
+_CHUNK_PAGE_SIZE = 100
+
+
+async def _index_completed_chunks(chunk_repo, indexing, document) -> int:
+    """Index every embedded chunk of a document, a page at a time.
+
+    ``get_chunks_by_document`` caps its result at 100 rows by default, so
+    reading it in one call silently dropped every chunk past the first 100 of
+    a long document. Paging keeps large documents fully searchable.
+    """
+    total = 0
+    skip = 0
+    while True:
+        page = await chunk_repo.get_chunks_by_document(
+            document.id,
+            embedding_status="completed",
+            skip=skip,
+            limit=_CHUNK_PAGE_SIZE,
+        )
+        if not page:
+            break
+        total += await indexing.index_document_chunks(
+            chunks=list(page), document=document,
+        )
+        if len(page) < _CHUNK_PAGE_SIZE:
+            break
+        skip += _CHUNK_PAGE_SIZE
+    return total
+
+
 async def backfill(*, force: bool = False) -> int:
     qdrant_store = QdrantVectorStore()
     await qdrant_store.connect()
@@ -67,8 +97,40 @@ async def backfill(*, force: bool = False) -> int:
 
                 existing = await chunk_repo.count_chunks_by_document(doc_id)
                 if existing > 0:
-                    print(f"  SKIP  {name} -- {existing} chunk(s) already exist")
+                    # Chunks in Postgres do not imply vectors in Qdrant: a
+                    # recreated collection or a replaced cluster leaves the
+                    # relational rows intact and the vectors gone. Skipping on
+                    # chunk count alone left such documents unsearchable and
+                    # only --force could recover them, at the cost of
+                    # re-chunking and re-embedding work that was already done.
+                    indexed_vectors = await qdrant_store.count_vectors_by_document(doc_id)
+                    completed = await chunk_repo.count_chunks_by_document(
+                        doc_id, embedding_status="completed",
+                    )
+                    if indexed_vectors >= completed and completed > 0:
+                        print(f"  SKIP  {name} -- {existing} chunk(s), {indexed_vectors} vector(s) already indexed")
+                        await session.commit()
+                        continue
+
+                    if completed == 0:
+                        # Chunks exist but were never embedded successfully.
+                        embedded = await embedding.generate_for_document(doc_id)
+                        print(f"  EMBED {name} -- {embedded} embedded", end="", flush=True)
+                        completed = await chunk_repo.count_chunks_by_document(
+                            doc_id, embedding_status="completed",
+                        )
+                    else:
+                        print(
+                            f"  REIDX {name} -- {completed} chunk(s), {indexed_vectors} vector(s) in Qdrant",
+                            end="", flush=True,
+                        )
+
+                    reindexed = await _index_completed_chunks(
+                        chunk_repo, indexing, document,
+                    )
+                    print(f" => {reindexed} indexed")
                     await session.commit()
+                    processed += 1
                     continue
 
                 version = get_latest_version(document)
@@ -95,14 +157,10 @@ async def backfill(*, force: bool = False) -> int:
                 embedded = await embedding.generate_for_document(doc_id)
                 print(f" => {embedded} embedded", end="", flush=True)
 
-                completed_chunks = await chunk_repo.get_chunks_by_document(
-                    doc_id, embedding_status="completed",
+                indexed = await _index_completed_chunks(
+                    chunk_repo, indexing, document,
                 )
-                if completed_chunks:
-                    indexed = await indexing.index_document_chunks(
-                        chunks=list(completed_chunks),
-                        document=document,
-                    )
+                if indexed:
                     print(f" => {indexed} indexed")
                 else:
                     print(" => 0 indexed (no completed embeddings)")

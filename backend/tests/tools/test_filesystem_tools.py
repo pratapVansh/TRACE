@@ -721,3 +721,60 @@ class TestEdgeCases:
             "source": str(src), "destination": str(tmp_workspace / "self_copy.txt"),
         }, ctx)
         assert result_cp.success
+
+
+# ── Workspace-root guard ──────────────────────────────────────
+
+
+class TestWorkspaceRootGuard:
+    """The root guard must block destructive access but permit read-only access.
+
+    It previously applied to every caller of ``resolve()``, so listing or
+    searching the workspace root — the primary use case of those tools —
+    failed with "cannot target workspace root".
+    """
+
+    def test_root_blocked_by_default(self, sandbox: WorkspaceSandbox, tmp_workspace: Path):
+        with pytest.raises(PathTraversalError, match="workspace root"):
+            sandbox.resolve(str(tmp_workspace))
+
+    def test_root_allowed_for_read_only_callers(
+        self, sandbox: WorkspaceSandbox, tmp_workspace: Path
+    ):
+        assert sandbox.resolve(str(tmp_workspace), allow_root=True) == tmp_workspace.resolve()
+
+    def test_subpaths_unaffected(self, sandbox: WorkspaceSandbox, tmp_workspace: Path):
+        target = tmp_workspace / "a.txt"
+        _touch(target)
+        assert sandbox.resolve(str(target)) == target.resolve()
+
+    def test_git_still_blocked_even_when_root_allowed(
+        self, sandbox: WorkspaceSandbox, tmp_workspace: Path
+    ):
+        (tmp_workspace / ".git").mkdir()
+        with pytest.raises(PathTraversalError, match=".git"):
+            sandbox.resolve(str(tmp_workspace / ".git"), allow_root=True)
+
+    def test_traversal_still_blocked_when_root_allowed(self, sandbox: WorkspaceSandbox):
+        with pytest.raises(PathTraversalError, match="outside the workspace"):
+            sandbox.resolve("../../etc/passwd", allow_root=True)
+
+    async def test_delete_tool_still_refuses_workspace_root(
+        self, sandbox: WorkspaceSandbox, tmp_workspace: Path, ctx: ToolContext
+    ):
+        tool = DeleteFileTool()
+        tool._sandbox = sandbox
+        result = await tool.execute({"path": str(tmp_workspace)}, ctx)
+        assert not result.success
+        assert "workspace root" in result.error
+
+    async def test_write_tool_still_refuses_workspace_root(
+        self, sandbox: WorkspaceSandbox, tmp_workspace: Path, ctx: ToolContext
+    ):
+        tool = WriteFileTool()
+        tool._sandbox = sandbox
+        result = await tool.execute(
+            {"path": str(tmp_workspace), "content": "x"}, ctx
+        )
+        assert not result.success
+        assert "workspace root" in result.error
