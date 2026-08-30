@@ -12,6 +12,7 @@ from app.agents.framework.tool import ToolResult
 from app.agents.framework.tools.context import ToolContext
 from app.agents.framework.tools.executor import ToolExecutor
 from app.agents.framework.agents.no_evidence import annotate_answer, has_evidence, has_any_evidence, no_evidence_response
+from app.agents.framework.agents.rca_tools import RCA_SYSTEM_PROMPT
 from app.core.authorization import Permission
 from app.core.authorization.permissions import get_permissions_for_role
 from app.schemas.rag import Citation
@@ -76,6 +77,9 @@ class RootCauseAnalysisAgent(BaseAgent):
     )
     supported_tasks = _RCA_TASKS
     required_permissions: set[Permission] = {Permission.ASSETS_READ, Permission.MAINTENANCE}
+    # Workflow contract enforced by _collect_evidence / _call_root_cause below and
+    # handed to the LLM that writes the analysis (see RootCauseTool).
+    system_prompt = RCA_SYSTEM_PROMPT
 
     def __init__(
         self, tool_executor: ToolExecutor | None = None,
@@ -149,7 +153,7 @@ class RootCauseAnalysisAgent(BaseAgent):
             )
         elif intent == "corrective":
             answer, citations, confidence = await self._handle_corrective(
-                question, search_data, tool_ctx, tools_used,
+                question, entity, search_data, tool_ctx, tools_used,
             )
         else:
             answer, citations, confidence = await self._handle_general(
@@ -202,70 +206,147 @@ class RootCauseAnalysisAgent(BaseAgent):
         tool_ctx: ToolContext, tools_used: list[str],
         agent_context: AgentContext,
     ) -> tuple[str, list[Citation], float]:
-        
-        # 1. Multi-Agent Delegation (Evidence Collection)
-        evidence_summary = ""
-        delegated_answers = []
-        if agent_context.orchestrator is not None:
-            tasks = [
-                ("maintenance", f"Get maintenance history and work orders for {entity or 'the asset'}"),
-                ("knowledge_graph", f"Find connected components and topology for {entity or 'the asset'}"),
-                ("document_analysis", f"Extract SOPs and manual guidelines for {entity or 'the asset'}"),
-            ]
-            import asyncio
-            for target_agent, subtask in tasks:
-                try:
-                    if hasattr(agent_context.orchestrator, "execute_multi"):
-                        resp = await agent_context.orchestrator.execute(
-                            question=subtask, user_id=agent_context.user_id, user_role=agent_context.user_role,
-                            conversation_id=agent_context.conversation_id, agent_id=target_agent,
-                            session=agent_context.session
-                        )
-                        delegated_answers.append(f"[{target_agent}]: {resp.answer}")
-                    else:
-                        resp = await agent_context.orchestrator.execute(
-                            question=subtask, user_id=agent_context.user_id, user_role=agent_context.user_role,
-                            conversation_id=agent_context.conversation_id, agent_ids=[target_agent], mode="single",
-                            session=agent_context.session
-                        )
-                        delegated_answers.append(f"[{target_agent}]: {resp.answer}")
-                except Exception as exc:
-                    logger.error("Delegation to %s failed: %s", target_agent, exc)
 
-            if delegated_answers:
-                evidence_summary = "\n\n".join(delegated_answers)
-                
-        # 2. Fallback to local tool if delegation yielded nothing
-        evidence_result = None
+        # 1. Evidence collection always runs first — it is the sole source of
+        #    the evidence summary that root_cause is allowed to reason over.
+        evidence_summary, evidence_result = await self._collect_evidence(
+            question, entity, tool_ctx, tools_used,
+        )
         if not evidence_summary:
-            evidence_result = await self._call_tool("evidence_collection", {
-                "entity_name": entity or question,
-                "depth": 2, "limit": 30,
-            }, tool_ctx, tools_used)
+            logger.info(
+                "RCA: evidence_collection returned nothing for %r — root_cause skipped.",
+                entity or question,
+            )
+            return "", [], 0.0
 
-            if evidence_result.success and evidence_result.data:
-                d = evidence_result.data
-                graph = d.get("graph_evidence", [])
-                docs = d.get("document_evidence", [])
-                evidence_summary = (
-                    f"Graph evidence ({len(graph)} items): " +
-                    "; ".join(f"{e['entity_name']} ({e['relationship']})" for e in graph[:8]) +
-                    f"\nDocument evidence ({len(docs)} items): " +
-                    "; ".join(f"{e['document_name']}" for e in docs[:5])
+        # 2. Peer agents add supplementary context on top of the collected
+        #    evidence; they never stand in for it.
+        delegated = await self._delegate_evidence(entity, agent_context)
+        if delegated:
+            evidence_summary = (
+                evidence_summary
+                + "\n\nSupplementary agent findings:\n"
+                + delegated
+            )
+
+        # 3. Analysis, always carrying the collected evidence forward.
+        rca_result = await self._call_root_cause(
+            question, entity, evidence_summary, tool_ctx, tools_used,
+        )
+
+        if rca_result.success and rca_result.data:
+            analysis = rca_result.data.get("analysis", "")
+            return analysis, self._build_citations(evidence_result), 0.85
+
+        return "", [], 0.0
+
+    async def _collect_evidence(
+        self, question: str, entity: str,
+        tool_ctx: ToolContext, tools_used: list[str],
+    ) -> tuple[str, ToolResult | None]:
+        """Run ``evidence_collection`` and render its result as a summary string.
+
+        An empty summary means no grounded evidence exists, and therefore that
+        ``root_cause`` must not run.
+        """
+        evidence_result = await self._call_tool("evidence_collection", {
+            "entity_name": entity or question,
+            "depth": 2, "limit": 30,
+        }, tool_ctx, tools_used)
+
+        if not has_evidence(evidence_result):
+            return "", evidence_result
+
+        d = evidence_result.data or {}
+        graph = d.get("graph_evidence", [])
+        docs = d.get("document_evidence", [])
+
+        parts: list[str] = []
+        if graph:
+            parts.append(
+                f"Graph evidence ({len(graph)} items): " +
+                "; ".join(
+                    f"{e.get('entity_name', 'unknown')} ({e.get('relationship', 'related')})"
+                    for e in graph[:8]
                 )
+            )
+        if docs:
+            parts.append(
+                f"Document evidence ({len(docs)} items): " +
+                "; ".join(e.get("document_name", "unnamed") for e in docs[:5])
+            )
+        return "\n".join(parts), evidence_result
 
-        rca_result = await self._call_tool("root_cause", {
+    async def _delegate_evidence(
+        self, entity: str, agent_context: AgentContext,
+    ) -> str:
+        """Ask peer agents for supplementary context around *entity*.
+
+        Returns an empty string when no orchestrator is available or every
+        delegation fails.  Callers must treat the result as an addition to the
+        ``evidence_collection`` summary, never as a replacement for it.
+        """
+        if agent_context.orchestrator is None:
+            return ""
+
+        tasks = [
+            ("maintenance", f"Get maintenance history and work orders for {entity or 'the asset'}"),
+            ("knowledge_graph", f"Find connected components and topology for {entity or 'the asset'}"),
+            ("document_analysis", f"Extract SOPs and manual guidelines for {entity or 'the asset'}"),
+        ]
+
+        delegated_answers: list[str] = []
+        for target_agent, subtask in tasks:
+            try:
+                if hasattr(agent_context.orchestrator, "execute_multi"):
+                    resp = await agent_context.orchestrator.execute(
+                        question=subtask, user_id=agent_context.user_id,
+                        user_role=agent_context.user_role,
+                        conversation_id=agent_context.conversation_id,
+                        agent_id=target_agent,
+                        session=agent_context.session,
+                    )
+                else:
+                    resp = await agent_context.orchestrator.execute(
+                        question=subtask, user_id=agent_context.user_id,
+                        user_role=agent_context.user_role,
+                        conversation_id=agent_context.conversation_id,
+                        agent_ids=[target_agent], mode="single",
+                        session=agent_context.session,
+                    )
+                delegated_answers.append(f"[{target_agent}]: {resp.answer}")
+            except Exception as exc:
+                logger.error("Delegation to %s failed: %s", target_agent, exc)
+
+        return "\n\n".join(delegated_answers)
+
+    async def _call_root_cause(
+        self, question: str, entity: str, evidence_summary: str,
+        tool_ctx: ToolContext, tools_used: list[str],
+    ) -> ToolResult:
+        """Invoke ``root_cause``, refusing to dispatch without evidence.
+
+        ``evidence_collection`` must have run and produced a summary first;
+        analysing an empty summary can only yield an ungrounded answer, so the
+        call is blocked here rather than left to the tool to reject.
+        """
+        if not evidence_summary.strip():
+            logger.warning(
+                "RCA: root_cause suppressed — no evidence_collection summary available."
+            )
+            return ToolResult(
+                data=None,
+                error=(
+                    "root_cause requires an evidence_summary produced by "
+                    "evidence_collection; none was available."
+                ),
+            )
+
+        return await self._call_tool("root_cause", {
             "incident_description": question,
             "entity_name": entity,
             "evidence_summary": evidence_summary,
         }, tool_ctx, tools_used)
-
-        if rca_result.success and rca_result.data:
-            analysis = rca_result.data.get("analysis", "")
-            citations = self._build_citations(evidence_result) if evidence_result else []
-            return analysis, citations, 0.85 if rca_result.error is None else 0.5
-
-        return "", [], 0.0
 
     async def _handle_similar(
         self, question: str, entity: str,
@@ -301,7 +382,7 @@ class RootCauseAnalysisAgent(BaseAgent):
         return "No similar incidents found.", [], 0.0
 
     async def _handle_corrective(
-        self, question: str,
+        self, question: str, entity: str,
         search_data: dict | None,
         tool_ctx: ToolContext, tools_used: list[str],
     ) -> tuple[str, list[Citation], float]:
@@ -309,13 +390,28 @@ class RootCauseAnalysisAgent(BaseAgent):
         if not has_evidence(search_data):
             return "", [], 0.0
 
-        rca_result = await self._call_tool("root_cause", {
-            "incident_description": question,
-            "entity_name": "", "evidence_summary": "",
-        }, tool_ctx, tools_used)
+        # Corrective actions are root-cause conclusions too, so they follow the
+        # same contract: collect evidence first, then analyse with it.
+        evidence_summary, evidence_result = await self._collect_evidence(
+            question, entity, tool_ctx, tools_used,
+        )
+        if not evidence_summary:
+            logger.info(
+                "RCA: no evidence for %r — corrective-action analysis skipped.",
+                entity or question,
+            )
+            return "", [], 0.0
+
+        rca_result = await self._call_root_cause(
+            question, entity, evidence_summary, tool_ctx, tools_used,
+        )
 
         if rca_result.success and rca_result.data:
-            return rca_result.data.get("analysis", ""), [], 0.7
+            return (
+                rca_result.data.get("analysis", ""),
+                self._build_citations(evidence_result),
+                0.7,
+            )
         return "", [], 0.0
 
     async def _handle_general(
@@ -379,9 +475,9 @@ class RootCauseAnalysisAgent(BaseAgent):
         return ""
 
     @staticmethod
-    def _build_citations(evidence_result: ToolResult) -> list[Citation]:
+    def _build_citations(evidence_result: ToolResult | None) -> list[Citation]:
         citations: list[Citation] = []
-        if evidence_result.success and evidence_result.data:
+        if evidence_result is not None and evidence_result.success and evidence_result.data:
             for e in evidence_result.data.get("document_evidence", [])[:5]:
                 citations.append(Citation(
                     document_name=e.get("document_name", "Evidence"),

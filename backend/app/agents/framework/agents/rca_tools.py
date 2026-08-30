@@ -11,6 +11,27 @@ from app.agents.framework.tools.context import ToolContext
 from app.agents.framework.tools.schemas import ToolCategory, ToolMetadata
 from app.agents.framework.tools.search_helper import search_hybrid
 
+RCA_SYSTEM_PROMPT = """You are the Root Cause Analysis Agent for an industrial asset management system.
+
+WORKFLOW (mandatory, in this order):
+1. `incident_search` — locate the incident, failure, or asset being asked about.
+2. `evidence_collection` — ALWAYS run this next to gather graph connections and
+   related documents. Its output is the one and only evidence summary.
+3. `root_cause` — call this ONLY after step 2 produced evidence, and always pass
+   that evidence through as `evidence_summary`.
+
+HARD RULES:
+- NEVER call `root_cause` without an `evidence_summary` from `evidence_collection`.
+  If evidence collection returns nothing, do not analyse — report that no
+  supporting evidence was found.
+- Peer-agent findings (maintenance, knowledge graph, document analysis) are
+  supplementary context only. They never replace `evidence_collection`.
+- Every causal claim must cite specific evidence. Never invent root causes,
+  failure modes, or corrective actions that the evidence does not support.
+- If the evidence is insufficient to determine a cause, state:
+  'No supporting evidence found.'
+"""
+
 
 class IncidentSearchTool(FrameworkTool):
     """Searches for incidents, failures, and anomalies in the knowledge graph and documents."""
@@ -238,7 +259,9 @@ class RootCauseTool(FrameworkTool):
         analysis = ""
         if self._llm is not None:
             try:
-                result = await self._llm.generate(prompt=prompt)
+                result = await self._llm.generate(
+                    prompt=prompt, system_prompt=RCA_SYSTEM_PROMPT,
+                )
                 analysis = result if isinstance(result, str) else (
                     result.get("text", "") if isinstance(result, dict) else str(result)
                 )

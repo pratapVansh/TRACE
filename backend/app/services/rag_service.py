@@ -11,6 +11,12 @@ from app.schemas.rag import Citation, GraphCitation, GraphRagResponse, RagQueryR
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk
 from app.services.hybrid_retriever import HybridRetriever
 from app.services.prompt_builder import PromptBuilder
+from app.services.query_understanding import (
+    QueryUnderstanding,
+    ResolvedQuery,
+    build_history_window,
+    build_interpretation_note,
+)
 from app.services.retriever_service import RetrieverService
 
 INSUFFICIENT_CONTEXT_MESSAGE = (
@@ -40,16 +46,46 @@ def _compute_highlighted_excerpt(query: str, content: str, max_length: int = 300
     return escaped
 
 
+def _understand_turn(
+    query_understanding: QueryUnderstanding,
+    question: str,
+    history: list[dict] | None,
+) -> tuple[ResolvedQuery, list[dict] | None]:
+    """Resolve *question* against history, and window the history itself.
+
+    Retrieval runs on the resolved query; the LLM still answers the question
+    the user actually asked.
+    """
+    window = build_history_window(history)
+    resolved = query_understanding.resolve(question, history=window)
+    # Callers distinguish "no history" (None) from "an empty conversation"
+    # ([]), and that distinction survives windowing.
+    forwarded = window or (None if history is None else [])
+    return resolved, forwarded
+
+
+def _merge_system_context(
+    additional_system_context: str | None,
+    resolved: ResolvedQuery,
+) -> str | None:
+    """Fold the follow-up interpretation into the caller's system context."""
+    note = build_interpretation_note(resolved)
+    parts = [p for p in (additional_system_context, note) if p]
+    return "\n\n".join(parts) if parts else None
+
+
 class RagService:
     def __init__(
         self,
         retriever: RetrieverService,
         prompt_builder: PromptBuilder,
         llm: LLMProvider,
+        query_understanding: QueryUnderstanding | None = None,
     ) -> None:
         self._retriever = retriever
         self._prompt_builder = prompt_builder
         self._llm = llm
+        self._query_understanding = query_understanding or QueryUnderstanding()
 
     async def query(
         self,
@@ -60,8 +96,15 @@ class RagService:
         history: list[dict] | None = None,
         additional_system_context: str | None = None,
     ) -> RagQueryResponse:
+        resolved, history = _understand_turn(
+            self._query_understanding, question, history,
+        )
+        additional_system_context = _merge_system_context(
+            additional_system_context, resolved,
+        )
+
         retrieval = await self._retriever.retrieve(
-            query=question,
+            query=resolved.search_query,
             top_k=top_k,
             similarity_threshold=similarity_threshold,
             filters=filters,
@@ -102,7 +145,7 @@ class RagService:
                 chunk_content=chunk.content,
                 score=chunk.score,
                 similarity_score=chunk.score,
-                highlighted_excerpt=_compute_highlighted_excerpt(question, chunk.content),
+                highlighted_excerpt=_compute_highlighted_excerpt(resolved.search_query, chunk.content),
             )
             for chunk in retrieval.results
         ]
@@ -130,8 +173,15 @@ class RagService:
         history: list[dict] | None = None,
         additional_system_context: str | None = None,
     ) -> AsyncGenerator[str, None]:
+        resolved, history = _understand_turn(
+            self._query_understanding, question, history,
+        )
+        additional_system_context = _merge_system_context(
+            additional_system_context, resolved,
+        )
+
         retrieval = await self._retriever.retrieve(
-            query=question,
+            query=resolved.search_query,
             top_k=top_k,
             similarity_threshold=similarity_threshold,
             filters=filters,
@@ -145,7 +195,7 @@ class RagService:
                 chunk_content=chunk.content,
                 score=chunk.score,
                 similarity_score=chunk.score,
-                highlighted_excerpt=_compute_highlighted_excerpt(question, chunk.content),
+                highlighted_excerpt=_compute_highlighted_excerpt(resolved.search_query, chunk.content),
             )
             for chunk in retrieval.results
         ]
@@ -275,11 +325,13 @@ class GraphRagService:
         retriever: RetrieverService,
         prompt_builder: PromptBuilder,
         llm: LLMProvider,
+        query_understanding: QueryUnderstanding | None = None,
     ) -> None:
         self._hybrid_retriever = hybrid_retriever
         self._retriever = retriever
         self._prompt_builder = prompt_builder
         self._llm = llm
+        self._query_understanding = query_understanding or QueryUnderstanding()
 
     async def query(
         self,
@@ -292,6 +344,13 @@ class GraphRagService:
         vector_top_k: int = 10,
         graph_top_k: int = 5,
     ) -> GraphRagResponse:
+        resolved, history = _understand_turn(
+            self._query_understanding, question, history,
+        )
+        additional_system_context = _merge_system_context(
+            additional_system_context, resolved,
+        )
+
         retrieval_source = "hybrid"
         chunks: list[RetrievedChunk] = []
         graph_facts: list[GraphFact] = []
@@ -299,7 +358,7 @@ class GraphRagService:
 
         try:
             unified = await self._hybrid_retriever.retrieve(
-                query=question,
+                query=resolved.search_query,
                 top_k=top_k,
                 vector_top_k=vector_top_k,
                 graph_top_k=graph_top_k,
@@ -317,7 +376,7 @@ class GraphRagService:
             )
             retrieval_source = "semantic_fallback"
             retrieval = await self._retriever.retrieve(
-                query=question,
+                query=resolved.search_query,
                 top_k=top_k,
                 similarity_threshold=similarity_threshold,
                 filters=filters,
@@ -362,7 +421,7 @@ class GraphRagService:
                 chunk_content=chunk.content,
                 score=chunk.score,
                 similarity_score=chunk.score,
-                highlighted_excerpt=_compute_highlighted_excerpt(question, chunk.content),
+                highlighted_excerpt=_compute_highlighted_excerpt(resolved.search_query, chunk.content),
             )
             for chunk in chunks
         ]
@@ -405,6 +464,13 @@ class GraphRagService:
         vector_top_k: int = 10,
         graph_top_k: int = 5,
     ) -> AsyncGenerator[str, None]:
+        resolved, history = _understand_turn(
+            self._query_understanding, question, history,
+        )
+        additional_system_context = _merge_system_context(
+            additional_system_context, resolved,
+        )
+
         retrieval_source = "hybrid"
         chunks: list[RetrievedChunk] = []
         graph_facts: list[GraphFact] = []
@@ -412,7 +478,7 @@ class GraphRagService:
 
         try:
             unified = await self._hybrid_retriever.retrieve(
-                query=question,
+                query=resolved.search_query,
                 top_k=top_k,
                 vector_top_k=vector_top_k,
                 graph_top_k=graph_top_k,
@@ -425,7 +491,7 @@ class GraphRagService:
             )
             retrieval_source = "semantic_fallback"
             retrieval = await self._retriever.retrieve(
-                query=question,
+                query=resolved.search_query,
                 top_k=top_k,
                 similarity_threshold=similarity_threshold,
                 filters=filters,
@@ -440,7 +506,7 @@ class GraphRagService:
                 chunk_content=chunk.content,
                 score=chunk.score,
                 similarity_score=chunk.score,
-                highlighted_excerpt=_compute_highlighted_excerpt(question, chunk.content),
+                highlighted_excerpt=_compute_highlighted_excerpt(resolved.search_query, chunk.content),
             )
             for chunk in chunks
         ]

@@ -128,27 +128,22 @@ class ChatService:
             logger.exception("Failed to persist conversation turn for conv=%s", conversation_id)
             raise
 
-    async def chat(
+    async def _build_turn_context(
         self,
-        user_id: str,
         question: str,
-        conversation_id: str | None = None,
-        session_id: str | None = None,
-        top_k: int = settings.retrieval_top_k,
-        similarity_threshold: float = settings.retrieval_similarity_threshold,
-        filters: RetrievalFilter | None = None,
-    ) -> ChatResponse:
-        start = time.perf_counter()
-        uid = uuid.UUID(user_id)
+        user_id: str,
+        conversation_id: uuid.UUID,
+        messages: list,
+    ) -> str:
+        """Assemble the non-retrieval context for one conversational turn.
 
-        conv = await self._ensure_conversation(uid, conversation_id, question, session_id=session_id)
+        Long-term memories, the user knowledge graph, evidence cited in the
+        previous answer, and the last agent snapshot — everything the model
+        should know that this turn's retrieval will not surface.
 
-        messages = await self._repo.get_messages(conv.id)
-        history_dicts = [
-            {"role": m.role, "content": m.content}
-            for m in messages
-        ]
-
+        Streaming and non-streaming chat held byte-identical copies of this,
+        so any fix to one silently left the other behind.
+        """
         memory_context = ""
         if self._memory_service is not None:
             try:
@@ -198,7 +193,7 @@ class ChatService:
         snapshot_context = ""
         if messages:
             try:
-                snaps = await self._repo.get_snapshots(conv.id)
+                snaps = await self._repo.get_snapshots(conversation_id)
                 if snaps:
                     latest_snap = snaps[-1]
                     parts: list[str] = []
@@ -220,6 +215,35 @@ class ChatService:
         context_parts = [p for p in [memory_context, user_graph_context, evidence_context, snapshot_context] if p]
         combined_context = "\n\n".join(context_parts)
 
+        return combined_context
+
+    async def chat(
+        self,
+        user_id: str,
+        question: str,
+        conversation_id: str | None = None,
+        session_id: str | None = None,
+        top_k: int = settings.retrieval_top_k,
+        similarity_threshold: float = settings.retrieval_similarity_threshold,
+        filters: RetrievalFilter | None = None,
+    ) -> ChatResponse:
+        start = time.perf_counter()
+        uid = uuid.UUID(user_id)
+
+        conv = await self._ensure_conversation(uid, conversation_id, question, session_id=session_id)
+
+        messages = await self._repo.get_messages(conv.id)
+        history_dicts = [
+            {"role": m.role, "content": m.content}
+            for m in messages
+        ]
+
+        combined_context = await self._build_turn_context(
+            question=question,
+            user_id=user_id,
+            conversation_id=conv.id,
+            messages=messages,
+        )
         try:
             rag_response = await self._rag.query(
                 question=question,
@@ -311,77 +335,12 @@ class ChatService:
             for m in messages
         ]
 
-        memory_context = ""
-        if self._memory_service is not None:
-            try:
-                retrieved = await self._memory_service.search(
-                    query=question, user_id=user_id, limit=5,
-                )
-                memory_context = _format_memories_for_context(retrieved)
-            except Exception:
-                logger.warning("Memory retrieval failed (non-fatal)", exc_info=True)
-
-        user_graph_context = ""
-        if self._user_graph is not None:
-            try:
-                facts = await self._user_graph.get_user_knowledge(user_id)
-                if facts:
-                    lines = ["About You:", "------------------"]
-                    for f in facts[:5]:
-                        if f.relationship_type and f.related_entity:
-                            lines.append(
-                                f"- You {f.relationship_type.replace('_', ' ').title()} "
-                                f"{f.related_entity} ({f.related_entity_type or 'Entity'})"
-                            )
-                    user_graph_context = "\n".join(lines)
-            except Exception:
-                logger.warning("UserGraph retrieval failed (non-fatal)", exc_info=True)
-
-        evidence_context = ""
-        if messages:
-            last_evidence = None
-            for m in reversed(messages):
-                if m.role == "assistant" and m.citations:
-                    last_evidence = m.citations
-                    break
-            if last_evidence:
-                lines = [
-                    "Previously Retrieved Evidence:",
-                    "------------------",
-                    "The following documents were cited in the previous assistant response. "
-                    "Use them as context for the current question without re-retrieving if applicable.",
-                ]
-                for i, c in enumerate(last_evidence[:10], 1):
-                    doc = c.get("document_name", "Unknown")
-                    excerpt = c.get("chunk_content", "") or c.get("highlighted_excerpt", "") or ""
-                    lines.append(f"[{i}] {doc}: {excerpt[:200]}")
-                evidence_context = "\n".join(lines)
-
-        snapshot_context = ""
-        if messages:
-            try:
-                snaps = await self._repo.get_snapshots(conv.id)
-                if snaps:
-                    latest_snap = snaps[-1]
-                    parts: list[str] = []
-                    if latest_snap.working_memory:
-                        parts.append("Previous Working Memory: " + str(latest_snap.working_memory)[:300])
-                    if latest_snap.agent_results:
-                        for ar in latest_snap.agent_results[:3]:
-                            parts.append("- " + str(ar)[:200])
-                    if latest_snap.timeline:
-                        parts.append("Execution Timeline: " + str(latest_snap.timeline)[:300])
-                    if parts:
-                        snapshot_context = (
-                            "Previous Agent State:\n"
-                            "------------------\n" + "\n".join(parts)
-                        )
-            except Exception:
-                logger.warning("Snapshot context build failed (non-fatal)", exc_info=True)
-
-        context_parts = [p for p in [memory_context, user_graph_context, evidence_context, snapshot_context] if p]
-        combined_context = "\n\n".join(context_parts)
-
+        combined_context = await self._build_turn_context(
+            question=question,
+            user_id=user_id,
+            conversation_id=conv.id,
+            messages=messages,
+        )
         full_answer = ""
         citations_data: list[dict] | None = None
 
