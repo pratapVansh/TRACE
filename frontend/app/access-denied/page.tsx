@@ -27,8 +27,8 @@ function AccessDeniedContent() {
             </p>
             {user?.role ? (
               <p className="text-sm text-muted-foreground">
-                Signed in as <span className="text-white">{user.full_name}</span>{" "}
-                with role <span className="text-white">{user.role}</span>.
+                Signed in as <span className="text-foreground">{user.full_name}</span>{" "}
+                with role <span className="text-foreground">{user.role}</span>.
               </p>
             ) : null}
           </div>

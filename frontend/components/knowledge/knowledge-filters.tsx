@@ -45,7 +45,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
+        className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -78,7 +78,7 @@ export function KnowledgeFilters({
   return (
     <div
       className={cn(
-        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:p-5",
+        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:p-2.5",
         showDepartmentFilter ? "lg:grid-cols-4" : "lg:grid-cols-3",
         className,
       )}
@@ -108,7 +108,7 @@ export function KnowledgeFilters({
           type="button"
           disabled={!hasActiveFilters}
           onClick={() => onChange(resetFilters)}
-          className="h-10 w-full rounded-xl border border-border px-3 text-sm text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-7 w-full rounded-md border border-border px-3 text-[12px] text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           Clear filters
         </button>

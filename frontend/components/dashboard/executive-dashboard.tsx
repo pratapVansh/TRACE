@@ -160,17 +160,17 @@ export function ExecutiveDashboard() {
 
   if (loading) {
     return (
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 lg:gap-10">
+      <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-3">
         <DashboardHeader facilityName="" lastUpdated="" />
-        <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-8 text-center">
-          <p className="text-sm text-muted-foreground">Loading dashboard data...</p>
+        <div className="rounded-md border border-border bg-[var(--surface-secondary)] px-3 py-2">
+          <p className="text-[12px] text-muted-foreground">Loading dashboard data…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 lg:gap-10">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-3">
       <DashboardHeader
         facilityName={displayData.facilityName}
         lastUpdated={displayData.lastUpdated}
@@ -179,7 +179,7 @@ export function ExecutiveDashboard() {
       {loadFailed && (
         <div
           role="alert"
-          className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12px] leading-[1.5] text-destructive"
         >
           Could not load dashboard data. The figures below are unavailable, not
           zero — check that the backend is reachable and try refreshing.
@@ -189,12 +189,12 @@ export function ExecutiveDashboard() {
       {displayData.kpis.length > 0 ? (
         <DashboardKpiGrid kpis={kpis} />
       ) : (
-        <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-8 text-center">
-          <p className="text-sm text-muted-foreground">No KPI data available.</p>
+        <div className="rounded-md border border-border bg-[var(--surface-secondary)] px-3 py-2">
+          <p className="text-[12px] text-muted-foreground">No KPI data available.</p>
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-12">
+      <div className="grid gap-3 xl:grid-cols-12">
         <div className="xl:col-span-8">
           <RecentDocumentsWidget
             documents={recentDocuments}
@@ -206,12 +206,12 @@ export function ExecutiveDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <RecentActivityWidget activities={displayData.recentActivity} />
         <ComplianceOverviewWidget metrics={displayData.complianceMetrics} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-12">
+      <div className="grid gap-3 xl:grid-cols-12">
         <div className="xl:col-span-5">
           <AssetDistributionWidget
             categories={displayData.assetCategories}

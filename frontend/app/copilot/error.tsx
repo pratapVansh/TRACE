@@ -31,7 +31,7 @@ export default function CopilotError({
             />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl font-semibold text-foreground">
           Copilot encountered an issue
         </h2>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -41,7 +41,7 @@ export default function CopilotError({
           <button
             type="button"
             onClick={reset}
-            className="rounded-xl border border-border bg-[var(--surface-secondary)] px-5 py-2.5 text-sm font-medium text-white transition-industrial hover:border-[var(--accent-steel)]/25"
+            className="rounded-xl border border-border bg-[var(--surface-secondary)] px-5 py-2.5 text-sm font-medium text-foreground transition-industrial hover:border-[var(--accent-steel)]/25"
           >
             Try again
           </button>

@@ -45,25 +45,3 @@ export interface UpdateUserStatusPayload {
 export interface ResetUserPasswordPayload {
   new_password: string;
 }
-
-export interface RoleDefinition {
-  role: string;
-  description: string;
-  userCount: number;
-}
-
-export interface SettingsField {
-  id: string;
-  label: string;
-  value: string;
-  type?: "text" | "toggle" | "select";
-  options?: string[];
-  enabled?: boolean;
-}
-
-export interface SettingsSectionData {
-  id: string;
-  title: string;
-  description: string;
-  fields: SettingsField[];
-}

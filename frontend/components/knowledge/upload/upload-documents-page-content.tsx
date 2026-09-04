@@ -156,7 +156,7 @@ export function UploadDocumentsPageContent() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:gap-8">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 lg:gap-8">
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Upload Documents"
@@ -171,7 +171,7 @@ export function UploadDocumentsPageContent() {
         accept={UPLOAD_ACCEPT_ATTRIBUTE}
       />
 
-      <div className="grid gap-6 xl:grid-cols-12">
+      <div className="grid gap-3 xl:grid-cols-12">
         <div className="xl:col-span-7">
           <UploadQueue items={queue} />
         </div>
@@ -184,15 +184,15 @@ export function UploadDocumentsPageContent() {
       </div>
 
       {historyError ? (
-        <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+        <div className="rounded-md border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-[12px] text-[var(--danger)]">
           {historyError}
         </div>
       ) : null}
 
       {isHistoryLoading ? (
-        <div className="industrial-card space-y-3 p-6">
+        <div className="industrial-card space-y-3 p-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 w-full rounded-xl" />
+            <Skeleton key={index} className="h-16 w-full rounded-md" />
           ))}
         </div>
       ) : (

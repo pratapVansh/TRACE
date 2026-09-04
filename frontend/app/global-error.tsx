@@ -11,7 +11,7 @@ export default function GlobalError({
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-background p-8">
         <div className="max-w-md text-center">
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="text-xl font-semibold text-foreground">
             Critical application error
           </h2>
           <p className="mt-3 text-sm text-muted-foreground">

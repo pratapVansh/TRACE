@@ -122,7 +122,7 @@ export function DocumentsPageContent() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:gap-8">
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 lg:gap-8">
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Documents"
@@ -130,7 +130,7 @@ export function DocumentsPageContent() {
         action={
           <Link
             href={APP_ROUTES.documentsUpload}
-            className="inline-flex h-10 items-center rounded-xl bg-[var(--accent-steel)] px-4 text-sm font-medium text-white transition-industrial hover:bg-[#6a8eb5]"
+            className="inline-flex h-7 items-center rounded-md bg-[var(--accent-steel)] px-4 text-[12px] font-medium text-white transition-industrial hover:bg-[#6a8eb5]"
           >
             Upload Documents
           </Link>
@@ -151,21 +151,21 @@ export function DocumentsPageContent() {
       />
 
       {error ? (
-        <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+        <div className="rounded-md border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-[12px] text-[var(--danger)]">
           {error}
         </div>
       ) : null}
 
       {actionError ? (
-        <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+        <div className="rounded-md border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-[12px] text-[var(--danger)]">
           {actionError}
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className="industrial-card space-y-3 p-6">
+        <div className="industrial-card space-y-3 p-3">
           {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-12 w-full rounded-xl" />
+            <Skeleton key={index} className="h-12 w-full rounded-md" />
           ))}
         </div>
       ) : (

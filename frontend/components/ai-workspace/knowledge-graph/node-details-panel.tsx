@@ -18,7 +18,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-white truncate">
+        <h3 className="text-lg font-semibold text-foreground truncate">
           {node.label}
         </h3>
         <Badge variant="secondary" className="shrink-0">
@@ -31,7 +31,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Entity ID
           </dt>
-          <dd className="mt-0.5 font-mono text-xs text-white/70 break-all">
+          <dd className="mt-0.5 font-mono text-xs text-foreground/70 break-all">
             {node.id}
           </dd>
         </div>
@@ -40,7 +40,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Source Document
           </dt>
-          <dd className="mt-0.5 text-white/70 break-words">
+          <dd className="mt-0.5 text-foreground/70 break-words">
             {node.sourceDocument || "N/A"}
           </dd>
         </div>
@@ -49,7 +49,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Connected Neighbors
           </dt>
-          <dd className="mt-0.5 text-white">{node.neighbors}</dd>
+          <dd className="mt-0.5 text-foreground">{node.neighbors}</dd>
         </div>
       </dl>
 
@@ -59,7 +59,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
             <label className="text-xs text-muted-foreground uppercase tracking-wider">
               Traversal depth
             </label>
-            <span className="text-xs font-medium text-white">{depth}</span>
+            <span className="text-xs font-medium text-foreground">{depth}</span>
           </div>
           <input
             type="range"
@@ -71,7 +71,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
           />
           <button
             onClick={() => onExpand(node.id, depth)}
-            className="w-full rounded-lg border border-border bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-border/50"
+            className="w-full rounded-lg border border-border bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-border/50"
           >
             Expand neighbors (depth {depth})
           </button>
@@ -84,7 +84,7 @@ function NodeDetails({ node, onExpand }: { node: SelectedNode; onExpand?: (entit
 function EdgeDetails({ edge }: { edge: SelectedEdge }) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-white truncate">
+      <h3 className="text-lg font-semibold text-foreground truncate">
         {edge.relationshipType}
       </h3>
 
@@ -102,7 +102,7 @@ function EdgeDetails({ edge }: { edge: SelectedEdge }) {
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Source Entity
           </dt>
-          <dd className="mt-0.5 font-mono text-xs text-white/70 break-all">
+          <dd className="mt-0.5 font-mono text-xs text-foreground/70 break-all">
             {edge.from}
           </dd>
         </div>
@@ -111,7 +111,7 @@ function EdgeDetails({ edge }: { edge: SelectedEdge }) {
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Target Entity
           </dt>
-          <dd className="mt-0.5 font-mono text-xs text-white/70 break-all">
+          <dd className="mt-0.5 font-mono text-xs text-foreground/70 break-all">
             {edge.to}
           </dd>
         </div>
@@ -120,7 +120,7 @@ function EdgeDetails({ edge }: { edge: SelectedEdge }) {
           <dt className="text-muted-foreground text-xs uppercase tracking-wider">
             Relationship ID
           </dt>
-          <dd className="mt-0.5 font-mono text-xs text-white/70 break-all">
+          <dd className="mt-0.5 font-mono text-xs text-foreground/70 break-all">
             {edge.id}
           </dd>
         </div>
@@ -144,7 +144,7 @@ export function NodeDetailsPanel({
         </h2>
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-border/50 hover:text-white"
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-border/50 hover:text-foreground"
           aria-label="Close details"
         >
           <X size={16} />

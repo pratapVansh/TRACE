@@ -12,10 +12,10 @@ type SearchHistoryPanelProps = {
 
 export function SearchHistoryPanel({ history, onSelect }: SearchHistoryPanelProps) {
   return (
-    <div className="industrial-card p-5 sm:p-6">
+    <div className="industrial-card p-2.5 sm:p-3">
       <p className="section-label">Query log</p>
-      <h3 className="mt-2 text-lg font-semibold text-white">Search history</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <h3 className="mt-2 text-[14px] font-semibold text-foreground">Search history</h3>
+      <p className="mt-2 text-[12px] text-muted-foreground">
         Recent semantic queries across the knowledge base.
       </p>
 
@@ -25,11 +25,11 @@ export function SearchHistoryPanel({ history, onSelect }: SearchHistoryPanelProp
             <button
               type="button"
               onClick={() => onSelect(item.query)}
-              className="flex w-full items-start gap-3 rounded-xl border border-border bg-[var(--surface-secondary)] p-4 text-left transition-industrial hover:border-[var(--accent-steel)]/25 hover:bg-[var(--surface)]"
+              className="flex w-full items-start gap-3 rounded-md border border-border bg-[var(--surface-secondary)] p-4 text-left transition-industrial hover:border-[var(--accent-steel)]/25 hover:bg-[var(--surface)]"
             >
               <Search className="mt-0.5 size-4 shrink-0 text-[var(--accent-steel-muted)]" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-white">&ldquo;{item.query}&rdquo;</p>
+                <p className="text-[12px] text-foreground">&ldquo;{item.query}&rdquo;</p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{item.resultCount} results</span>
                   <span className="inline-flex items-center gap-1">

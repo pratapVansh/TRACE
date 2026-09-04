@@ -17,7 +17,6 @@ export const PERMISSIONS = {
   SEARCH: "search",
   COPILOT: "copilot",
   KNOWLEDGE_GRAPH: "knowledge_graph",
-  AI_AGENTS: "ai_agents",
   ASSETS_READ: "assets_read",
   ASSETS_WRITE: "assets_write",
   MAINTENANCE: "maintenance",

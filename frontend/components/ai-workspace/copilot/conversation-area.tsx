@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SendHorizonal, X, Sparkles, FileText, FileClock, Bolt } from "lucide-react";
+import { AlertTriangle, SendHorizonal, X } from "lucide-react";
 
+import type { AnswerGroundingState } from "@/components/ai-workspace/copilot/answer-grounding";
 import { ChatMessage } from "@/components/ai-workspace/copilot/chat-message";
-import { TypingIndicator } from "@/components/ai-workspace/copilot/typing-indicator";
-import { SuggestedPrompts } from "@/components/ai-workspace/copilot/suggested-prompts";
+import type { RetrievalTraceState } from "@/components/ai-workspace/copilot/retrieval-trace";
+import {
+  ThreadEmptyState,
+  type Suggestion,
+} from "@/components/ai-workspace/copilot/thread-empty-state";
+import type { TurnNoticeState } from "@/components/ai-workspace/copilot/turn-notice";
 import { cn } from "@/lib/utils";
 import type { Citation } from "@/types/chat";
 
@@ -17,6 +22,15 @@ export type Message = {
   sources?: string[];
   timestamp?: number;
   isError?: boolean;
+  /** Retrieval progress for an assistant turn, from the SSE stream. */
+  trace?: RetrievalTraceState;
+  /**
+   * A failure, timeout or cancellation for this turn. Kept out of `content`
+   * so any partial answer already streamed stays clean, readable markdown.
+   */
+  notice?: TurnNoticeState;
+  /** How much of the finished answer the cited passages actually carry. */
+  grounding?: AnswerGroundingState;
 };
 
 type ConversationAreaProps = {
@@ -24,21 +38,19 @@ type ConversationAreaProps = {
   isWaiting: boolean;
   draft: string;
   onDraftChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (overrideQuestion?: string) => void;
   onCancel?: () => void;
   disabled?: boolean;
-  onCitationClick?: (citation: Citation) => void;
+  onCitationSelect?: (messageId: string, index: number, citation?: Citation) => void;
+  activeCitation?: { messageId: string; index: number } | null;
   streamingMessageId?: string | null;
   onEditMessage?: (id: string, newContent: string) => void;
   onRegenerateMessage?: (id: string) => void;
   restoreNotice?: "not_found" | "incomplete" | null;
+  onDismissRestoreNotice?: () => void;
+  suggestions?: Suggestion[];
+  onRetryMessage?: (id: string) => void;
 };
-
-const SUGGESTED_PROMPTS = [
-  { id: "1", label: "Summarize recent incidents", prompt: "Summarize all safety incidents from the past 30 days." },
-  { id: "2", label: "Find maintenance guides", prompt: "Find maintenance procedures for the hydraulic press." },
-  { id: "3", label: "Check compliance", prompt: "What are the latest compliance requirements for handling hazardous waste?" },
-];
 
 export function ConversationArea({
   messages,
@@ -48,11 +60,15 @@ export function ConversationArea({
   onSubmit,
   onCancel,
   disabled,
-  onCitationClick,
+  onCitationSelect,
+  activeCitation = null,
   streamingMessageId,
   onEditMessage,
   onRegenerateMessage,
   restoreNotice,
+  onDismissRestoreNotice,
+  suggestions = [],
+  onRetryMessage,
 }: ConversationAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -71,86 +87,38 @@ export function ConversationArea({
   }, [disabled, isWaiting, messages.length]);
 
   return (
-    <div className="flex h-full flex-col bg-background/50 overflow-hidden relative">
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl space-y-6 pb-24">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+        <div className="mx-auto max-w-3xl space-y-1">
           {messages.length === 0 && !isWaiting && (
-            <div className="flex h-full min-h-[500px] flex-col items-center justify-center pt-12">
-              {restoreNotice === "not_found" ? (
-                <>
-                  <div className="mb-6 flex size-16 items-center justify-center rounded-2xl bg-[var(--surface-tertiary)] border border-[var(--accent-steel)]/20">
-                    <FileClock className="size-8 text-muted-foreground" strokeWidth={1.5} />
-                  </div>
-                  <h2 className="mb-2 text-xl font-bold text-white tracking-tight">Conversation not found</h2>
-                  <p className="mb-2 text-center text-sm text-muted-foreground max-w-[420px]">
-                    The previous conversation was deleted or is no longer available.
-                  </p>
-                  <p className="text-center text-xs text-muted-foreground/60 max-w-[420px]">
-                    Start a new conversation below.
-                  </p>
-                </>
-              ) : restoreNotice === "incomplete" ? (
-                <>
-                  <div className="mb-6 flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                    <span className="text-2xl text-amber-400">&#9888;</span>
-                  </div>
-                  <h2 className="mb-2 text-xl font-bold text-white tracking-tight">Response interrupted</h2>
-                  <p className="mb-2 text-center text-sm text-muted-foreground max-w-[420px]">
-                    The last response was cut off before it completed. You can ask your question again to continue.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="mb-10 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-steel)] to-[var(--surface-tertiary)] shadow-lg shadow-[var(--accent-steel)]/20">
-                    <Sparkles className="size-8 text-white" strokeWidth={1.5} />
-                  </div>
-                  <h2 className="mb-2 text-2xl font-bold text-white tracking-tight">How can I help you today?</h2>
-                  <p className="mb-12 text-center text-sm text-muted-foreground max-w-[400px]">
-                    Ask me about procedures, compliance documents, or past incidents. I can search through our indexed knowledge base and provide cited answers.
-                  </p>
+            <ThreadEmptyState
+              variant={restoreNotice === "not_found" ? "not_found" : "default"}
+              suggestions={suggestions}
+              onSelect={(prompt) => onSubmit(prompt)}
+            />
+          )}
 
-                  <div className="w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <Bolt className="size-4" /> Quick Actions
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {SUGGESTED_PROMPTS.map(p => (
-                          <button 
-                            key={p.id}
-                            onClick={() => {
-                              onDraftChange(p.prompt);
-                              setTimeout(() => onSubmit(), 100);
-                            }}
-                            className="text-left p-4 rounded-xl border border-white/5 bg-[var(--surface-secondary)] hover:bg-[var(--surface-tertiary)] hover:border-[var(--accent-steel)]/30 transition-all group shadow-sm"
-                          >
-                            <p className="text-sm font-medium text-white/90 group-hover:text-white mb-1">{p.label}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{p.prompt}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <FileClock className="size-4" /> Recently Viewed
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {[1, 2].map(i => (
-                          <div key={i} className="flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-[var(--surface-secondary)] hover:bg-[var(--surface-tertiary)] transition-all cursor-pointer shadow-sm">
-                            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-steel)]/10 text-[var(--accent-steel)]">
-                              <FileText className="size-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white/90">Safety Protocol V{i}.0</p>
-                              <p className="text-xs text-muted-foreground">Updated {i} days ago</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
+          {/* A restored thread whose last answer was cut off still has
+              messages, so this cannot live in the empty state. */}
+          {restoreNotice === "incomplete" && messages.length > 0 && (
+            <div className="mb-2 flex items-start gap-1.5 rounded border border-[var(--warning)]/30 bg-[var(--warning)]/8 px-2.5 py-2">
+              <AlertTriangle
+                className="mt-[1px] size-3.5 shrink-0 text-[var(--warning)]"
+                strokeWidth={2}
+              />
+              <p className="min-w-0 flex-1 text-[12px] leading-[1.5] text-foreground/85">
+                The last answer was cut off before it finished. Ask again to
+                continue.
+              </p>
+              {onDismissRestoreNotice && (
+                <button
+                  type="button"
+                  onClick={onDismissRestoreNotice}
+                  className="shrink-0 text-[var(--warning)]/70 transition-industrial hover:text-[var(--warning)]"
+                  aria-label="Dismiss"
+                >
+                  <X className="size-3" strokeWidth={2} />
+                </button>
               )}
             </div>
           )}
@@ -161,7 +129,20 @@ export function ConversationArea({
               role={msg.role}
               content={msg.content}
               citations={msg.citations}
-              onCitationClick={onCitationClick}
+              onCitationSelect={(index) =>
+                onCitationSelect?.(msg.id, index, msg.citations?.[index])
+              }
+              activeCitationIndex={
+                activeCitation?.messageId === msg.id ? activeCitation.index : null
+              }
+              trace={msg.trace}
+              notice={msg.notice}
+              grounding={msg.grounding}
+              onRetry={
+                msg.notice?.kind === "error" && onRetryMessage
+                  ? () => onRetryMessage(msg.id)
+                  : undefined
+              }
               isStreaming={msg.id === streamingMessageId}
               timestamp={msg.timestamp}
               isError={msg.isError}
@@ -171,30 +152,24 @@ export function ConversationArea({
             />
           ))}
 
-          {isWaiting && !streamingMessageId && (
-            <div className="py-4">
-              <TypingIndicator />
-            </div>
-          )}
-
           <div ref={bottomRef} className="h-px w-full" />
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[var(--background)] via-[var(--background)]/90 to-transparent pt-10 pb-6 px-4">
-        <div className="mx-auto max-w-4xl relative">
+      <div className="shrink-0 border-t border-border bg-[var(--surface)] px-3 py-2.5">
+        <div className="relative mx-auto max-w-3xl">
           <form
             onSubmit={(event) => {
               event.preventDefault();
               onSubmit();
             }}
-            className="relative flex items-end gap-2 bg-[var(--surface-secondary)] border border-[var(--accent-steel)]/20 rounded-2xl shadow-xl shadow-black/20 focus-within:border-[var(--accent-steel)]/50 focus-within:ring-1 focus-within:ring-[var(--accent-steel)]/30 transition-all p-2"
+            className="relative flex items-end gap-2 rounded-lg border border-border bg-[var(--surface-secondary)] p-1 transition-industrial focus-within:border-[var(--accent-steel)]/45"
           >
             <textarea
               ref={inputRef}
               value={draft}
               onChange={(event) => onDraftChange(event.target.value)}
-              placeholder="Ask about assets, procedures, compliance, or incidents… (Enter to send, Shift+Enter for new line)"
+              placeholder="Ask about assets, procedures, compliance, or incidents…"
               disabled={disabled}
               rows={1}
               onKeyDown={(e) => {
@@ -203,43 +178,43 @@ export function ConversationArea({
                   onSubmit();
                 }
               }}
-              className="max-h-48 min-h-[44px] w-full resize-none bg-transparent py-3 pl-4 pr-12 text-[15px] text-foreground placeholder:text-muted-foreground outline-none leading-relaxed"
+              className="max-h-40 min-h-[34px] w-full resize-none bg-transparent py-2 pl-2.5 pr-11 text-[13px] leading-[1.55] text-foreground outline-none placeholder:text-muted-foreground"
               onInput={(e) => {
                 const el = e.currentTarget;
                 el.style.height = "auto";
-                el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+                el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
               }}
             />
-            <div className="absolute right-3 bottom-3 flex items-center">
+            <div className="absolute bottom-1.5 right-1.5 flex items-center">
               {isWaiting ? (
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="flex size-9 items-center justify-center rounded-xl bg-[var(--surface-tertiary)] hover:bg-red-500/20 text-red-400 transition-colors"
+                  className="flex size-7 items-center justify-center rounded-md bg-[var(--surface-tertiary)] text-[var(--danger)] transition-industrial hover:bg-[var(--danger)]/20"
                   title="Stop generating"
                 >
-                  <X className="size-4" strokeWidth={2} />
+                  <X className="size-3.5" strokeWidth={2} />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={disabled || !draft.trim()}
                   className={cn(
-                    "flex size-9 items-center justify-center rounded-xl transition-all shadow-sm",
+                    "flex size-7 items-center justify-center rounded-md transition-industrial",
                     draft.trim() && !disabled
                       ? "bg-[var(--accent-steel)] text-white hover:bg-[var(--accent-steel)]/90"
-                      : "bg-[var(--surface-tertiary)] text-white/30"
+                      : "bg-[var(--surface-tertiary)] text-foreground/30"
                   )}
                   title="Send message"
                 >
-                  <SendHorizonal className="size-4" strokeWidth={1.75} />
+                  <SendHorizonal className="size-3.5" strokeWidth={1.75} />
                 </button>
               )}
             </div>
           </form>
-          <div className="text-center mt-3 text-[11px] text-muted-foreground/60">
-            AI responses can be inaccurate. Please verify critical information.
-          </div>
+          <p className="mt-1.5 text-[10px] leading-none text-muted-foreground/60">
+            Enter to send · Shift+Enter for newline · verify critical values against the cited source
+          </p>
         </div>
       </div>
     </div>

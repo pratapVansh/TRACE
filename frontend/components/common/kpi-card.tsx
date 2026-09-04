@@ -22,20 +22,20 @@ export function KpiCard({
   return (
     <article
       className={cn(
-        "group rounded-xl border border-border bg-[var(--surface)] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.18)] transition-all duration-200 hover:border-[var(--accent-steel)]/20 hover:shadow-[0_8px_32px_rgba(0,0,0,0.22)]",
+        "group rounded-md border border-border bg-[var(--surface)] p-2.5 transition-industrial hover:border-[var(--accent-steel)]/35",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-4">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-semibold tracking-tight text-white">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="section-label truncate">{title}</p>
+          <p className="mt-1 font-mono text-[20px] leading-none font-medium tracking-tight text-foreground tabular-nums">
             {value}
           </p>
           {change ? (
             <p
               className={cn(
-                "text-xs font-medium",
+                "mt-1 text-[11px] font-medium",
                 changeType === "positive" && "text-[var(--success)]",
                 changeType === "warning" && "text-[var(--warning)]",
                 changeType === "negative" && "text-[var(--danger)]",
@@ -46,8 +46,8 @@ export function KpiCard({
             </p>
           ) : null}
         </div>
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-[var(--surface-secondary)] text-[var(--accent-steel-muted)] transition-colors duration-200 group-hover:border-[var(--accent-steel)]/25 group-hover:text-[var(--accent-steel-muted)]">
-          <Icon className="size-5" strokeWidth={1.75} />
+        <div className="flex size-6 shrink-0 items-center justify-center rounded border border-border bg-[var(--surface-secondary)] text-[var(--accent-steel-muted)] transition-industrial group-hover:border-[var(--accent-steel)]/35">
+          <Icon className="size-3.5" strokeWidth={1.75} />
         </div>
       </div>
     </article>

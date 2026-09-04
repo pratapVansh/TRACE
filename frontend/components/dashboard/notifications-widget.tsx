@@ -40,7 +40,7 @@ export function NotificationsWidget({ notifications }: NotificationsWidgetProps)
           <li
             key={notification.id}
             className={cn(
-              "rounded-xl border p-4 transition-industrial",
+              "rounded-md border p-4 transition-industrial",
               notification.read
                 ? "border-border bg-[var(--surface-secondary)]"
                 : "border-[var(--accent-steel)]/20 bg-[var(--surface-secondary)]",
@@ -59,7 +59,7 @@ export function NotificationsWidget({ notifications }: NotificationsWidgetProps)
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-white">{notification.title}</p>
+                  <p className="text-[12px] font-medium text-foreground">{notification.title}</p>
                   <Badge variant={PRIORITY_VARIANT[notification.priority]}>
                     {notification.priority}
                   </Badge>

@@ -7,21 +7,17 @@ type WidgetHeaderProps = {
   action?: ReactNode;
 };
 
-export function WidgetHeader({
-  sectionLabel,
-  title,
-  description,
-  action,
-}: WidgetHeaderProps) {
+/**
+ * One rule-separated line. The stacked label/title/description block was three
+ * lines of chrome above every widget; in a console the title carries it, and
+ * `description` is kept as the accessible name rather than printed.
+ */
+export function WidgetHeader({ title, description, action }: WidgetHeaderProps) {
   return (
-    <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
-      <div className="space-y-2">
-        <p className="section-label">{sectionLabel}</p>
-        <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
-        {description ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
+    <div className="mb-2 flex h-5 shrink-0 items-center justify-between gap-2 border-b border-border pb-1.5">
+      <h3 className="section-label truncate" title={description ?? undefined}>
+        {title}
+      </h3>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );

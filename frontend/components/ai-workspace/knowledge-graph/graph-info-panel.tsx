@@ -24,7 +24,7 @@ export function GraphInfoPanel({ stats, items }: GraphInfoPanelProps) {
 
       <div className="industrial-card p-5 sm:p-6">
         <p className="section-label">Schema</p>
-        <h3 className="mt-1 text-lg font-semibold text-white">Information panel</h3>
+        <h3 className="mt-1 text-lg font-semibold text-foreground">Information panel</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           Relationship types that will be extracted and linked across the industrial knowledge base.
         </p>
@@ -35,7 +35,7 @@ export function GraphInfoPanel({ stats, items }: GraphInfoPanelProps) {
               key={item.id}
               className="rounded-xl border border-border bg-[var(--surface-secondary)] p-4"
             >
-              <p className="text-sm font-medium text-white">{item.label}</p>
+              <p className="text-sm font-medium text-foreground">{item.label}</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {item.description}
               </p>

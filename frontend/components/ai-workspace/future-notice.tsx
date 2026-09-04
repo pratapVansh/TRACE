@@ -15,7 +15,7 @@ export function FutureNotice({
         <Sparkles className="size-4.5" strokeWidth={1.75} />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium text-white">{title}</p>
+        <p className="text-sm font-medium text-foreground">{title}</p>
         <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
     </div>

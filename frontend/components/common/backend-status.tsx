@@ -39,7 +39,7 @@ export function BackendStatus() {
           {isOnline ? "Online" : "Offline"}
         </Badge>
       </div>
-      <p className="mt-4 text-2xl font-semibold text-white">
+      <p className="mt-4 text-2xl font-semibold text-foreground">
         {isOnline ? "Systems operational" : "Connection unavailable"}
       </p>
       {health?.service ? (

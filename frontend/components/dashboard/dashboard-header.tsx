@@ -13,7 +13,7 @@ export function DashboardHeader({ facilityName, lastUpdated }: DashboardHeaderPr
   const { user } = useAuth();
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-2">
       <p className="section-label">Executive Overview</p>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">

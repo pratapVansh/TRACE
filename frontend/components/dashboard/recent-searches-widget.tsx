@@ -22,14 +22,14 @@ export function RecentSearchesWidget({ searches }: RecentSearchesWidgetProps) {
         {searches.map((search) => (
           <li
             key={search.id}
-            className="rounded-xl border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
+            className="rounded-md border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
           >
             <div className="flex items-start gap-3">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface)] text-[var(--accent-steel-muted)]">
                 <Search className="size-4" strokeWidth={1.75} />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
-                <p className="text-sm font-medium text-white">&ldquo;{search.query}&rdquo;</p>
+                <p className="text-[12px] font-medium text-foreground">&ldquo;{search.query}&rdquo;</p>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>{search.results} results</span>
                   <span>{search.user}</span>

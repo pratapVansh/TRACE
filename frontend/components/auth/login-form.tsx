@@ -141,7 +141,7 @@ export function LoginForm() {
 
           <button
             type="button"
-            className="text-left text-sm text-[var(--accent-steel-muted)] transition-industrial hover:text-white sm:text-right"
+            className="text-left text-sm text-[var(--accent-steel-muted)] transition-industrial hover:text-foreground sm:text-right"
             disabled
             title="Password recovery will be available in a future release"
           >

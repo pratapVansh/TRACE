@@ -99,7 +99,7 @@ export function UsersPageContent() {
       header: "User",
       render: (row: AdminUser) => (
         <div className="space-y-1">
-          <p className="font-medium text-white">{row.fullName}</p>
+          <p className="font-medium text-foreground">{row.fullName}</p>
           <p className="text-xs text-muted-foreground">{row.email}</p>
         </div>
       ),
@@ -128,7 +128,7 @@ export function UsersPageContent() {
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-lg text-muted-foreground hover:text-white"
+          className="rounded-lg text-muted-foreground hover:text-foreground"
           onClick={() => setSelectedUser(row)}
           aria-label={`Edit ${row.fullName}`}
         >

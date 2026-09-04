@@ -8,6 +8,26 @@ export interface Citation {
   highlighted_excerpt: string;
 }
 
+export type Classification = "FACT" | "HYPOTHESIS" | "UNKNOWN";
+
+export interface ClassifiedStatement {
+  text: string;
+  classification: Classification;
+  /** Document names of the passages whose wording this statement overlaps. */
+  evidence_refs: string[];
+}
+
+export interface EvidenceSummary {
+  fact_count: number;
+  hypothesis_count: number;
+  unknown_count: number;
+}
+
+export interface EvidencePayload {
+  classified_statements: ClassifiedStatement[];
+  evidence: EvidenceSummary;
+}
+
 export interface ChatResponse {
   answer: string;
   citations: Citation[];
@@ -15,6 +35,8 @@ export interface ChatResponse {
   confidence: number;
   processing_time: number;
   conversation_id: string;
+  classified_statements: ClassifiedStatement[];
+  evidence: EvidenceSummary;
 }
 
 export interface ChatRequest {
@@ -102,6 +124,8 @@ export interface SseCallbacks {
   onMeta?: (data: { conversation_id: string }) => void;
   onCitations?: (data: { citations: Citation[]; sources: string[] }) => void;
   onToken?: (token: string) => void;
+  /** Arrives immediately before `done`, once the full answer is known. */
+  onEvidence?: (data: EvidencePayload) => void;
   onDone?: (data: { confidence: number }) => void;
   onError?: (message: string) => void;
 }

@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.schemas.evidence import ClassifiedStatement, EvidenceSummary
 from app.schemas.rag import Citation
 
 
@@ -29,6 +30,9 @@ class ChatResponse(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     processing_time: float = Field(ge=0.0)
     conversation_id: str
+    # Per-sentence grounding of the answer against `citations`.
+    classified_statements: list[ClassifiedStatement] = Field(default_factory=list)
+    evidence: EvidenceSummary = Field(default_factory=EvidenceSummary)
 
 
 class ConversationItem(BaseModel):

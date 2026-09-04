@@ -16,7 +16,7 @@ export default function LoginError({
   return (
     <div className="flex min-h-screen items-center justify-center p-8">
       <div className="max-w-md text-center">
-        <h2 className="text-lg font-semibold text-white">Something went wrong</h2>
+        <h2 className="text-lg font-semibold text-foreground">Something went wrong</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           An error occurred on the login page.
         </p>

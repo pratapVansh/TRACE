@@ -27,7 +27,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="section-label">Administration</p>
-            <h3 className="mt-1 text-xl font-semibold text-white">Invite user</h3>
+            <h3 className="mt-1 text-xl font-semibold text-foreground">Invite user</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Send an invitation to join the workspace.
             </p>
@@ -35,7 +35,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-[var(--surface-secondary)] hover:text-white"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-[var(--surface-secondary)] hover:text-foreground"
             aria-label="Close"
           >
             <X className="size-4" />
@@ -79,7 +79,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
             <button
               type="submit"
               disabled
-              className="h-11 flex-1 rounded-xl bg-[var(--accent-steel)]/50 text-sm font-medium text-white/60"
+              className="h-11 flex-1 rounded-xl bg-[var(--accent-steel)]/50 text-sm font-medium text-foreground/60"
             >
               Send invitation
             </button>

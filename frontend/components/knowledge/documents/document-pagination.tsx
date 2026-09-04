@@ -10,6 +10,7 @@ type DocumentPaginationProps = {
   total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  itemLabel?: string;
 };
 
 export function DocumentPagination({
@@ -18,14 +19,16 @@ export function DocumentPagination({
   total,
   pageSize,
   onPageChange,
+  itemLabel = "document",
 }: DocumentPaginationProps) {
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-3">
       <p className="text-xs text-muted-foreground">
-        Showing {start}-{end} of {total} document{total === 1 ? "" : "s"}
+        Showing {start}-{end} of {total} {itemLabel}
+        {total === 1 ? "" : "s"}
       </p>
       <div className="flex items-center gap-2">
         <Button

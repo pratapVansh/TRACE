@@ -49,7 +49,7 @@ export function SearchFiltersPanel({
   return (
     <div
       className={cn(
-        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 lg:p-5",
+        "industrial-card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 lg:p-2.5",
         className,
       )}
     >
@@ -78,7 +78,7 @@ export function SearchFiltersPanel({
             onChange({ ...filters, filename: e.target.value || undefined })
           }
           placeholder="Filter by filename…"
-          className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-foreground placeholder:text-muted-foreground/50 transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
+          className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground placeholder:text-muted-foreground/50 transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
         />
       </div>
 
@@ -92,7 +92,7 @@ export function SearchFiltersPanel({
           onChange={(e) =>
             onChange({ ...filters, uploaded_after: e.target.value || undefined })
           }
-          className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
+          className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
         />
       </div>
 
@@ -106,7 +106,7 @@ export function SearchFiltersPanel({
           onChange={(e) =>
             onChange({ ...filters, uploaded_before: e.target.value || undefined })
           }
-          className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
+          className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
         />
       </div>
 
@@ -115,7 +115,7 @@ export function SearchFiltersPanel({
           type="button"
           disabled={!hasActiveFilters}
           onClick={() => onChange(DEFAULT_SEARCH_FILTERS)}
-          className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-border px-3 text-sm text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-border px-3 text-[12px] text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <X className="size-4" />
           Clear filters
@@ -144,7 +144,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
+        className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-steel)]/15"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

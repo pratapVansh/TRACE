@@ -29,7 +29,7 @@ export function UsersPagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="size-3.5" />
           Previous
@@ -41,7 +41,7 @@ export function UsersPagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
           <ChevronRight className="size-3.5" />

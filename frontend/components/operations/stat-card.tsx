@@ -35,7 +35,7 @@ export function StatCard({
     >
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <p className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+        <p className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           {value}
         </p>
         {hint ? <p className={cn("text-xs font-medium", TONE_STYLES[tone])}>{hint}</p> : null}

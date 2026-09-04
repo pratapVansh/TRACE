@@ -6,10 +6,10 @@ type SupportedFileTypesProps = {
 
 export function SupportedFileTypes({ fileTypes }: SupportedFileTypesProps) {
   return (
-    <div className="industrial-card p-5 sm:p-6">
+    <div className="industrial-card p-2.5 sm:p-3">
       <p className="section-label">Accepted formats</p>
-      <h3 className="mt-2 text-lg font-semibold text-white">Supported file types</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <h3 className="mt-2 text-[14px] font-semibold text-foreground">Supported file types</h3>
+      <p className="mt-2 text-[12px] text-muted-foreground">
         Upload technical records in standard industrial document formats.
       </p>
 
@@ -17,10 +17,10 @@ export function SupportedFileTypes({ fileTypes }: SupportedFileTypesProps) {
         {fileTypes.map((fileType) => (
           <li
             key={fileType.extension}
-            className="flex items-center justify-between rounded-xl border border-border bg-[var(--surface-secondary)] px-4 py-3"
+            className="flex items-center justify-between rounded-md border border-border bg-[var(--surface-secondary)] px-4 py-3"
           >
             <div>
-              <p className="text-sm font-medium text-white">
+              <p className="text-[12px] font-medium text-foreground">
                 .{fileType.extension.toUpperCase()}
               </p>
               <p className="text-xs text-muted-foreground">{fileType.label}</p>

@@ -57,7 +57,7 @@ export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) 
 
               <div
                 className={cn(
-                  "relative z-10 flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface-secondary)]",
+                  "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface-secondary)]",
                   ACTIVITY_COLORS[activity.type],
                 )}
               >
@@ -65,7 +65,7 @@ export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) 
               </div>
 
               <div className="min-w-0 flex-1 space-y-1 pt-0.5">
-                <p className="text-sm text-white">
+                <p className="text-[12px] text-foreground">
                   <span className="font-medium">{activity.action}</span>
                   {" — "}
                   <span className="text-muted-foreground">{activity.subject}</span>

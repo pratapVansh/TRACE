@@ -45,9 +45,9 @@ export function DocumentTable({
 
   if (documents.length === 0) {
     return (
-      <div className="industrial-card flex flex-col items-center justify-center p-12 text-center">
-        <p className="text-sm font-medium text-white">No documents found</p>
-        <p className="mt-2 text-sm text-muted-foreground">
+      <div className="industrial-card flex flex-col items-start px-3 py-4">
+        <p className="text-[12px] font-medium text-foreground">No documents found</p>
+        <p className="mt-1 text-[12px] text-muted-foreground">
           Adjust your search or filters, or upload new technical records.
         </p>
       </div>
@@ -57,13 +57,13 @@ export function DocumentTable({
   return (
     <div className="industrial-card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] text-left text-sm">
+        <table className="data-grid min-w-[900px]">
           <thead>
-            <tr className="border-b border-border bg-[var(--surface-secondary)]/60">
+            <tr className="bg-[var(--surface-secondary)]/60">
               {visibleHeaders.map((header) => (
                 <th
                   key={header}
-                  className="px-4 py-3.5 text-xs font-medium tracking-wide text-muted-foreground uppercase first:pl-6 last:pr-6"
+                  className="first:pl-3 last:pr-3"
                 >
                   {header}
                 </th>
@@ -74,39 +74,39 @@ export function DocumentTable({
             {documents.map((doc) => (
               <tr
                 key={doc.id}
-                className="border-b border-border/70 transition-industrial last:border-0 hover:bg-[var(--surface-secondary)]/40"
+                className="last:[&>td]:border-0"
               >
-                <td className="px-4 py-4 first:pl-6">
-                  <div className="max-w-xs space-y-1">
-                    <p className="font-medium text-white">{doc.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                <td className="first:pl-3">
+                  <div className="max-w-[280px]">
+                    <p className="font-medium text-foreground">{doc.title}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
                       {doc.assetTag ? `${doc.assetTag} · ` : ""}
                       {doc.fileSize}
                     </p>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-muted-foreground">{doc.type}</td>
-                <td className="px-4 py-4">
+                <td className="text-muted-foreground">{doc.type}</td>
+                <td >
                   <DocumentStatusBadge status={doc.status} />
                 </td>
-                <td className="px-4 py-4 font-mono text-xs text-white">
+                <td className="font-mono text-[11px] text-foreground">
                   {doc.version}
                 </td>
-                <td className="px-4 py-4 text-muted-foreground">{doc.owner}</td>
+                <td className="text-muted-foreground">{doc.owner}</td>
                 {showDepartment ? (
-                  <td className="px-4 py-4 text-muted-foreground">
+                  <td className="text-muted-foreground">
                     {doc.department}
                   </td>
                 ) : null}
-                <td className="px-4 py-4 text-muted-foreground">
+                <td className="text-muted-foreground">
                   {formatDateTime(doc.lastUpdated)}
                 </td>
-                <td className="px-4 py-4 last:pr-6">
+                <td className="last:pr-3">
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg text-muted-foreground hover:text-white"
+                      className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                       aria-label={`View ${doc.title}`}
                       onClick={() => onPreview?.(doc)}
                     >
@@ -115,7 +115,7 @@ export function DocumentTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg text-muted-foreground hover:text-white"
+                      className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                       aria-label={`Download ${doc.title}`}
                       onClick={() => onDownload?.(doc)}
                     >
@@ -125,7 +125,7 @@ export function DocumentTable({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-muted-foreground hover:text-white"
+                        className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                         aria-label={`Edit ${doc.title}`}
                         onClick={() => onEdit?.(doc)}
                       >

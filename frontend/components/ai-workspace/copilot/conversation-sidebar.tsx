@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Check, MessageSquare, Pencil, Plus, Search, Trash2, X, Bookmark, Pin } from "lucide-react";
+import { Archive, ArchiveRestore, Check, MessageSquare, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
 import type { ConversationItem } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -24,9 +24,10 @@ interface ConversationSidebarProps {
   onDeleteRequest?: (id: string | null) => void;
   onDeleteCancel?: () => void;
   onArchiveConversation?: (id: string) => void;
-  onRestoreConversation?: (id: string) => void;
   archivedConversations?: ConversationItem[];
   onShowArchived?: () => void;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 function formatDate(ts: number): string {
@@ -51,9 +52,9 @@ function SidebarSkeleton() {
           key={i}
           className="flex h-9 animate-pulse items-center gap-2 rounded-lg bg-[var(--surface-tertiary)] px-3"
         >
-          <div className="size-3.5 rounded bg-white/10" />
-          <div className="h-3 flex-1 rounded bg-white/10" />
-          <div className="size-4 rounded bg-white/10" />
+          <div className="size-3.5 rounded bg-[var(--surface)]/10" />
+          <div className="h-3 flex-1 rounded bg-[var(--surface)]/10" />
+          <div className="size-4 rounded bg-[var(--surface)]/10" />
         </div>
       ))}
     </div>
@@ -78,9 +79,10 @@ export function ConversationSidebar({
   onDeleteRequest,
   onDeleteCancel,
   onArchiveConversation,
-  onRestoreConversation,
   archivedConversations,
   onShowArchived,
+  error,
+  onRetry,
 }: ConversationSidebarProps) {
   const [searchLocal, setSearchLocal] = useState("");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,35 +96,50 @@ export function ConversationSidebar({
   }, [onSearch]);
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pb-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Conversations
-        </span>
+      <div className="flex h-8 shrink-0 items-center justify-between border-b border-border px-2">
+        <span className="section-label">Conversations</span>
         <button
           type="button"
           onClick={onNewConversation}
-          className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-industrial hover:bg-[var(--surface-tertiary)] hover:text-white"
+          className="inline-flex size-5 items-center justify-center rounded text-muted-foreground transition-industrial hover:bg-[var(--surface-tertiary)] hover:text-foreground"
           title="New conversation"
         >
-          <Plus className="size-4" strokeWidth={1.75} />
+          <Plus className="size-3.5" strokeWidth={1.75} />
         </button>
       </div>
 
+      {/* The list failed to refresh — say so instead of showing a stale
+          or empty list as though it were current. */}
+      {error && (
+        <div className="mx-1.5 mt-1.5 rounded border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-2 py-1.5">
+          <p className="text-[11px] leading-snug text-[var(--danger)]">{error}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-1 text-[11px] font-medium text-[var(--danger)] underline transition-industrial hover:text-red-300"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Search */}
       {onSearch && (
-        <div className="relative px-2 pb-2">
+        <div className="relative shrink-0 px-1.5 py-1.5">
           <Search
             size={14}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50"
           />
           <input
             type="text"
             value={searchLocal}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full rounded-lg border border-border bg-[var(--surface-tertiary)] py-1.5 pl-8 pr-3 text-xs text-white placeholder-muted-foreground/50 outline-none transition-colors focus:border-primary/30"
+            placeholder="Filter conversations"
+            className="w-full rounded border border-border bg-[var(--surface-secondary)] py-1 pl-7 pr-3 text-[12px] text-foreground placeholder-muted-foreground/50 outline-none transition-industrial focus:border-[var(--accent-steel)]/40"
           />
           {searchLocal && (
             <button
@@ -131,7 +148,7 @@ export function ConversationSidebar({
                 setSearchLocal("");
                 onSearch("");
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-industrial hover:text-foreground"
             >
               <X className="size-3" strokeWidth={1.75} />
             </button>
@@ -140,28 +157,25 @@ export function ConversationSidebar({
       )}
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {loading ? (
           <SidebarSkeleton />
         ) : conversations.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-            <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-tertiary)]">
-              <MessageSquare className="size-5 text-muted-foreground" strokeWidth={1.5} />
-            </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
+          <div className="flex flex-col items-start gap-2 px-2.5 py-6">
+            <p className="text-[11px] leading-snug text-muted-foreground">
               {searchLocal ? "No conversations match your search." : "No conversations yet."}
             </p>
             <button
               type="button"
               onClick={onNewConversation}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 py-1.5 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-white"
+              className="inline-flex items-center gap-1 rounded border border-border bg-[var(--surface-secondary)] px-2 py-1 text-[11px] font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-foreground"
             >
-              <Plus className="size-3.5" strokeWidth={1.75} />
-              Start a new chat
+              <Plus className="size-3" strokeWidth={1.75} />
+              New inquiry
             </button>
           </div>
         ) : (
-          <ul className="flex flex-col gap-0.5 px-2">
+          <ul className="flex flex-col px-1.5 py-1">
             {conversations.map((conv) => {
               const isActive = conv.id === activeConversationId;
               const isRenaming = renameId === conv.id;
@@ -170,12 +184,12 @@ export function ConversationSidebar({
               return (
                 <li key={conv.id}>
                   {isRenaming ? (
-                    <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-tertiary)] px-3 py-1.5">
+                    <div className="flex items-center gap-1 rounded bg-[var(--surface-tertiary)] px-2 py-1">
                       <input
                         type="text"
                         value={renameValue ?? conv.title ?? ""}
                         onChange={(e) => onRenameChange?.(e.target.value)}
-                        className="flex-1 bg-transparent text-xs text-white outline-none"
+                        className="flex-1 bg-transparent text-[12px] text-foreground outline-none"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter") onRenameConfirm?.();
@@ -193,16 +207,16 @@ export function ConversationSidebar({
                       <button
                         type="button"
                         onClick={onRenameCancel}
-                        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-white"
+                        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                         title="Cancel"
                       >
                         <X className="size-3.5" strokeWidth={1.75} />
                       </button>
                     </div>
                   ) : isDeleting ? (
-                    <div className="flex items-center gap-1 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-1.5">
-                      <span className="flex-1 text-xs text-[var(--danger)] truncate">
-                        Delete "{conv.title || "Untitled"}"?
+                    <div className="flex items-center gap-1 rounded border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-2 py-1">
+                      <span className="flex-1 truncate text-[11px] text-[var(--danger)]">
+                        Delete &quot;{conv.title || "Untitled"}&quot;?
                       </span>
                       <button
                         type="button"
@@ -215,7 +229,7 @@ export function ConversationSidebar({
                       <button
                         type="button"
                         onClick={onDeleteCancel}
-                        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-white"
+                        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                         title="Cancel"
                       >
                         <X className="size-3.5" strokeWidth={1.75} />
@@ -227,32 +241,28 @@ export function ConversationSidebar({
                         type="button"
                         onClick={() => onSelectConversation(conv.id)}
                         className={cn(
-                          "flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-industrial",
+                          "flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1 text-left text-[12px] transition-industrial",
                           isActive
-                            ? "bg-[var(--accent-steel)]/10 text-white"
-                            : "text-muted-foreground hover:bg-[var(--surface-tertiary)] hover:text-white",
+                            ? "bg-[var(--accent-steel)]/12 text-foreground"
+                            : "text-muted-foreground hover:bg-[var(--surface-tertiary)] hover:text-foreground",
                         )}
                       >
                         <MessageSquare
                           className={cn(
-                            "size-3.5 shrink-0",
+                            "size-3 shrink-0",
                             isActive
                               ? "text-[var(--accent-steel)]"
                               : "text-muted-foreground/60 group-hover:text-muted-foreground",
                           )}
                           strokeWidth={1.75}
                         />
-                        <span className="flex-1 truncate">
-                          {conv.title || "Untitled"}
+                        <span className="min-w-0 flex-1 truncate">{conv.title || "Untitled"}</span>
+                        <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/50">
+                          {conv.message_count}
                         </span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] tabular-nums text-muted-foreground/50">
-                            {conv.message_count}
-                          </span>
-                          <span className="hidden text-[10px] text-muted-foreground/40 group-hover:inline">
-                            {formatDate(conv.updated_at)}
-                          </span>
-                        </div>
+                        <span className="hidden shrink-0 font-mono text-[10px] text-muted-foreground/40 group-hover:inline">
+                          {formatDate(conv.updated_at)}
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -260,32 +270,10 @@ export function ConversationSidebar({
                           e.stopPropagation();
                           onRenameStart?.(conv.id, conv.title || "Untitled");
                         }}
-                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-white"
+                        className="flex size-5 shrink-0 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-foreground"
                         title="Rename conversation"
                       >
                         <Pencil className="size-3" strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle Bookmark
-                        }}
-                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-blue-400"
-                        title="Bookmark conversation"
-                      >
-                        <Bookmark className="size-3" strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle Pin
-                        }}
-                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-yellow-400"
-                        title="Pin conversation"
-                      >
-                        <Pin className="size-3" strokeWidth={1.75} />
                       </button>
                       {onArchiveConversation && (
                         <button
@@ -294,7 +282,7 @@ export function ConversationSidebar({
                             e.stopPropagation();
                             onArchiveConversation(conv.id);
                           }}
-                          className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-amber-400"
+                          className="flex size-5 shrink-0 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-amber-400"
                           title="Archive conversation"
                         >
                           <Archive className="size-3" strokeWidth={1.75} />
@@ -306,7 +294,7 @@ export function ConversationSidebar({
                           e.stopPropagation();
                           onDeleteRequest?.(conv.id);
                         }}
-                        className="flex size-5 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-[var(--danger)]"
+                        className="flex size-5 shrink-0 items-center justify-center rounded opacity-0 transition-industrial group-hover:opacity-100 text-muted-foreground hover:text-[var(--danger)]"
                         title="Delete conversation"
                       >
                         <Trash2 className="size-3" strokeWidth={1.75} />
@@ -322,13 +310,13 @@ export function ConversationSidebar({
 
       {/* Archived section */}
       {onShowArchived && (archivedConversations ?? []).length > 0 && (
-        <div className="border-t border-border pt-2 mt-2">
+        <div className="shrink-0 border-t border-border p-1.5">
           <button
             type="button"
             onClick={onShowArchived}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-[var(--surface-tertiary)] hover:text-white transition-industrial"
+            className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-[11px] text-muted-foreground transition-industrial hover:bg-[var(--surface-tertiary)] hover:text-foreground"
           >
-            <ArchiveRestore className="size-3.5" strokeWidth={1.75} />
+            <ArchiveRestore className="size-3" strokeWidth={1.75} />
             <span>Archived ({(archivedConversations ?? []).length})</span>
           </button>
         </div>

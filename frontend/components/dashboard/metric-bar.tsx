@@ -22,13 +22,13 @@ export function MetricBar({
   return (
     <div className={cn("space-y-2", className)}>
       {showLabel ? (
-        <div className="flex items-center justify-between gap-3 text-sm">
+        <div className="flex items-center justify-between gap-3 text-[12px]">
           <span className="text-muted-foreground">{label}</span>
-          <span className="font-medium text-white">{displayValue ?? `${value}%`}</span>
+          <span className="font-medium text-foreground">{displayValue ?? `${value}%`}</span>
         </div>
       ) : (
-        <div className="flex justify-end text-sm">
-          <span className="font-medium text-white">{displayValue ?? `${value}%`}</span>
+        <div className="flex justify-end text-[12px]">
+          <span className="font-medium text-foreground">{displayValue ?? `${value}%`}</span>
         </div>
       )}
       <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-secondary)]">

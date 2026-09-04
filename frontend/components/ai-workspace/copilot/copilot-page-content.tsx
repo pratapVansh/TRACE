@@ -1,19 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Menu, Plus, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 import {
   ConversationArea,
   type Message,
 } from "@/components/ai-workspace/copilot/conversation-area";
 import { ConversationSidebar } from "@/components/ai-workspace/copilot/conversation-sidebar";
-import { ReferencedDocuments } from "@/components/ai-workspace/copilot/referenced-documents";
-import { SourcePanel } from "@/components/ai-workspace/copilot/source-panel";
-import { SourcePreviewModal } from "@/components/ai-workspace/copilot/source-preview-modal";
-import { PageHeader } from "@/components/common/page-header";
+import type { RetrievalTraceState } from "@/components/ai-workspace/copilot/retrieval-trace";
+import { SourcesPanel } from "@/components/ai-workspace/copilot/sources-panel";
+import {
+  CURATED_SUGGESTIONS,
+  type Suggestion,
+} from "@/components/ai-workspace/copilot/thread-empty-state";
+import { CopilotBar } from "@/components/ai-workspace/copilot/copilot-bar";
 import {
   ChatTimeoutError,
+  StreamIncompleteError,
   archiveConversation,
   clearConversation,
   ensureSessionId,
@@ -22,11 +26,11 @@ import {
   listArchivedConversations,
   listConversations,
   renameConversation,
-  restoreConversation,
   rotateSessionId,
   saveConversationSnapshot,
   streamChatMessage,
 } from "@/lib/api/chat";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import type { Citation, ConversationItem } from "@/types/chat";
 
 const STORAGE_KEY = "lastConversationId";
@@ -114,10 +118,18 @@ export function CopilotPageContent() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [allSources, setAllSources] = useState<string[]>([]);
   const [lastCitations, setLastCitations] = useState<Citation[]>([]);
-  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  // Which inline reference is lit up, scoped to the turn that owns it.
+  const [activeCitation, setActiveCitation] = useState<
+    { messageId: string; index: number } | null
+  >(null);
+  const [expandedSourceIndex, setExpandedSourceIndex] = useState<number | null>(null);
+  // A passage opened from an earlier turn is not in the panel's list, so it
+  // gets pinned above it rather than silently doing nothing.
+  const [pinnedCitation, setPinnedCitation] = useState<Citation | null>(null);
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -126,8 +138,16 @@ export function CopilotPageContent() {
   const [archivedConversations, setArchivedConversations] = useState<ConversationItem[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [restoreNotice, setRestoreNotice] = useState<"not_found" | "incomplete" | null>(null);
+  // Background failures that leave the chat itself usable. Each is shown
+  // where its own data lives rather than as one page-wide error.
+  const [sidebarError, setSidebarError] = useState<string | null>(null);
+  const [snapshotWarning, setSnapshotWarning] = useState<string | null>(null);
   const turnIndexRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const streamingIdRef = useRef<string | null>(null);
+  const traceRef = useRef<
+    ((update: (current: RetrievalTraceState) => RetrievalTraceState) => void) | null
+  >(null);
   const hydratedRef = useRef(false);
 
   // Persist conversation ID to localStorage + URL whenever it changes,
@@ -158,8 +178,19 @@ export function CopilotPageContent() {
           }
           // still fetch the conversation list for the sidebar
           listConversations().then((d) => {
-            if (!cancelled) setConversations(d.conversations);
-          }).catch(() => {});
+            if (!cancelled) {
+              setConversations(d.conversations);
+              setSidebarError(null);
+            }
+          }).catch(async (listError) => {
+            if (cancelled) return;
+            setSidebarError(
+              await getApiErrorMessage(
+                listError,
+                "Could not load your conversation list.",
+              ),
+            );
+          });
           return;
         }
 
@@ -221,8 +252,43 @@ export function CopilotPageContent() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleSubmit = useCallback(async () => {
-    const question = draft.trim();
+  const handleRetryConversations = useCallback(async () => {
+    setSidebarError(null);
+    try {
+      const data = await listConversations();
+      setConversations(data.conversations);
+    } catch (retryError) {
+      setSidebarError(
+        await getApiErrorMessage(
+          retryError,
+          "Could not load your conversation list.",
+        ),
+      );
+    }
+  }, []);
+
+  const handleCitationSelect = useCallback(
+    (messageId: string, index: number, citation?: Citation) => {
+      setActiveCitation((prev) =>
+        prev && prev.messageId === messageId && prev.index === index
+          ? null
+          : { messageId, index },
+      );
+
+      // The panel lists the latest turn. A passage from an older turn is not
+      // in that list, so pin it instead of expanding the wrong row.
+      const inPanel =
+        citation != null && lastCitations[index]?.chunk_id === citation.chunk_id;
+      setPinnedCitation(inPanel || citation == null ? null : citation);
+      setExpandedSourceIndex(inPanel ? index : null);
+    },
+    [lastCitations],
+  );
+
+  // `overrideQuestion` lets a suggestion or a retry submit text that is not
+  // in the draft box yet — reading `draft` here would see the pre-update value.
+  const handleSubmit = useCallback(async (overrideQuestion?: string) => {
+    const question = (overrideQuestion ?? draft).trim();
     if (!question || isWaiting) return;
     if (messages.length > 0) {
       const last = messages[messages.length - 1];
@@ -230,6 +296,7 @@ export function CopilotPageContent() {
     }
 
     setDraft("");
+    setSnapshotWarning(null);
     setMessages((prev) => [
       ...prev,
       { id: nextId(), role: "user", content: question },
@@ -237,11 +304,38 @@ export function CopilotPageContent() {
     setIsWaiting(true);
 
     const assistantId = nextId();
+    const startedAt = Date.now();
     setMessages((prev) => [
       ...prev,
-      { id: assistantId, role: "assistant", content: "" },
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        trace: {
+          phase: "retrieving",
+          passageCount: 0,
+          documentCount: 0,
+          topScore: null,
+          startedAt,
+          finishedAt: null,
+        },
+      },
     ]);
     setStreamingMessageId(assistantId);
+    streamingIdRef.current = assistantId;
+
+    // Every trace update is driven by an SSE event the page already receives.
+    const patchTrace = (
+      update: (current: RetrievalTraceState) => RetrievalTraceState,
+    ) =>
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantId && msg.trace
+            ? { ...msg, trace: update(msg.trace) }
+            : msg,
+        ),
+      );
+    traceRef.current = patchTrace;
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -261,12 +355,37 @@ export function CopilotPageContent() {
             accumulatedSources = data.sources;
             setLastCitations(data.citations);
             setAllSources(data.sources);
+            // Sources land before the first answer token — show them arriving.
+            setActiveCitation(null);
+            setPinnedCitation(null);
+            setExpandedSourceIndex(null);
+            patchTrace((trace) => ({
+              ...trace,
+              phase: data.citations.length === 0 ? "empty" : "composing",
+              passageCount: data.citations.length,
+              documentCount: data.sources.length,
+            }));
           },
           onToken(token) {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantId
                   ? { ...msg, content: msg.content + token }
+                  : msg,
+              ),
+            );
+          },
+          onEvidence(data) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? {
+                      ...msg,
+                      grounding: {
+                        summary: data.evidence,
+                        statements: data.classified_statements,
+                      },
+                    }
                   : msg,
               ),
             );
@@ -283,8 +402,18 @@ export function CopilotPageContent() {
               return updated;
             });
             setStreamingMessageId(null);
+            patchTrace((trace) => ({
+              ...trace,
+              phase: trace.passageCount === 0 ? "empty" : "complete",
+              topScore:
+                typeof data.confidence === "number" ? data.confidence : null,
+              finishedAt: Date.now(),
+            }));
             // Save snapshot for this turn
-            const currentConvId = conversationId ?? (data as any).conversation_id ?? "";
+            const currentConvId =
+              conversationId ??
+              (data as { conversation_id?: string }).conversation_id ??
+              "";
             if (currentConvId) {
               turnIndexRef.current += 1;
               saveConversationSnapshot(currentConvId, {
@@ -296,19 +425,42 @@ export function CopilotPageContent() {
                   working_memory: null,
                   agent_results: null,
                 },
-              }).catch(() => {});
+              }).catch(() => {
+                // The answer above is already on screen and saved; only the
+                // per-turn detail snapshot failed, so warn without alarming.
+                setSnapshotWarning(
+                  "This turn's detail snapshot was not saved, so reopening this conversation may show less context.",
+                );
+              });
             }
             // Refresh conversation list to update message_count
             listConversations().then((convData) => {
               setConversations(convData.conversations);
-            }).catch(() => {});
+              setSidebarError(null);
+            }).catch(async (listError) => {
+              setSidebarError(
+                await getApiErrorMessage(
+                  listError,
+                  "Could not refresh your conversation list.",
+                ),
+              );
+            });
           },
           onError(message) {
             setStreamingMessageId(null);
+            patchTrace((trace) => ({
+              ...trace,
+              phase: "error",
+              finishedAt: Date.now(),
+            }));
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantId
-                  ? { ...msg, content: `Error: ${message}` }
+                  ? {
+                      ...msg,
+                      isError: true,
+                      notice: { kind: "error" as const, text: message },
+                    }
                   : msg,
               ),
             );
@@ -318,33 +470,77 @@ export function CopilotPageContent() {
       );
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      setStreamingMessageId(null);
+      patchTrace((trace) => ({ ...trace, phase: "error", finishedAt: Date.now() }));
+
       let message: string;
       if (err instanceof ChatTimeoutError) {
         message =
           "The request timed out. The AI service may be busy or unavailable — please try again.";
+      } else if (err instanceof StreamIncompleteError) {
+        message =
+          "The connection dropped before the answer finished. The text above may be incomplete — please try again.";
       } else {
         message = "Sorry, a server error occurred. Please try again.";
       }
+
+      // Tokens already on screen are real output. The failure is carried
+      // alongside them rather than written into the answer, so a partial
+      // answer stays clean markdown and the notice stays a notice.
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantId
-            ? { ...msg, content: message }
+            ? {
+                ...msg,
+                isError: true,
+                notice: { kind: "error" as const, text: message },
+              }
             : msg,
         ),
       );
     } finally {
       setIsWaiting(false);
       abortRef.current = null;
+      traceRef.current = null;
+      streamingIdRef.current = null;
     }
   }, [draft, isWaiting, conversationId]);
+
+  const handleRetryMessage = useCallback(
+    (assistantMessageId: string) => {
+      const index = messages.findIndex((m) => m.id === assistantMessageId);
+      if (index < 1) return;
+      for (let i = index - 1; i >= 0; i -= 1) {
+        if (messages[i].role === "user") {
+          handleSubmit(messages[i].content);
+          return;
+        }
+      }
+    },
+    [messages, handleSubmit],
+  );
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    traceRef.current?.((trace) => ({
+      ...trace,
+      phase: "cancelled",
+      finishedAt: Date.now(),
+    }));
+    const cancelledId = streamingIdRef.current;
     setMessages((prev) =>
       prev.map((msg) =>
-        msg.role === "assistant" && msg.content === ""
-          ? { ...msg, content: "Response cancelled." }
+        msg.id === cancelledId
+          ? {
+              ...msg,
+              notice: {
+                kind: "cancelled" as const,
+                text: msg.content.trim()
+                  ? "You stopped this response. The text above is what had arrived."
+                  : "You stopped this response before it started.",
+              },
+            }
           : msg,
       ),
     );
@@ -439,6 +635,9 @@ export function CopilotPageContent() {
     setAllSources([]);
     setLastCitations([]);
     setDraft("");
+    setActiveCitation(null);
+    setPinnedCitation(null);
+    setExpandedSourceIndex(null);
     setStoredConversationId(null);
     setUrlConversationId(null);
     setRestoreNotice(null);
@@ -467,215 +666,204 @@ export function CopilotPageContent() {
     }
   }
 
+  // Grounded in what this account has actually asked. No history yet means a
+  // first-run user, who gets the curated industrial prompts instead.
+  const suggestions = useMemo<Suggestion[]>(() => {
+    const fromHistory = conversations
+      .filter((c) => (c.title ?? "").trim().length > 0 && c.message_count > 0)
+      .slice(0, 4)
+      .map((c) => ({
+        id: c.id,
+        text: (c.title as string).trim(),
+        source: "history" as const,
+      }));
+    return fromHistory.length > 0 ? fromHistory : CURATED_SUGGESTIONS;
+  }, [conversations]);
+
+  const activeConversation =
+    conversations.find((c) => c.id === conversationId) ??
+    archivedConversations.find((c) => c.id === conversationId) ??
+    null;
+  const turnCount = messages.filter((m) => m.role === "assistant").length;
+
+  // The rail is rendered twice — docked on wide screens and inside a sheet on
+  // narrow ones. Only the post-action behaviour differs, so it is built once.
+  function renderRail(onAfterAction?: () => void) {
+    return (
+      <ConversationSidebar
+        conversations={showArchived ? archivedConversations : conversations}
+        activeConversationId={conversationId}
+        loading={loadingConversations}
+        onSelectConversation={(id) => {
+          handleSelectConversation(id);
+          setShowArchived(false);
+          onAfterAction?.();
+        }}
+        onNewConversation={() => {
+          handleNewConversation();
+          setShowArchived(false);
+          onAfterAction?.();
+        }}
+        onDeleteConversation={handleDeleteConversation}
+        onSearch={showArchived ? undefined : handleSearchConversations}
+        renameId={renameId}
+        renameValue={renameValue}
+        onRenameStart={(id, title) => {
+          setRenameId(id);
+          setRenameValue(title);
+        }}
+        onRenameChange={setRenameValue}
+        onRenameConfirm={() => {
+          if (renameId && renameValue.trim()) {
+            handleRenameConversation(renameId, renameValue.trim());
+          }
+        }}
+        onRenameCancel={() => {
+          setRenameId(null);
+          setRenameValue("");
+        }}
+        deleteConfirmId={deleteConfirmId}
+        onDeleteRequest={setDeleteConfirmId}
+        onDeleteCancel={() => setDeleteConfirmId(null)}
+        onArchiveConversation={showArchived ? undefined : handleArchiveConversation}
+        archivedConversations={archivedConversations}
+        onShowArchived={handleShowArchived}
+        error={sidebarError}
+        onRetry={handleRetryConversations}
+      />
+    );
+  }
+
+  function renderSources() {
+    return (
+      <SourcesPanel
+        citations={lastCitations}
+        sources={allSources}
+        expandedIndex={expandedSourceIndex}
+        onToggle={setExpandedSourceIndex}
+        pinned={pinnedCitation}
+        onClearPinned={() => setPinnedCitation(null)}
+      />
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:gap-8">
-      <PageHeader
-        sectionLabel="AI Workspace"
-        title="Copilot"
-        description="Conversational interface for grounded industrial knowledge."
-        action={
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleNewConversation}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-white"
-            >
-              <Plus className="size-3.5" strokeWidth={1.75} />
-              New conversation
-            </button>
-            {conversationId && deleteConfirmId === null && (
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmId("__all__")}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--danger)]/30 hover:text-[var(--danger)]"
-              >
-                <Trash2 className="size-3.5" strokeWidth={1.75} />
-                Clear chat
-              </button>
-            )}
-            {deleteConfirmId === "__all__" && (
-              <div className="flex items-center gap-2 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-1.5">
-                <span className="text-xs text-[var(--danger)]">Delete all conversations?</span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const { clearAllConversations } = await import("@/lib/api/chat");
-                    await clearAllConversations();
-                    setDeleteConfirmId(null);
-                    handleNewConversation();
-                  }}
-                  className="flex size-5 items-center justify-center rounded text-[var(--danger)] hover:text-red-300"
-                >
-                  <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmId(null)}
-                  className="flex size-5 items-center justify-center rounded text-muted-foreground hover:text-white"
-                >
-                  <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-            )}
-          </div>
-        }
+    <div className="flex h-[calc(100vh-5rem)] min-h-[520px] w-full flex-col gap-2">
+      <CopilotBar
+        title={activeConversation?.title ?? null}
+        turnCount={turnCount}
+        sourceCount={allSources.length}
+        hasConversation={conversationId !== null}
+        deleteConfirmOpen={deleteConfirmId === "__all__"}
+        onNewConversation={handleNewConversation}
+        onDeleteRequest={() => setDeleteConfirmId("__all__")}
+        onDeleteCancel={() => setDeleteConfirmId(null)}
+        onDeleteAll={async () => {
+          const { clearAllConversations } = await import("@/lib/api/chat");
+          await clearAllConversations();
+          setDeleteConfirmId(null);
+          handleNewConversation();
+        }}
+        onOpenRail={() => setMobileSidebarOpen(true)}
+        onOpenSources={() => setSourcesOpen(true)}
       />
 
-      {/* Mobile sidebar toggle */}
-      <div className="flex xl:hidden items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setMobileSidebarOpen(true)}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-[var(--surface-secondary)] px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-white"
-        >
-          <Menu className="size-3.5" strokeWidth={1.75} />
-          Conversations
-        </button>
-      </div>
-
-      {/* Mobile sidebar overlay */}
+      {/* Conversations sheet — narrow viewports */}
       {mobileSidebarOpen && (
         <div className="fixed inset-0 z-50 xl:hidden">
           <div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-black/60"
             onClick={() => setMobileSidebarOpen(false)}
+            role="presentation"
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-[var(--surface)] border-r border-border shadow-xl overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Conversations
-              </span>
+          <div className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-[var(--surface)] shadow-2xl">
+            <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
+              <span className="section-label">Conversations</span>
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-white"
+                className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-industrial hover:text-foreground"
+                aria-label="Close conversations"
               >
-                <X className="size-4" strokeWidth={1.75} />
+                <X className="size-3.5" strokeWidth={1.75} />
               </button>
             </div>
-            <div className="p-3">
-              <ConversationSidebar
-                conversations={showArchived ? archivedConversations : conversations}
-                activeConversationId={conversationId}
-                loading={loadingConversations}
-                onSelectConversation={(id) => {
-                  handleSelectConversation(id);
-                  setMobileSidebarOpen(false);
-                  setShowArchived(false);
-                }}
-                onNewConversation={() => {
-                  handleNewConversation();
-                  setMobileSidebarOpen(false);
-                  setShowArchived(false);
-                }}
-                onDeleteConversation={handleDeleteConversation}
-                onSearch={showArchived ? undefined : handleSearchConversations}
-                renameId={renameId}
-                renameValue={renameValue}
-                onRenameStart={(id, title) => {
-                  setRenameId(id);
-                  setRenameValue(title);
-                }}
-                onRenameChange={setRenameValue}
-                onRenameConfirm={() => {
-                  if (renameId && renameValue.trim()) {
-                    handleRenameConversation(renameId, renameValue.trim());
-                  }
-                }}
-                onRenameCancel={() => {
-                  setRenameId(null);
-                  setRenameValue("");
-                }}
-                deleteConfirmId={deleteConfirmId}
-                onDeleteRequest={setDeleteConfirmId}
-                onDeleteCancel={() => setDeleteConfirmId(null)}
-                onArchiveConversation={showArchived ? undefined : handleArchiveConversation}
-                archivedConversations={archivedConversations}
-                onShowArchived={handleShowArchived}
-              />
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {renderRail(() => setMobileSidebarOpen(false))}
             </div>
           </div>
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        {/* Sidebar — hidden on smaller screens */}
-        <div className="hidden xl:flex xl:flex-col xl:col-span-3">
-          <div className="rounded-xl border border-border bg-[var(--surface-secondary)] p-3">
-            <ConversationSidebar
-              conversations={showArchived ? archivedConversations : conversations}
-              activeConversationId={conversationId}
-              loading={loadingConversations}
-              onSelectConversation={(id) => {
-                handleSelectConversation(id);
-                setShowArchived(false);
-              }}
-              onNewConversation={() => {
-                handleNewConversation();
-                setShowArchived(false);
-              }}
-              onDeleteConversation={handleDeleteConversation}
-              onSearch={showArchived ? undefined : handleSearchConversations}
-              renameId={renameId}
-              renameValue={renameValue}
-              onRenameStart={(id, title) => {
-                setRenameId(id);
-                setRenameValue(title);
-              }}
-              onRenameChange={setRenameValue}
-              onRenameConfirm={() => {
-                if (renameId && renameValue.trim()) {
-                  handleRenameConversation(renameId, renameValue.trim());
-                }
-              }}
-              onRenameCancel={() => {
-                setRenameId(null);
-                setRenameValue("");
-              }}
-              deleteConfirmId={deleteConfirmId}
-              onDeleteRequest={setDeleteConfirmId}
-              onDeleteCancel={() => setDeleteConfirmId(null)}
-              onArchiveConversation={showArchived ? undefined : handleArchiveConversation}
-              archivedConversations={archivedConversations}
-              onShowArchived={handleShowArchived}
-            />
+      {/* Sources sheet — narrow viewports */}
+      {sourcesOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setSourcesOpen(false)}
+            role="presentation"
+          />
+          <div className="fixed inset-y-0 right-0 z-50 flex w-96 max-w-[90vw] flex-col border-l border-border bg-[var(--surface)] shadow-2xl">
+            <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
+              <span className="section-label">Sources</span>
+              <button
+                type="button"
+                onClick={() => setSourcesOpen(false)}
+                className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-industrial hover:text-foreground"
+                aria-label="Close sources"
+              >
+                <X className="size-3.5" strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col p-2">
+              {renderSources()}
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="flex flex-col gap-6 xl:col-span-6">
-          <div className="min-h-[600px]">
-            <ConversationArea
-              messages={messages}
-              isWaiting={isWaiting}
-              draft={draft}
-              onDraftChange={setDraft}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              onCitationClick={setSelectedCitation}
-              streamingMessageId={streamingMessageId}
-              restoreNotice={restoreNotice}
-            />
-          </div>
-        </div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[212px_minmax(0,1fr)_336px]">
+        <aside className="hidden min-h-0 overflow-hidden rounded-lg border border-border bg-[var(--surface)] xl:flex xl:flex-col">
+          {renderRail()}
+        </aside>
 
-        <div className="flex flex-col gap-6 xl:col-span-3">
-          <div className="max-h-[300px] overflow-y-auto">
-            <ReferencedDocuments sources={allSources} />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <SourcePanel
-              citations={lastCitations}
-              onCitationClick={setSelectedCitation}
-            />
-          </div>
-        </div>
+        <main className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-[var(--surface)]">
+          {snapshotWarning && (
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-amber-500/20 bg-amber-500/10 px-3 py-2">
+              <p className="text-[11px] leading-snug text-amber-300">
+                {snapshotWarning}
+              </p>
+              <button
+                type="button"
+                onClick={() => setSnapshotWarning(null)}
+                className="shrink-0 text-amber-300/70 transition-industrial hover:text-amber-200"
+                aria-label="Dismiss"
+              >
+                <X className="size-3.5" strokeWidth={1.75} />
+              </button>
+            </div>
+          )}
+          <ConversationArea
+            messages={messages}
+            isWaiting={isWaiting}
+            draft={draft}
+            onDraftChange={setDraft}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            onCitationSelect={handleCitationSelect}
+            activeCitation={activeCitation}
+            streamingMessageId={streamingMessageId}
+            restoreNotice={restoreNotice}
+            onDismissRestoreNotice={() => setRestoreNotice(null)}
+            suggestions={suggestions}
+            onRetryMessage={handleRetryMessage}
+          />
+        </main>
+
+        <aside className="hidden min-h-0 lg:flex lg:flex-col">
+          {renderSources()}
+        </aside>
       </div>
-
-      <SourcePreviewModal
-        citation={selectedCitation}
-        open={selectedCitation !== null}
-        onClose={() => setSelectedCitation(null)}
-      />
     </div>
   );
 }

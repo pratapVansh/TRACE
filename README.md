@@ -2,7 +2,7 @@
 
 ### Technical Records & Asset Compliance Engine
 
-> An AI-powered Industrial Knowledge Intelligence Platform that transforms scattered, unstructured industrial documents into a unified, searchable **Industrial Knowledge Brain** — with semantic search, knowledge graphs, and multi-agent AI orchestration.
+> An AI-powered Industrial Knowledge Intelligence Platform that transforms scattered, unstructured industrial documents into a unified, searchable **Industrial Knowledge Brain** — with semantic search, knowledge graphs, and grounded, cited answers.
 
 [![Status](https://img.shields.io/badge/status-milestone--3--4--5--active-blue)]()
 [![License](https://img.shields.io/badge/license-proprietary-lightgrey)]()
@@ -11,7 +11,7 @@
 
 ## Overview
 
-TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection reports, OEM manuals, safety manuals, spreadsheets, scanned images, and email threads — then transforms them into a single intelligence layer using OCR, document parsing, embedding vectors, a knowledge graph, and orchestrated AI agents. Engineers, operators, and inspectors can ask natural-language questions and receive grounded answers with citations, asset insights, and compliance-aware reasoning.
+TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection reports, OEM manuals, safety manuals, spreadsheets, scanned images, and email threads — then transforms them into a single intelligence layer using OCR, document parsing, embedding vectors, and a knowledge graph. Engineers, operators, and inspectors can ask natural-language questions and receive grounded answers with citations, asset insights, and compliance-aware reasoning.
 
 ---
 
@@ -24,16 +24,15 @@ TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection re
 | **Semantic Search** | Embedding-based vector search (Sentence Transformers + Qdrant) with keyword and hybrid modes | ✅ |
 | **Knowledge Graph** | Neo4j-powered entity extraction, relationship mapping, and graph traversal | ✅ |
 | **Hybrid RAG** | Retrieval-Augmented Generation combining vector similarity + graph facts | ✅ |
-| **AI Agent Framework** | 10+ specialized agents (Document, Graph, Maintenance, Compliance, Asset Intelligence, RCA, Report, Workspace, Conversation, Search) | ✅ |
-| **Multi-Agent Orchestration** | Automatic agent routing, chaining, parallel execution, collaboration, and fallback | ✅ |
 | **AI Copilot Chat** | Conversational UI with streaming responses, citations, conversation history, and snapshots | ✅ |
 | **Role-Based Access Control** | SuperAdmin, Admin, Engineer, Operator, Viewer with fine-grained permissions | ✅ |
 | **JWT Authentication** | Register, login, refresh with rotation, logout, protected routes | ✅ |
 | **Admin User Management** | Create, update roles, reset passwords, activate/deactivate users | ✅ |
 | **Executive Dashboard** | KPIs, document counts, graph stats, recent activity, compliance overview | ✅ |
 | **Enterprise UI** | Dark industrial theme, responsive layout, skeleton loaders, protected pages | ✅ |
-| **Observability** | Agent/tool latency histograms, memory hit rates, hallucination tracking, citation coverage, Prometheus metrics | ✅ |
-| **Audit Logging** | Full audit trail for all user actions | ✅ |
+| **Answer grounding** | Every answer's sentences scored against the passages actually cited — reported as grounded / hedged / unsupported counts | ✅ |
+| **Observability** | Retrieval latency, memory hit rates, citation coverage, Prometheus metrics | ✅ |
+| **Audit Logging** | Actions are recorded to the `audit_logs` table by `AuditService`. No read API exists yet, so the trail cannot be viewed — the Audit Logs page renders empty. | 🚧 |
 | **Rate Limiting** | Per-endpoint rate limiting for auth, upload, chat, search, RAG | ✅ |
 | **Long-Term Memory** | User-specific memory with embedding, importance scoring, and consolidation | ✅ |
 | **Investigation Records** | Root Cause Analysis persistence with confidence tracking | ✅ |
@@ -45,7 +44,7 @@ TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection re
 ```mermaid
 flowchart TB
     subgraph Client["Frontend — Next.js + TypeScript + Tailwind + shadcn/ui"]
-        UI["Copilot UI / Search / Dashboard / Knowledge Graph / Agents"]
+        UI["Copilot UI / Search / Dashboard / Knowledge Graph"]
     end
 
     subgraph API["Backend — FastAPI"]
@@ -57,7 +56,6 @@ flowchart TB
 
     subgraph AI["AI Layer"]
         ORCH["AI Orchestrator"]
-        AGENTS["10+ Specialized Agents<br/>(Document, Graph, Maintenance,<br/>Compliance, Asset, RCA, Report,<br/>Workspace, Conversation, Search)"]
         RAG["Hybrid RAG Service"]
         RET["Hybrid Retriever<br/>(Vector + Graph)"]
         EMB["Sentence Transformers"]
@@ -151,21 +149,8 @@ flowchart TB
 
 ```text
 TRACE/
-├── ai/                              # AI pipeline (placeholder for future expansion)
 ├── backend/                         # FastAPI service
 │   ├── app/
-│   │   ├── agents/                  # AI agent framework
-│   │   │   └── framework/
-│   │   │       ├── agents/          # 10+ specialized agent implementations
-│   │   │       ├── tools/           # Agent tool definitions
-│   │   │       ├── memory/          # Long-term memory management
-│   │   │       ├── collaboration/   # Multi-agent collaboration
-│   │   │       ├── workflow/        # Multi-agent workflow schemas
-│   │   │       ├── planner/         # Agent planning and routing
-│   │   │       ├── orchestrator.py  # AIOrchestrator (single & multi-agent)
-│   │   │       ├── base.py          # BaseAgent abstract class
-│   │   │       ├── registry.py      # Agent registry
-│   │   │       └── context.py       # Agent execution context
 │   │   ├── ai/                      # LLM provider abstraction
 │   │   │   ├── base.py              # LLMProvider interface
 │   │   │   └── groq_provider.py     # Groq LLM implementation
@@ -183,31 +168,25 @@ TRACE/
 │   │   ├── schemas/                # Pydantic DTOs (21 schema modules)
 │   │   ├── services/               # Business logic (45+ service modules)
 │   │   └── tasks/                  # Background workers
-│   ├── alembic/versions/           # 18 database migrations
+│   ├── alembic/versions/           # 19 database migrations
 │   └── scripts/                    # Utility scripts
-├── datasets/                        # Sample datasets (placeholder)
 ├── docs/                            # Architecture & planning documentation
 ├── frontend/                        # Next.js application
-│   ├── app/                         # 16+ route pages
+│   ├── app/                         # 14 route pages
 │   │   ├── copilot/                 # AI Copilot chat interface
 │   │   ├── knowledge-graph/         # Interactive graph visualization
 │   │   ├── documents/              # Document management & upload
 │   │   ├── search/                 # Semantic search interface
 │   │   ├── dashboard/              # Executive dashboard
-│   │   ├── assets/                 # Asset hierarchy & views
-│   │   ├── compliance/             # Compliance overview
-│   │   ├── maintenance/            # Maintenance workflows
-│   │   ├── sop-library/            # SOP library
-│   │   ├── ai-agents/              # AI agent hub & chat
 │   │   ├── audit-logs/             # Audit trail viewer
-│   │   ├── settings/               # System settings, users, roles
+│   │   ├── settings/users/         # Admin user management
 │   │   └── access-denied/          # Permission denied page
 │   ├── components/                 # Reusable UI components
-│   │   ├── ai-workspace/           # Copilot, agents, knowledge graph
+│   │   ├── ai-workspace/           # Copilot, knowledge graph
 │   │   ├── dashboard/              # Dashboard widgets
 │   │   ├── knowledge/              # Documents, search, upload
-│   │   ├── operations/             # Assets, compliance, maintenance, SOP
-│   │   ├── administration/         # Users, roles, settings
+│   │   ├── operations/             # Audit log viewer, shared table/badge/stat
+│   │   ├── administration/         # Admin user management
 │   │   ├── layout/                 # Sidebar, topbar, auth shell
 │   │   ├── auth/                   # Login, register forms
 │   │   └── ui/                     # shadcn/ui primitives
@@ -222,71 +201,37 @@ TRACE/
 
 ---
 
-## AI / Agent Workflow
+## RAG Pipeline
 
 ```mermaid
 flowchart LR
-    User["User Question"] --> ORCH["AI Orchestrator"]
-    ORCH --> ROUTER["Agent Router"]
-    ROUTER --> AGENTS["Specialized Agents"]
-    
-    subgraph Agents["Agent Pool"]
-        DA["Document Agent<br/>Search, Summarize, Compare"]
-        GA["Graph Agent<br/>Search, Neighbors, Paths"]
-        MA["Maintenance Agent<br/>Checklists, History, Risk"]
-        CA["Compliance Agent<br/>Checks, Gaps, Recommendations"]
-        AAA["Asset Agent<br/>Search, Relationships, Risk"]
-        RCA["RCA Agent<br/>Evidence, Root Cause, Similar"]
-        RA["Report Agent<br/>Generate, Summarize"]
-        WA["Workspace Agent<br/>Files, Charts, Python"]
-    end
-    
-    AGENTS --> DA
-    AGENTS --> GA
-    AGENTS --> MA
-    AGENTS --> CA
-    AGENTS --> AAA
-    AGENTS --> RCA
-    AGENTS --> RA
-    AGENTS --> WA
-
-    DA & GA & MA & CA & AAA & RCA --> RET["Hybrid Retriever"]
-    RET --> VEC[(Vector Store)]
-    RET --> KG[(Knowledge Graph)]
-    
-    DA & GA & MA & CA & AAA & RCA --> LLM["Groq LLM"]
-    
-    ORCH --> MEM["Long-Term Memory<br/>Store & Retrieve"]
+    User["User Question"] --> CHAT["ChatService"]
+    CHAT --> QU["Query Understanding<br/>resolves follow-ups"]
+    QU --> RET["Hybrid Retriever"]
+    RET --> VEC[(Qdrant<br/>Vector Store)]
+    RET --> KG[(Neo4j<br/>Knowledge Graph)]
+    RET --> RERANK["Cross-Encoder Reranker"]
+    RERANK --> PROMPT["Prompt Builder"]
+    CHAT --> MEM["Long-Term Memory<br/>store & retrieve"]
     MEM --> PG[(PostgreSQL)]
-    
-    ORCH --> RESP["Response<br/>+ Citations<br/>+ Confidence"]
+    MEM --> PROMPT
+    PROMPT --> LLM["Groq LLM"]
+    LLM --> GROUND["Evidence Classification<br/>grounded / hedged / unsupported"]
+    GROUND --> RESP["Answer<br/>+ Citations<br/>+ Grounding counts"]
     RESP --> User
 ```
 
 ### How it works
 
-1. **Question** enters via the Copilot chat or agent API
-2. **Orchestrator** selects the best agent(s) automatically or by explicit request
-3. **Agents** use tools to search documents, query the knowledge graph, analyze assets, check compliance, and generate reports
-4. **Hybrid Retriever** combines vector similarity search (Qdrant) with graph facts (Neo4j)
-5. **LLM** synthesizes retrieved context into a grounded answer with citations
-6. **Long-Term Memory** stores user interactions and consolidates important information
-7. **Confidence Scoring** evaluates answer reliability based on evidence strength, source agreement, and LLM certainty
-
-### Available Agents
-
-| Agent | Tools | Purpose |
-| --- | --- | --- |
-| **DocumentAgent** | Search, Summary, Metadata, Comparison | Analyze and compare documents |
-| **KnowledgeGraphAgent** | Search, Neighbor, Path, Statistics | Explore entity relationships |
-| **MaintenanceAgent** | Search, Recommendation, History, Checklist, Risk | Maintenance planning and analysis |
-| **ComplianceAgent** | Search, Check, Gap, Recommendation | Identify compliance gaps |
-| **AssetIntelligenceAgent** | Search, Relationship, Risk, Maintenance, Summary | Asset-centric intelligence |
-| **RootCauseAnalysisAgent** | Incident Search, Evidence, Root Cause, Similar Incidents | Investigate failures |
-| **ReportGenerationAgent** | Generate, Executive Summary, Markdown | Generate structured reports |
-| **WorkspaceAgent** | File ops, SQL, CSV, Excel, Python, Charts, Email, REST, PI Historian, SAP | Multi-tool workspace |
-| **ConversationAgent** | Conversation history | Context-aware conversation |
-| **SearchAgent** | Hybrid search | General purpose search |
+1. **Question** enters via the Copilot chat (`POST /api/chat/stream`).
+2. **Query understanding** resolves follow-ups against conversation history, so
+   "what caused it?" searches for the subject rather than the word "it".
+3. **Hybrid Retriever** combines vector similarity (Qdrant) with graph facts
+   (Neo4j), then a cross-encoder reranks the candidates.
+4. **Long-term memory** contributes any relevant stored facts for this user.
+5. **LLM** synthesises the retrieved context into an answer with citations.
+6. **Evidence classification** scores each sentence of the finished answer
+   against the passages actually cited, and the UI reports the counts.
 
 ---
 
@@ -346,7 +291,36 @@ Also create the frontend env file:
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 2. Database Setup
+### 2. Install Dependencies
+
+Do this before the database steps below — both of them run inside the virtual
+environment created here.
+
+```bash
+# Backend
+cd backend
+python -m venv .venv
+.venv\Scripts\activate    # Windows
+# source .venv/bin/activate  # macOS / Linux
+pip install -r requirements.txt
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+`requirements.txt` carries TRACE's supported direct dependencies and is the
+file you edit. `requirements.lock.txt` is the fully-resolved set captured from a
+clean install that was verified end to end — `import app.main` boots and the
+backend suite passes 1162 tests against exactly those versions — so it is the
+reproducible path; prefer it for CI, containers, and anywhere a repeatable
+environment matters:
+
+```bash
+pip install -r requirements.lock.txt
+```
+
+### 3. Database Setup
 
 ```bash
 # Create database (as postgres superuser)
@@ -358,7 +332,7 @@ cd backend
 alembic upgrade head
 ```
 
-### 3. Bootstrap SuperAdmin
+### 4. Bootstrap SuperAdmin
 
 ```bash
 cd backend
@@ -367,20 +341,6 @@ python scripts/create_super_admin.py
 ```
 
 This creates the first SuperAdmin user. Registration via the API always creates **Viewer**-role users.
-
-### 4. Install Dependencies
-
-```bash
-# Backend
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-
-# Frontend
-cd frontend
-npm install
-```
 
 ---
 
@@ -437,7 +397,6 @@ docker run -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
 | `POST /api/rag/*` | 3 | RAG retrieve, query, graph-enhanced query |
 | `POST /api/chat/*` | 14 | Chat, stream, conversations, snapshots |
 | `GET/POST/PATCH/DELETE /api/graph/*` | 9 | Graph health, entities, neighbors, paths |
-| `POST /api/agents/*` | 3 | Single & multi-agent execution, streaming |
 | `GET/POST /api/processing/*` | 5 | Processing job management |
 | `GET /api/vector/health` | 1 | Vector store health |
 | `GET /api/llm/health` | 1 | LLM provider health |
@@ -445,7 +404,7 @@ docker run -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
 | `GET /api/observability/dashboard` | 1 | Monitoring and metrics dashboard |
 | `GET/POST /api/metrics` | 2 | Prometheus & JSON metrics |
 | `GET/POST/PATCH/DELETE /api/chunks` | 1 | Document chunks |
-| `GET /api/demo/admin` | 1 | Demo admin access test |
+| `GET /api/demo/admin` | 1 | Demo-only RBAC check; off unless `DEMO_ROUTES_ENABLED=true` |
 
 Full API specification is available at `/docs` (Swagger) when the backend is running.
 
@@ -554,22 +513,59 @@ flowchart TD
 - **Vector Search**: Qdrant-powered semantic, keyword, hybrid, and ranked search modes
 - **Knowledge Graph**: Neo4j entity extraction, neighbor/path queries, batch operations
 - **Hybrid RAG**: Combined vector + graph retrieval with LLM-based answer generation
-- **AI Agent Framework**: 10+ specialized agents with tool-based execution
-- **Multi-Agent Orchestration**: Automatic routing, chaining, parallel execution, collaboration
 - **AI Copilot**: Streaming chat with conversation management, snapshots, citations
+- **Answer Grounding**: Each answer sentence scored against the passages cited, surfaced as grounded / hedged / unsupported counts
 - **Executive Dashboard**: Real-time KPIs, document/graph stats, activity feed
-- **Compliance & Asset Modules**: Dedicated pages for compliance, assets, maintenance, SOP library
-- **Admin UI**: User management, role management, system settings
-- **Observability**: Agent/tool latency tracking, memory efficiency, hallucination rate, Prometheus metrics
-- **Audit Logging**: Full audit trail for document and user operations
+- **Admin UI**: User management (create, role assignment, password reset, activate/deactivate)
+- **Observability**: Retrieval latency tracking, memory efficiency, citation coverage, Prometheus metrics
 - **Long-Term Memory**: Per-user memory storage with embedding and importance scoring
-- **Root Cause Analysis**: Investigation records with evidence tracking
 - **Rate Limiting**: Configurable per-endpoint rate limiting
 - **Enterprise UI**: Dark industrial theme, responsive layout, permission-gated pages
 
+### Not yet built
+
+These were scaffolded, found to have no backend behind them, and removed rather
+than left as empty pages and fabricated results. Recorded here so the intent
+isn't lost.
+
+**The AI agent framework was removed** — 10 agents, 43 tools, an orchestrator,
+a planner, a tool registry, multi-agent workflows and long-term agent memory,
+plus the `/ai-agents` hub and its chat page. ~23,000 lines, 40% of the backend.
+See "Decisions already made" in `ROADMAP.md` for the full reasoning and the
+evidence behind it. The one capability worth keeping — per-sentence answer
+grounding — was ported into the Copilot path first
+(`backend/app/services/evidence_classification.py`). The report-generation
+prompts are preserved as reference text in `docs/salvage/report-prompts.md`.
+
+**Frontend pages removed** — each rendered an empty array; none had a backend
+domain, data model, or API:
+
+| Page | What it needs |
+| --- | --- |
+| Assets | An asset registry model and CRUD API. Assets exist as Neo4j graph entities today, but nothing owns them as first-class records. |
+| Asset Hierarchy | Parent/child asset topology, on top of the asset registry above. |
+| Maintenance | Work orders and schedules — a domain model, not just documents mentioning maintenance. |
+| Compliance | Standards, controls, and per-asset compliance state with a scoring rule. |
+| SOP Library | SOP documents are already ingested; this needs a curated view over them, not a new store. |
+| Roles & Permissions | The role→permission matrix is enforced server-side and is currently static; editing it needs a management API. |
+| System Settings | A settings store and API. Configuration lives in `.env` today. |
+
+Audit Logs is still present and still empty: `audit_logs` and `AuditService`
+already record every action, so it needs only a read endpoint. That makes it the
+cheapest of these to finish.
+
+**Six agent tools were withdrawn in Phase 0 and are now gone entirely.** They
+were unregistered first — `send_email`, `pi_historian` and `sap_execute`
+returned fabricated success without performing the action; `python_execute`,
+`sql_execute` and `rest_client` were unsandboxed sinks for LLM-generated input
+— and deleted with the rest of the framework. Nothing depends on them. If any
+of these capabilities is wanted later it needs building properly: a real SMTP
+client, a PI Web API client, an SAP connector, an out-of-process sandbox, a
+least-privilege DB role, and an outbound host allowlist respectively.
+
 ### In Progress / Next
 
-- AI pipeline refinements and agent accuracy improvements
+- RAG pipeline refinements and retrieval accuracy improvements
 - Testing coverage expansion
 - Deployment and CI/CD configuration
 - Performance optimization at scale
@@ -589,7 +585,7 @@ Based on existing project structure and planned documentation:
 | **Notifications** | Alert system for document processing and compliance events |
 | **Deployment** | Docker compose, CI/CD pipelines |
 | **Performance** | Caching, query optimization, horizontal scaling |
-| **Evaluation** | Automated RAG evaluation and agent benchmarking |
+| **Evaluation** | Automated RAG evaluation against a golden question set |
 
 ---
 

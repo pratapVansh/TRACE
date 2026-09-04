@@ -86,7 +86,7 @@ export function GraphToolbar({
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search entities..."
-            className="w-full rounded-lg border border-border bg-[var(--surface-secondary)] py-2 pl-10 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
+            className="w-full rounded-lg border border-border bg-[var(--surface-secondary)] py-2 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
             onFocus={() => (results.length > 0 || noResults) && setShowDropdown(true)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 300)}
           />
@@ -108,7 +108,7 @@ export function GraphToolbar({
                 <button
                   key={entity.id}
                   onMouseDown={() => handleSelect(entity)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-white transition-colors hover:bg-border/50"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-border/50"
                 >
                   <span className="shrink-0 rounded-full bg-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {entity.type}
@@ -136,7 +136,7 @@ export function GraphToolbar({
       <div className="flex items-center gap-1 rounded-lg border border-border bg-[var(--surface-secondary)] p-1">
         <button
           onClick={onZoomIn}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-white"
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-foreground"
           aria-label="Zoom in"
           title="Zoom in"
         >
@@ -144,7 +144,7 @@ export function GraphToolbar({
         </button>
         <button
           onClick={onZoomOut}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-white"
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-foreground"
           aria-label="Zoom out"
           title="Zoom out"
         >
@@ -152,7 +152,7 @@ export function GraphToolbar({
         </button>
         <button
           onClick={onReset}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-white"
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-border/50 hover:text-foreground"
           aria-label="Reset view"
           title="Reset view"
         >

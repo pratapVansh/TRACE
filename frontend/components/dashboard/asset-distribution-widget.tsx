@@ -20,14 +20,14 @@ export function AssetDistributionWidget({
         description={`Equipment breakdown across ${totalAssets.toLocaleString()} registered industrial assets.`}
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {categories.slice(0, 3).map((category) => (
           <div
             key={category.id}
-            className="rounded-xl border border-border bg-[var(--surface-secondary)] p-4"
+            className="rounded-md border border-border bg-[var(--surface-secondary)] p-4"
           >
             <p className="text-xs text-muted-foreground">{category.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-white">
+            <p className="mt-2 text-[18px] font-semibold text-foreground">
               {category.count.toLocaleString()}
             </p>
             <p className="mt-1 text-xs text-[var(--accent-steel-muted)]">

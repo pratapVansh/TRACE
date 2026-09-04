@@ -16,7 +16,7 @@ export default function DocumentsError({
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-8">
       <div className="max-w-md text-center">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-foreground">
           Documents error
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">

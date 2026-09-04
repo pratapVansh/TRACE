@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # Security
     security_headers_hsts_enabled: bool = False  # Enable only in production
 
+    # /api/demo/* exists to show RBAC working in a walkthrough. It is not part
+    # of the product surface, so it stays out of the route table unless a demo
+    # explicitly asks for it.
+    demo_routes_enabled: bool = False
+
     # Rate limiting
     auth_rate_limit_max: int = 10
     auth_rate_limit_window_seconds: int = 60

@@ -433,7 +433,7 @@ export function KnowledgeGraphPageContent() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-border/50 hover:text-white disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-[var(--surface-secondary)] px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-border/50 hover:text-foreground disabled:opacity-50"
                 >
                   {loadingMore && <Loader2 size={14} className="animate-spin" />}
                   {loadingMore ? "Loading..." : "Load More Entities"}

@@ -7,22 +7,18 @@ type PageHeaderProps = {
   action?: ReactNode;
 };
 
-export function PageHeader({
-  sectionLabel,
-  title,
-  description,
-  action,
-}: PageHeaderProps) {
+/**
+ * A console labels the screen you are on; it does not sell it. One line:
+ * title, supporting text, and actions — no stacked hero block.
+ */
+export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <section className="space-y-4">
-      <p className="section-label">{sectionLabel}</p>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-3">
-          <h2 className="page-title">{title}</h2>
-          <p className="page-subtitle max-w-2xl">{description}</p>
-        </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-    </section>
+    <header className="mb-3 flex items-baseline gap-3 border-b border-border pb-2">
+      <h2 className="page-title shrink-0">{title}</h2>
+      <p className="page-subtitle hidden min-w-0 flex-1 truncate md:block">
+        {description}
+      </p>
+      {action ? <div className="ml-auto shrink-0">{action}</div> : null}
+    </header>
   );
 }

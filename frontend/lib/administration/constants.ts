@@ -7,7 +7,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [PERMISSIONS.SEARCH]: "Search",
   [PERMISSIONS.COPILOT]: "Copilot",
   [PERMISSIONS.KNOWLEDGE_GRAPH]: "Knowledge Graph",
-  [PERMISSIONS.AI_AGENTS]: "AI Agents",
   [PERMISSIONS.ASSETS_READ]: "Assets",
   [PERMISSIONS.ASSETS_WRITE]: "Assets (Write)",
   [PERMISSIONS.MAINTENANCE]: "Maintenance",
@@ -51,7 +50,6 @@ export const PERMISSION_GROUPS: { label: string; permissions: Permission[] }[] =
     permissions: [
       PERMISSIONS.COPILOT,
       PERMISSIONS.KNOWLEDGE_GRAPH,
-      PERMISSIONS.AI_AGENTS,
     ],
   },
 ];

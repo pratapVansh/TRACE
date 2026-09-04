@@ -34,7 +34,7 @@ export function AuthShell({
           <div className="industrial-card p-7 sm:p-9">
             <div className="mb-8 space-y-3">
               <p className="section-label">Secure access</p>
-              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
                 {title}
               </h2>
               <p className="page-subtitle text-sm">{subtitle}</p>
@@ -62,7 +62,7 @@ export function AuthLink({
   return (
     <Link
       href={href}
-      className="font-medium text-[var(--accent-steel-muted)] transition-industrial hover:text-white"
+      className="font-medium text-[var(--accent-steel-muted)] transition-industrial hover:text-foreground"
     >
       {children}
     </Link>

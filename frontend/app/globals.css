@@ -8,9 +8,20 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
+
+  /* Product surfaces — usable as bg-surface, border-surface-tertiary, … */
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-accent-steel: var(--accent-steel);
+  --color-accent-steel-muted: var(--accent-steel-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -40,6 +51,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Operator-console scale: tight radii, hairline borders. */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -47,53 +60,79 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Shell metrics — the Copilot's full-height frame derives from these. */
+  --shell-topbar-h: 3rem;
+  --shell-pad: 1rem;
 }
 
+/* ── Light: paper-white surfaces, ink text, hairline rules ───────── */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.375rem;
+
+  --background: #f7f8f9;
+  --foreground: #16191d;
+
+  --surface: #ffffff;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f1f3f5;
+  --surface-tertiary: #e3e6ea;
+
+  --accent-steel: #35618f;
+  --accent-steel-muted: #4f7ba8;
+  --success: #3d7a4e;
+  --warning: #8a6414;
+  --danger: #ad4038;
+
+  --card: #ffffff;
+  --card-foreground: #16191d;
+  --popover: #ffffff;
+  --popover-foreground: #16191d;
+  --primary: #35618f;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f5;
+  --secondary-foreground: #16191d;
+  --muted: #f1f3f5;
+  --muted-foreground: #5f6873;
+  --accent: #f1f3f5;
+  --accent-foreground: #16191d;
+  --destructive: #ad4038;
+  --border: #dfe3e8;
+  --input: #dfe3e8;
+  --ring: rgba(53, 97, 143, 0.35);
+
+  --chart-1: #35618f;
+  --chart-2: #4f7ba8;
+  --chart-3: #6d97c0;
+  --chart-4: #9db8d4;
+  --chart-5: #c6d5e5;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16191d;
+  --sidebar-primary: #35618f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f3f5;
+  --sidebar-accent-foreground: #16191d;
+  --sidebar-border: #dfe3e8;
+  --sidebar-ring: rgba(53, 97, 143, 0.35);
 }
 
+/* ── Dark: the established industrial palette ────────────────────── */
 .dark {
   --background: #0b0f14;
   --foreground: #f8fafc;
+
   --surface: #111827;
+  --surface-primary: #111827;
   --surface-secondary: #1f2937;
+  --surface-tertiary: #374151;
+
   --accent-steel: #5b7fa8;
   --accent-steel-muted: #8ba3c4;
   --success: #6b9e7a;
   --warning: #c9a24d;
   --danger: #c46b6b;
+
   --card: #111827;
   --card-foreground: #f8fafc;
   --popover: #111827;
@@ -107,23 +146,24 @@
   --accent: #1f2937;
   --accent-foreground: #f8fafc;
   --destructive: #c46b6b;
-  --border: rgba(255, 255, 255, 0.07);
-  --input: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
   --ring: rgba(91, 127, 168, 0.4);
+
   --chart-1: #5b7fa8;
   --chart-2: #8ba3c4;
   --chart-3: #4a6585;
   --chart-4: #374151;
   --chart-5: #1f2937;
-  --sidebar: #0b0f14;
+
+  --sidebar: #0d1219;
   --sidebar-foreground: #f8fafc;
   --sidebar-primary: #5b7fa8;
   --sidebar-primary-foreground: #f8fafc;
   --sidebar-accent: #111827;
   --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: rgba(91, 127, 168, 0.4);
-  --radius: 0.75rem;
 }
 
 @layer base {
@@ -143,22 +183,44 @@
   h4 {
     @apply tracking-tight text-foreground;
   }
+  /* Numbers in a data tool must align in columns. */
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer utilities {
+  /* Page title: an operator console labels screens, it does not market them. */
   .page-title {
-    @apply text-3xl font-semibold tracking-tight text-white md:text-4xl;
+    @apply text-[15px] font-semibold tracking-tight text-foreground;
   }
   .page-subtitle {
-    @apply text-base leading-relaxed text-muted-foreground;
+    @apply text-[12px] leading-[1.5] text-muted-foreground;
   }
   .section-label {
-    @apply text-xs font-medium tracking-[0.18em] text-[var(--accent-steel-muted)] uppercase;
+    @apply text-[10px] font-medium tracking-[0.14em] text-muted-foreground uppercase;
   }
   .industrial-card {
-    @apply rounded-xl border border-border bg-[var(--surface)] shadow-[0_4px_24px_rgba(0,0,0,0.16)];
+    @apply rounded-md border border-border bg-[var(--surface)];
   }
   .transition-industrial {
-    @apply transition-all duration-200 ease-out;
+    @apply transition-all duration-150 ease-out;
+  }
+
+  /* Dense table primitives, shared by every record screen. */
+  .data-grid {
+    @apply w-full border-collapse text-[12px];
+  }
+  .data-grid th {
+    @apply border-b border-border px-2 py-1.5 text-left text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase;
+  }
+  .data-grid td {
+    @apply border-b border-border/60 px-2 py-1.5 align-middle text-foreground/90;
+  }
+  .data-grid tbody tr {
+    /* Cannot @apply .transition-industrial: it is defined in this same
+       utilities layer, so Tailwind cannot resolve it here. Inlined instead. */
+    @apply transition-all duration-150 ease-out hover:bg-[var(--surface-secondary)];
   }
 }

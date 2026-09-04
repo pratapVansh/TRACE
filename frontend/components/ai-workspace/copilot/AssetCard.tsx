@@ -49,7 +49,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
       <div className="p-5">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <Activity className="size-5 text-[var(--accent-steel)]" />
               {asset.name || "Unknown Asset"}
             </h3>
@@ -80,7 +80,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
           <>
             <button
               onClick={() => setExpanded(!expanded)}
-              className="mt-4 flex w-full items-center justify-between rounded-lg bg-[var(--surface-tertiary)] px-4 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-[var(--surface-tertiary)]/80"
+              className="mt-4 flex w-full items-center justify-between rounded-lg bg-[var(--surface-tertiary)] px-4 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-[var(--surface-tertiary)]/80"
             >
               <span>View Asset Details & Relationships</span>
               {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
@@ -91,7 +91,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                 {/* Relationships */}
                 {asset.graph_relationships && asset.graph_relationships.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="flex items-center gap-2 text-sm font-medium text-white/90">
+                    <h4 className="flex items-center gap-2 text-sm font-medium text-foreground/90">
                       <Share2 className="size-4 text-indigo-400" />
                       Graph Relationships
                     </h4>
@@ -100,7 +100,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                         <li key={i} className="flex items-center gap-2 text-xs">
                           <span className="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">{rel.type}</span>
                           <span className="text-muted-foreground">→</span>
-                          <span className="font-medium text-white/80">{rel.target}</span>
+                          <span className="font-medium text-foreground/80">{rel.target}</span>
                         </li>
                       ))}
                     </ul>
@@ -110,7 +110,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                 {/* Maintenance */}
                 {asset.maintenance_history && asset.maintenance_history.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="flex items-center gap-2 text-sm font-medium text-white/90">
+                    <h4 className="flex items-center gap-2 text-sm font-medium text-foreground/90">
                       <Wrench className="size-4 text-blue-400" />
                       Maintenance History
                     </h4>
@@ -118,7 +118,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                       {asset.maintenance_history.map((record, i) => (
                         <li key={i} className="relative pl-5 text-xs">
                           <span className="absolute left-0.5 top-1 size-2 rounded-full bg-blue-500 ring-2 ring-[var(--surface-secondary)]" />
-                          <div className="font-medium text-white/70 mb-0.5">{record.date}</div>
+                          <div className="font-medium text-foreground/70 mb-0.5">{record.date}</div>
                           <div className="text-muted-foreground leading-relaxed">{record.description}</div>
                         </li>
                       ))}
@@ -129,7 +129,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                 {/* Connected Incidents */}
                 {asset.connected_incidents && asset.connected_incidents.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="flex items-center gap-2 text-sm font-medium text-white/90">
+                    <h4 className="flex items-center gap-2 text-sm font-medium text-foreground/90">
                       <ShieldAlert className="size-4 text-red-400" />
                       Related Incidents
                     </h4>
@@ -147,7 +147,7 @@ export function AssetCard({ data }: { data: string | AssetData }) {
                 {/* Connected Assets */}
                 {asset.connected_assets && asset.connected_assets.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="flex items-center gap-2 text-sm font-medium text-white/90">
+                    <h4 className="flex items-center gap-2 text-sm font-medium text-foreground/90">
                       <Activity className="size-4 text-[var(--accent-steel)]" />
                       Connected Assets
                     </h4>

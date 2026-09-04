@@ -22,17 +22,17 @@ export function UploadQueue({ items }: UploadQueueProps) {
   ).length;
 
   return (
-    <div className="industrial-card p-5 sm:p-6">
+    <div className="industrial-card p-2.5 sm:p-3">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <p className="section-label">Ingestion pipeline</p>
-          <h3 className="mt-2 text-lg font-semibold text-white">Upload queue</h3>
+          <h3 className="mt-2 text-[14px] font-semibold text-foreground">Upload queue</h3>
         </div>
         <Badge variant="secondary">{activeCount} active</Badge>
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-xl border border-border bg-[var(--surface-secondary)] p-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-md border border-border bg-[var(--surface-secondary)] p-3 text-center text-[12px] text-muted-foreground">
           No files in queue. Drop files above to begin ingestion.
         </p>
       ) : (
@@ -40,11 +40,11 @@ export function UploadQueue({ items }: UploadQueueProps) {
           {items.map((item) => (
             <li
               key={item.id}
-              className="rounded-xl border border-border bg-[var(--surface-secondary)] p-4"
+              className="rounded-md border border-border bg-[var(--surface-secondary)] p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate text-sm font-medium text-white">
+                  <p className="truncate text-[12px] font-medium text-foreground">
                     {item.fileName}
                   </p>
                   <p className="text-xs text-muted-foreground">

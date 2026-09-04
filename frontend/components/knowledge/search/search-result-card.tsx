@@ -74,11 +74,11 @@ export function SearchResultCard({ result, query }: SearchResultCardProps) {
 
   return (
     <div className="industrial-card group relative overflow-hidden transition-industrial hover:border-[var(--accent-steel)]/25">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:p-6">
-        <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-start">
+      <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-start sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-start">
           <span
             className={cn(
-              "inline-flex h-8 min-w-[3.25rem] items-center justify-center rounded-lg px-2 text-xs font-semibold text-white",
+              "inline-flex h-8 min-w-[3.25rem] items-center justify-center rounded-lg px-2 text-xs font-semibold text-foreground",
               scoreColor(result.score),
             )}
             title="Relevance score"
@@ -87,14 +87,14 @@ export function SearchResultCard({ result, query }: SearchResultCardProps) {
           </span>
         </div>
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <FileText className="size-4 shrink-0 text-[var(--accent-steel-muted)]" />
-            <span className="truncate text-sm font-medium text-white">
+            <FileText className="size-3.5 shrink-0 text-[var(--accent-steel-muted)]" />
+            <span className="truncate text-[12px] font-medium text-foreground">
               {result.filename || "Unknown document"}
             </span>
             {result.page != null ? (
-              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-[var(--surface-secondary)] px-2 py-0.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded border border-border bg-[var(--surface-secondary)] px-1.5 py-0.5 text-[11px] text-muted-foreground">
                 p.{result.page}
               </span>
             ) : null}
@@ -105,7 +105,7 @@ export function SearchResultCard({ result, query }: SearchResultCardProps) {
             ) : null}
           </div>
 
-          <div className="text-sm leading-relaxed text-muted-foreground [&>mark]:font-medium">
+          <div className="text-[12px] leading-relaxed text-muted-foreground [&>mark]:font-medium">
             {highlighted}
           </div>
 
@@ -129,7 +129,7 @@ export function SearchResultCard({ result, query }: SearchResultCardProps) {
         <div className="flex shrink-0 items-center gap-2 sm:flex-col">
           <a
             href={docUrl}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-white"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/25 hover:text-foreground"
           >
             <ExternalLink className="size-3.5" />
             Open

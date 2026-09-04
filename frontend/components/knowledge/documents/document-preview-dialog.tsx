@@ -44,17 +44,17 @@ export function DocumentPreviewDialog({
       role="presentation"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-[var(--surface)] shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-border bg-[var(--surface)] shadow-2xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex items-center justify-between border-b border-border px-2.5 py-4">
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Document preview
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-white">{document.title}</h3>
+            <h3 className="mt-1 text-[14px] font-semibold text-foreground">{document.title}</h3>
           </div>
           <Button
             variant="ghost"
@@ -69,7 +69,7 @@ export function DocumentPreviewDialog({
 
         <div className="flex min-h-[420px] flex-1 items-center justify-center bg-[var(--surface-secondary)] p-4">
           {isLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
               Loading preview…
             </div>
@@ -79,7 +79,7 @@ export function DocumentPreviewDialog({
             <iframe
               src={previewUrl}
               title={document.title}
-              className="h-[70vh] w-full rounded-xl border border-border bg-white"
+              className="h-[70vh] w-full rounded-md border border-border bg-[var(--surface)]"
             />
           ) : null}
 
@@ -88,26 +88,26 @@ export function DocumentPreviewDialog({
             <img
               src={previewUrl}
               alt={document.title}
-              className="max-h-[70vh] max-w-full rounded-xl border border-border object-contain"
+              className="max-h-[70vh] max-w-full rounded-md border border-border object-contain"
             />
           ) : null}
 
           {!isLoading && previewKind === "text" && previewText !== null ? (
-            <pre className="h-[70vh] w-full overflow-auto rounded-xl border border-border bg-[var(--surface)] p-4 text-left text-sm whitespace-pre-wrap text-white">
+            <pre className="h-[70vh] w-full overflow-auto rounded-md border border-border bg-[var(--surface)] p-4 text-left text-[12px] whitespace-pre-wrap text-foreground">
               {previewText}
             </pre>
           ) : null}
 
           {showDownloadOnly ? (
-            <div className="max-w-md space-y-4 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="max-w-md space-y-2 text-center">
+              <p className="text-[12px] text-muted-foreground">
                 {getPreviewUnavailableMessage(document)}
               </p>
               {onDownload ? (
                 <Button
                   type="button"
                   onClick={() => onDownload(document)}
-                  className="rounded-xl"
+                  className="rounded-md"
                 >
                   <Download className="size-4" />
                   Download file

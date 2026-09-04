@@ -52,6 +52,18 @@ export class ChatTimeoutError extends Error {
   }
 }
 
+/** The SSE stream closed before the server sent its `done` event.
+
+A backend that dies mid-answer closes the connection cleanly, so the read
+loop simply ends: no exception, no `done` callback. Without this the UI kept
+its streaming cursor on a half-written message forever and showed no error. */
+export class StreamIncompleteError extends Error {
+  constructor() {
+    super("CHAT_STREAM_INCOMPLETE");
+    this.name = "StreamIncompleteError";
+  }
+}
+
 export async function sendChatMessage(
   params: ChatRequest,
 ): Promise<ChatResponse> {
@@ -120,6 +132,7 @@ export async function streamChatMessage(
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let sawTerminalEvent = false;
 
   try {
     while (true) {
@@ -151,10 +164,15 @@ export async function streamChatMessage(
                 case "token":
                   callbacks.onToken?.(data.token);
                   break;
+                case "evidence":
+                  callbacks.onEvidence?.(data);
+                  break;
                 case "done":
+                  sawTerminalEvent = true;
                   callbacks.onDone?.(data);
                   break;
                 case "error":
+                  sawTerminalEvent = true;
                   callbacks.onError?.(data.message);
                   break;
               }
@@ -169,6 +187,13 @@ export async function streamChatMessage(
     }
   } finally {
     reader.releaseLock();
+  }
+
+  // Reaching here without a terminal event means the connection closed
+  // mid-answer. Surface it rather than leaving the caller believing the
+  // partial text it already rendered is the whole reply.
+  if (!sawTerminalEvent) {
+    throw new StreamIncompleteError();
   }
 }
 

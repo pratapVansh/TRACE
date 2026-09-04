@@ -246,6 +246,77 @@ class TestChatServiceChatStream:
         assert repo.get_conversation.await_count == 0  # no existing conversation
         assert repo.add_message.await_count == 2  # user + assistant
 
+    async def test_emits_evidence_before_done(self, sample_chunks):
+        """`evidence` must precede `done` — `done` is terminal, and clients
+        stop reading once they see it."""
+        mock_retriever = AsyncMock(spec=RetrieverService)
+        mock_retriever.retrieve.return_value = RetrievalResult(
+            results=sample_chunks, total=len(sample_chunks),
+        )
+        rag = RagService(
+            retriever=mock_retriever,
+            prompt_builder=PromptBuilder(),
+            llm=MockLLM(tokens=["Pump P-101 ", "is a centrifugal pump."]),
+        )
+        repo = AsyncMock(spec=ConversationRepository)
+        conv = _make_conv(
+            "11111111-1111-1111-1111-111111111111",
+            "00000000-0000-0000-0000-000000000001",
+        )
+        conv.user_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+        repo.create_conversation.return_value = conv
+        repo.get_messages.return_value = []
+        repo.add_message.return_value = AsyncMock(spec=MessageModel)
+        svc = ChatService(rag=rag, conversation_repository=repo, session=AsyncMock())
+
+        kinds, payloads = [], {}
+        async for event in svc.chat_stream(
+            user_id="00000000-0000-0000-0000-000000000001",
+            question="What is P-101?",
+        ):
+            kind = event.splitlines()[0].removeprefix("event: ")
+            kinds.append(kind)
+            payloads[kind] = event
+
+        assert "evidence" in kinds, kinds
+        assert kinds.index("evidence") < kinds.index("done")
+        assert kinds[-1] == "done"
+
+        data = json.loads(payloads["evidence"].partition("data: ")[2])
+        assert "classified_statements" in data and "evidence" in data
+        # Classification ran over the accumulated answer, not a single token.
+        assert data["classified_statements"][0]["text"].startswith("Pump P-101")
+
+    async def test_error_events_still_reach_the_client(self, sample_chunks):
+        """Reordering the yields must not swallow non-token events."""
+        mock_retriever = AsyncMock(spec=RetrieverService)
+        mock_retriever.retrieve.return_value = RetrievalResult(
+            results=sample_chunks, total=len(sample_chunks),
+        )
+        rag = RagService(
+            retriever=mock_retriever,
+            prompt_builder=PromptBuilder(),
+            llm=FailingMockLLM(),
+        )
+        repo = AsyncMock(spec=ConversationRepository)
+        conv = _make_conv(
+            "11111111-1111-1111-1111-111111111111",
+            "00000000-0000-0000-0000-000000000001",
+        )
+        conv.user_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+        repo.create_conversation.return_value = conv
+        repo.get_messages.return_value = []
+        svc = ChatService(rag=rag, conversation_repository=repo, session=AsyncMock())
+
+        kinds = [
+            event.splitlines()[0].removeprefix("event: ")
+            async for event in svc.chat_stream(
+                user_id="00000000-0000-0000-0000-000000000001",
+                question="What is P-101?",
+            )
+        ]
+        assert "error" in kinds, kinds
+
     async def test_reuses_existing_conversation(self, sample_chunks):
         mock_retriever = AsyncMock(spec=RetrieverService)
         mock_retriever.retrieve.return_value = RetrievalResult(

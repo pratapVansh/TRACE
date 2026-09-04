@@ -208,7 +208,8 @@ class TestChatServiceMemoryRetrieval:
 
         # query_stream doesn't accept memory_context directly
         # verify the search was called (pipeline integration)
-        assert len(events) == 4  # meta + citations + token + done
+        kinds = [e.splitlines()[0].removeprefix("event: ") for e in events]
+        assert kinds == ["meta", "citations", "token", "evidence", "done"]
 
     async def test_chat_non_fatal_when_memory_service_unavailable(self, mock_graph_rag, mock_repo):
         """Chat works without memory_service — memory retrieval is optional."""

@@ -74,31 +74,31 @@ export function DocumentEditDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-[var(--surface)] shadow-2xl">
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+      <div className="w-full max-w-lg rounded-md border border-border bg-[var(--surface)] shadow-2xl">
+        <form onSubmit={handleSubmit} className="space-y-5 p-3">
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Edit document
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-white">{document.title}</h3>
+            <h3 className="mt-1 text-[14px] font-semibold text-foreground">{document.title}</h3>
           </div>
 
           <label className="block space-y-2">
-            <span className="text-sm text-muted-foreground">Title</span>
+            <span className="text-[12px] text-muted-foreground">Title</span>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-white"
+              className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground"
               required
             />
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm text-muted-foreground">Document type</span>
+            <span className="text-[12px] text-muted-foreground">Document type</span>
             <select
               value={docType}
               onChange={(event) => setDocType(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-white"
+              className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground"
             >
               {DOC_TYPE_FILTER_OPTIONS.filter((option) => option.value !== "all").map(
                 (option) => (
@@ -111,13 +111,13 @@ export function DocumentEditDialog({
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm text-muted-foreground">Status</span>
+            <span className="text-[12px] text-muted-foreground">Status</span>
             <select
               value={status}
               onChange={(event) =>
                 setStatus(event.target.value as KnowledgeDocument["status"])
               }
-              className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-white"
+              className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground"
             >
               {DOCUMENT_STATUSES.map((value) => (
                 <option key={value} value={value}>
@@ -128,11 +128,11 @@ export function DocumentEditDialog({
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm text-muted-foreground">Department</span>
+            <span className="text-[12px] text-muted-foreground">Department</span>
             <select
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-[var(--surface-secondary)] px-3 text-sm text-white"
+              className="h-7 w-full rounded-md border border-border bg-[var(--surface-secondary)] px-3 text-[12px] text-foreground"
             >
               {DEPARTMENTS.map((value) => (
                 <option key={value} value={value}>
@@ -142,7 +142,7 @@ export function DocumentEditDialog({
             </select>
           </label>
 
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {error ? <p className="text-[12px] text-[var(--danger)]">{error}</p> : null}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>

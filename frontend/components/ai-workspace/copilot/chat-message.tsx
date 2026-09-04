@@ -1,19 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Check, Copy, Loader2, UserRound, Edit2, RotateCw, AlertTriangle, PlaySquare } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Check, Copy, Download, Edit2, RotateCw, Square } from "lucide-react";
 
 import type { Citation } from "@/types/chat";
 import { cn } from "@/lib/utils";
+import { AnswerGrounding, type AnswerGroundingState } from "./answer-grounding";
 import { EnterpriseReportRenderer } from "./enterprise-report-renderer";
+import { RetrievalTrace, type RetrievalTraceState } from "./retrieval-trace";
+import { TurnNotice, type TurnNoticeState } from "./turn-notice";
 
 type ChatMessageProps = {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
-  onCitationClick?: (citation: Citation) => void;
+  onCitationSelect?: (index: number) => void;
+  activeCitationIndex?: number | null;
+  trace?: RetrievalTraceState;
+  notice?: TurnNoticeState;
+  grounding?: AnswerGroundingState;
+  onRetry?: () => void;
   isStreaming?: boolean;
   timestamp?: number;
   onEdit?: (newContent: string) => void;
@@ -22,13 +28,33 @@ type ChatMessageProps = {
   isError?: boolean;
 };
 
+// Answers are documents, not chat bubbles. The renderer ships generous
+// article spacing; these overrides tighten it to scanning density without
+// forking the renderer itself.
+const PROSE_DENSITY =
+  "text-[13px] leading-[1.55] text-foreground/90 " +
+  "[&_p]:mb-2 [&_p]:leading-[1.55] [&_ul]:mb-2 [&_ol]:mb-2 [&_li]:leading-[1.5] " +
+  "[&_h1]:mt-4 [&_h1]:mb-1.5 [&_h1]:text-[14px] [&_h1]:pb-1 " +
+  "[&_h2]:mt-3 [&_h2]:mb-1.5 [&_h2]:text-[13px] " +
+  "[&_h3]:mt-2.5 [&_h3]:mb-1 [&_h3]:text-[13px] " +
+  "[&_table]:mb-3 [&_th]:px-2 [&_th]:py-1.5 [&_td]:px-2 [&_td]:py-1.5 " +
+  "[&_blockquote]:my-2 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0";
+
+const iconButton =
+  "inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-industrial hover:bg-[var(--surface-tertiary)] hover:text-foreground";
+
 export function ChatMessage({
   role,
   content,
   citations,
-  onCitationClick,
+  onCitationSelect,
+  activeCitationIndex = null,
+  trace,
+  notice,
+  grounding,
+  onRetry,
   isStreaming,
-  timestamp = Date.now() / 1000,
+  timestamp,
   onEdit,
   onRegenerate,
   onStop,
@@ -38,11 +64,17 @@ export function ChatMessage({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(content);
   const isUser = role === "user";
+  // The backend signals "nothing retrieved" with an empty citations event
+  // followed by its own message as a normal token.
+  const noResults = trace?.phase === "empty" && content.trim().length > 0;
 
-  const timeString = new Date(timestamp * 1000).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timeString =
+    timestamp === undefined
+      ? null
+      : new Date(timestamp * 1000).toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
   async function handleCopy() {
     await navigator.clipboard.writeText(content);
@@ -57,180 +89,154 @@ export function ChatMessage({
     setIsEditing(false);
   }
 
-  return (
-    <div className={cn("group flex gap-4 py-4 px-2 hover:bg-[var(--surface-tertiary)]/30 rounded-2xl transition-colors", isUser ? "flex-row-reverse" : "flex-row")}>
-      <div
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-full border shadow-sm",
-          isUser
-            ? "border-[var(--accent-steel)]/20 bg-gradient-to-br from-[var(--surface-secondary)] to-[var(--surface-tertiary)] text-[var(--accent-steel)]"
-            : "border-[var(--accent-steel)]/40 bg-gradient-to-br from-[var(--accent-steel)]/20 to-transparent text-[var(--accent-steel-muted)]",
-          isError && !isUser && "border-red-500/40 text-red-400 bg-red-500/10"
+  function handleExport() {
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TRACE_Export_${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Question ────────────────────────────────────────────────
+  if (isUser) {
+    if (isEditing) {
+      return (
+        <div className="flex flex-col gap-1.5 rounded-md border border-[var(--accent-steel)]/40 bg-[var(--surface-secondary)] p-2">
+          <textarea
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="w-full resize-none bg-transparent text-[13px] leading-[1.55] text-foreground outline-none"
+            rows={3}
+            autoFocus
+          />
+          <div className="flex justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="rounded px-2 py-1 text-[11px] font-medium text-muted-foreground transition-industrial hover:bg-[var(--surface)]/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              className="rounded bg-[var(--accent-steel)] px-2 py-1 text-[11px] font-medium text-white transition-industrial hover:bg-[var(--accent-steel)]/85"
+            >
+              Save &amp; submit
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="group flex items-start gap-2 pt-4 pb-1.5 first:pt-1">
+        <span
+          aria-hidden
+          className="mt-[5px] h-3 w-[2px] shrink-0 rounded-full bg-[var(--accent-steel)]"
+        />
+        <p className="min-w-0 flex-1 text-[13px] font-medium leading-[1.5] text-foreground">
+          {content}
+        </p>
+        {timeString && (
+          <span className="mt-[3px] shrink-0 font-mono text-[10px] text-muted-foreground/60 tabular-nums">
+            {timeString}
+          </span>
         )}
-      >
-        {isUser ? (
-          <UserRound className="size-5" strokeWidth={1.5} />
-        ) : isError ? (
-          <AlertTriangle className="size-5" strokeWidth={1.5} />
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className={cn(iconButton, "shrink-0 opacity-0 group-hover:opacity-100")}
+            title="Edit question"
+          >
+            <Edit2 className="size-3" strokeWidth={2} />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Answer ──────────────────────────────────────────────────
+  return (
+    <div className="group pb-3">
+      <div className="min-w-0">
+        {trace && <RetrievalTrace state={trace} />}
+
+        {/* Retrieval returned nothing: the backend's own wording, presented as
+            a result rather than disguised as a normal answer. */}
+        {noResults ? (
+          <TurnNotice notice={{ kind: "empty", text: content.trim() }} />
         ) : (
-          <Bot className="size-5" strokeWidth={1.5} />
+          <>
+            {notice && (
+              <TurnNotice
+                notice={notice}
+                onRetry={onRetry}
+                className={cn(content && "mb-2")}
+              />
+            )}
+
+            {content ? (
+              <div className={cn("max-w-none break-words", PROSE_DENSITY)}>
+                <EnterpriseReportRenderer
+                  content={content}
+                  citations={citations}
+                  activeCitationIndex={activeCitationIndex}
+                  onCitationSelect={onCitationSelect}
+                />
+              </div>
+            ) : null}
+
+            {/* Only once the answer is settled — a partial answer would be
+                measured against sentences the model has not finished. */}
+            {grounding && !isStreaming ? (
+              <AnswerGrounding state={grounding} />
+            ) : null}
+          </>
         )}
       </div>
 
-      <div className={cn("flex flex-col gap-2 max-w-[85%]", isUser ? "items-end" : "items-start")}>
-        <div className="flex items-center gap-2 px-1">
-          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-            {isUser ? "You" : "Industrial Copilot"}
-          </span>
-          <span className="text-[10px] text-muted-foreground/60">{timeString}</span>
-        </div>
-
-        {isEditing && isUser ? (
-          <div className="flex w-full min-w-[300px] flex-col gap-2 rounded-2xl border border-[var(--accent-steel)]/40 bg-[var(--surface-secondary)] p-3 shadow-lg">
-            <textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="w-full resize-none bg-transparent text-sm text-foreground outline-none leading-relaxed"
-              rows={3}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="rounded-lg bg-[var(--accent-steel)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--accent-steel)]/80 transition-colors"
-              >
-                Save & Submit
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={cn(
-              "relative space-y-3 rounded-2xl px-5 py-3.5",
-              isUser
-                ? "bg-[var(--surface-secondary)] text-foreground border border-white/5"
-                : "bg-transparent",
-              isError && "border border-red-500/20 bg-red-500/5"
-            )}
+      <div className="mt-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <button type="button" onClick={handleCopy} className={iconButton} title="Copy answer">
+          {copied ? (
+            <Check className="size-3 text-[var(--success)]" strokeWidth={2.25} />
+          ) : (
+            <Copy className="size-3" strokeWidth={2} />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={handleExport}
+          className={iconButton}
+          title="Export as Markdown"
+        >
+          <Download className="size-3" strokeWidth={2} />
+        </button>
+        {onRegenerate && !isStreaming && (
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className={iconButton}
+            title={isError ? "Retry" : "Regenerate"}
           >
-            {isUser ? (
-              <p className="break-words text-[15px] leading-relaxed text-foreground/90">
-                {content}
-              </p>
-            ) : (
-              <div className="prose prose-invert prose-p:leading-relaxed prose-pre:bg-[var(--surface-tertiary)] prose-pre:border prose-pre:border-white/10 prose-sm max-w-none break-words text-[15px] text-foreground/90">
-                {content ? (
-                  <EnterpriseReportRenderer content={content} />
-                ) : isStreaming ? (
-                  <span className="animate-pulse text-muted-foreground">Thinking...</span>
-                ) : (
-                  ""
-                )}
-              </div>
-            )}
-
-            {citations && citations.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-2">
-                {citations.map((citation, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--accent-steel)]/20 bg-[var(--accent-steel)]/10 px-2.5 py-1 text-xs text-[var(--accent-steel-muted)] transition-all hover:border-[var(--accent-steel)]/40 hover:bg-[var(--accent-steel)]/20 shadow-sm"
-                    onClick={() => onCitationClick?.(citation)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onCitationClick?.(citation);
-                      }
-                    }}
-                  >
-                    <PlaySquare className="size-3" strokeWidth={2} />
-                    <span className="font-medium text-white/90">
-                      {citation.document_name}
-                    </span>
-                    {citation.page_number != null && (
-                      <span className="text-white/60">p.{citation.page_number}</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+            <RotateCw className="size-3" strokeWidth={2} />
+          </button>
         )}
-
-        {/* Message Actions */}
-        {!isEditing && (
-          <div className={cn("flex items-center gap-2 pt-1 opacity-0 group-hover:opacity-100 transition-opacity px-2", isUser && "justify-end")}>
-            {isUser && onEdit && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--surface-tertiary)] hover:text-white"
-                title="Edit prompt"
-              >
-                <Edit2 className="size-3.5" strokeWidth={2} />
-              </button>
-            )}
-            
-                {!isUser && (
-                  <>
-                    <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--surface-tertiary)] hover:text-white"
-                  title="Copy message"
-                >
-                  {copied ? <Check className="size-3.5 text-green-400" strokeWidth={2} /> : <Copy className="size-3.5" strokeWidth={2} />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const blob = new Blob([content], { type: "text/markdown" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `TRACE_Export_${new Date().toISOString().slice(0, 10)}.md`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--surface-tertiary)] hover:text-white"
-                  title="Export Markdown"
-                >
-                  <svg className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                </button>
-                
-                {onRegenerate && !isStreaming && (
-                  <button
-                    onClick={onRegenerate}
-                    className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-muted-foreground transition-colors hover:bg-[var(--surface-tertiary)] hover:text-white"
-                    title={isError ? "Retry" : "Regenerate"}
-                  >
-                    <RotateCw className="size-3.5" strokeWidth={2} />
-                  </button>
-                )}
-                
-                {isStreaming && onStop && (
-                  <button
-                    onClick={onStop}
-                    className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-red-400 transition-colors hover:bg-red-400/10"
-                    title="Stop generating"
-                  >
-                    <div className="size-3 bg-red-400 rounded-sm" />
-                    <span className="font-medium">Stop</span>
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+        {isStreaming && onStop && (
+          <button
+            type="button"
+            onClick={onStop}
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium text-[var(--danger)] transition-industrial hover:bg-[var(--danger)]/10"
+            title="Stop generating"
+          >
+            <Square className="size-2.5 fill-current" strokeWidth={0} />
+            Stop
+          </button>
         )}
       </div>
     </div>

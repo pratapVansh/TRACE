@@ -92,7 +92,7 @@ export function SearchPageContent() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 lg:gap-8">
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-3">
       <KnowledgePageHeader
         sectionLabel="Knowledge Management"
         title="Search"
@@ -109,7 +109,7 @@ export function SearchPageContent() {
       <SearchFiltersPanel filters={filters} onChange={setFilters} />
 
       {error ? (
-        <div className="rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+        <div className="rounded-md border border-[var(--danger)]/25 bg-[var(--danger)]/10 px-4 py-3 text-[12px] text-[var(--danger)]">
           {error}
         </div>
       ) : null}
@@ -117,9 +117,9 @@ export function SearchPageContent() {
       {activeQuery ? (
         <>
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="industrial-card p-6">
+                <div key={i} className="industrial-card p-3">
                   <div className="flex gap-4">
                     <Skeleton className="h-8 w-14 shrink-0 rounded-lg" />
                     <div className="flex-1 space-y-3">
@@ -132,7 +132,7 @@ export function SearchPageContent() {
               ))}
             </div>
           ) : results.length === 0 ? (
-            <div className="industrial-card flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <div className="industrial-card flex flex-col items-start gap-1 px-3 py-4">
               <div className="flex size-14 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
                 <svg
                   className="size-6 text-muted-foreground"
@@ -148,25 +148,25 @@ export function SearchPageContent() {
                   />
                 </svg>
               </div>
-              <p className="text-base font-medium text-white">
+              <p className="text-[13px] font-medium text-foreground">
                 No results found
               </p>
-              <p className="max-w-md text-sm text-muted-foreground">
+              <p className="max-w-md text-[12px] text-muted-foreground">
                 No matches for &ldquo;{activeQuery}&rdquo;. Try adjusting your
                 search terms or removing filters.
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-2">
+              <p className="text-[12px] text-muted-foreground">
                 Found{" "}
-                <span className="font-medium text-white">
+                <span className="font-medium text-foreground">
                   {results.length}
                 </span>{" "}
                 result{results.length === 1 ? "" : "s"} for &ldquo;
                 {activeQuery}&rdquo;
               </p>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {results.map((result, i) => (
                   <SearchResultCard
                     key={`${result.document_id}-${result.page ?? 0}-${i}`}
@@ -177,9 +177,9 @@ export function SearchPageContent() {
               </div>
 
               {isLoadingMore ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={`more-skel-${i}`} className="industrial-card p-6">
+                    <div key={`more-skel-${i}`} className="industrial-card p-3">
                       <div className="flex gap-4">
                         <Skeleton className="h-8 w-14 shrink-0 rounded-lg" />
                         <div className="flex-1 space-y-3">
@@ -197,7 +197,7 @@ export function SearchPageContent() {
           )}
         </>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-12">
+        <div className="grid gap-3 xl:grid-cols-12">
           <div className="xl:col-span-5">
             <SearchHistoryPanel
               history={history}
@@ -210,9 +210,9 @@ export function SearchPageContent() {
           </div>
           <div className="xl:col-span-7">
             {isRecentLoading ? (
-              <div className="industrial-card space-y-3 p-6">
+              <div className="industrial-card space-y-3 p-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                  <Skeleton key={i} className="h-16 w-full rounded-md" />
                 ))}
               </div>
             ) : (

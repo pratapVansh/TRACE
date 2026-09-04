@@ -11,7 +11,6 @@ class Permission(StrEnum):
     SEARCH = "search"
     COPILOT = "copilot"
     KNOWLEDGE_GRAPH = "knowledge_graph"
-    AI_AGENTS = "ai_agents"
     ASSETS_READ = "assets_read"
     ASSETS_WRITE = "assets_write"
     MAINTENANCE = "maintenance"
@@ -20,7 +19,6 @@ class Permission(StrEnum):
     USER_MANAGEMENT = "user_management"
     ROLE_MANAGEMENT = "role_management"
     SYSTEM_SETTINGS = "system_settings"
-    WORKSPACE = "workspace"
 
 
 ALL_PERMISSIONS: frozenset[Permission] = frozenset(Permission)
@@ -35,13 +33,11 @@ ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
             Permission.SEARCH,
             Permission.COPILOT,
             Permission.KNOWLEDGE_GRAPH,
-            Permission.AI_AGENTS,
             Permission.ASSETS_READ,
             Permission.ASSETS_WRITE,
             Permission.MAINTENANCE,
             Permission.COMPLIANCE,
             Permission.SOP_LIBRARY,
-            Permission.WORKSPACE,
         }
     ),
     "Operator": frozenset(
@@ -51,7 +47,6 @@ ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
             Permission.SEARCH,
             Permission.COPILOT,
             Permission.MAINTENANCE,
-            Permission.WORKSPACE,
         }
     ),
     "Viewer": frozenset(

@@ -85,7 +85,7 @@ export function UserFilters({
           type="button"
           disabled={!hasActiveFilters}
           onClick={onClear}
-          className="h-10 w-full rounded-xl border border-border px-3 text-sm text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-10 w-full rounded-xl border border-border px-3 text-sm text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           Clear filters
         </button>

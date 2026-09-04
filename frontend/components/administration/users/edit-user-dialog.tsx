@@ -160,7 +160,7 @@ export function EditUserDialog({
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-[var(--surface-secondary)]/50 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-medium text-white">{user.fullName}</p>
+            <p className="text-base font-medium text-foreground">{user.fullName}</p>
             <UserRoleBadge role={user.role} />
             <UserStatusBadge isActive={user.isActive} />
           </div>
@@ -177,7 +177,7 @@ export function EditUserDialog({
         ) : null}
 
         <section className="space-y-3">
-          <h4 className="text-sm font-medium text-white">Role assignment</h4>
+          <h4 className="text-sm font-medium text-foreground">Role assignment</h4>
           <form className="space-y-3" onSubmit={submitRole}>
             <FormField
               label="Role"
@@ -213,10 +213,10 @@ export function EditUserDialog({
         </section>
 
         <section className="space-y-3">
-          <h4 className="text-sm font-medium text-white">Account status</h4>
+          <h4 className="text-sm font-medium text-foreground">Account status</h4>
           <div className="flex items-center justify-between rounded-xl border border-border bg-[var(--surface-secondary)]/30 p-4">
             <div>
-              <p className="text-sm text-white">
+              <p className="text-sm text-foreground">
                 {user.isActive ? "Account is active" : "Account is inactive"}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -250,7 +250,7 @@ export function EditUserDialog({
         </section>
 
         <section className="space-y-3">
-          <h4 className="text-sm font-medium text-white">Reset password</h4>
+          <h4 className="text-sm font-medium text-foreground">Reset password</h4>
           <form className="space-y-3" onSubmit={submitPassword}>
             <FormField
               label="New password"

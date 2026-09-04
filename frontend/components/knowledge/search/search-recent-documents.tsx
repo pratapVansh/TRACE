@@ -10,10 +10,10 @@ type SearchRecentDocumentsProps = {
 
 export function SearchRecentDocuments({ documents }: SearchRecentDocumentsProps) {
   return (
-    <div className="industrial-card p-5 sm:p-6">
+    <div className="industrial-card p-2.5 sm:p-3">
       <p className="section-label">Knowledge base</p>
-      <h3 className="mt-2 text-lg font-semibold text-white">Recent documents</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <h3 className="mt-2 text-[14px] font-semibold text-foreground">Recent documents</h3>
+      <p className="mt-2 text-[12px] text-muted-foreground">
         Recently indexed and updated technical records.
       </p>
 
@@ -21,14 +21,14 @@ export function SearchRecentDocuments({ documents }: SearchRecentDocumentsProps)
         {documents.map((doc) => (
           <li
             key={doc.id}
-            className="flex gap-4 rounded-xl border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
+            className="flex gap-4 rounded-md border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
           >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface)] text-[var(--accent-steel-muted)]">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface)] text-[var(--accent-steel-muted)]">
               <FileText className="size-4.5" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-sm font-medium text-white">{doc.title}</p>
+                <p className="text-[12px] font-medium text-foreground">{doc.title}</p>
                 <DocumentStatusBadge status={doc.status} />
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

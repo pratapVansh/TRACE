@@ -23,14 +23,14 @@ export function TraceLogo({
     <div className={cn("inline-flex items-center gap-3", className)}>
       <div
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-xl border border-[var(--accent-steel)]/30 bg-[var(--surface)] font-semibold text-white shadow-sm",
+          "flex shrink-0 items-center justify-center rounded-xl border border-[var(--accent-steel)]/30 bg-[var(--surface)] font-semibold text-foreground shadow-sm",
           sizes.box,
         )}
       >
         TR
       </div>
       {showWordmark ? (
-        <span className={cn("font-semibold text-white", sizes.word)}>
+        <span className={cn("font-semibold text-foreground", sizes.word)}>
           TRACE
         </span>
       ) : null}

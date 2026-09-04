@@ -48,9 +48,9 @@ function GeometricBackdrop() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       <div className="absolute -top-20 -left-16 size-64 rounded-full border border-white/[0.04]" />
       <div className="absolute top-1/3 -right-24 size-80 rounded-full border border-white/[0.03]" />
-      <div className="absolute bottom-24 left-1/4 h-px w-72 rotate-12 bg-white/[0.06]" />
+      <div className="absolute bottom-24 left-1/4 h-px w-72 rotate-12 bg-[var(--surface)]/[0.06]" />
       <div className="absolute top-1/2 right-1/3 size-32 rotate-45 border border-white/[0.04]" />
-      <div className="absolute right-16 bottom-16 h-40 w-px bg-white/[0.05]" />
+      <div className="absolute right-16 bottom-16 h-40 w-px bg-[var(--surface)]/[0.05]" />
     </div>
   );
 }
@@ -65,7 +65,7 @@ export function AuthBrandPanel() {
 
         <div className="max-w-xl space-y-4">
           <p className="section-label">Industrial Knowledge Intelligence</p>
-          <h1 className="text-3xl leading-[1.15] font-semibold text-white xl:text-[2.75rem]">
+          <h1 className="text-3xl leading-[1.15] font-semibold text-foreground xl:text-[2.75rem]">
             Technical Records &amp; Asset Compliance Engine
           </h1>
           <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
@@ -86,7 +86,7 @@ export function AuthBrandPanel() {
                   <Icon className="size-4.5" strokeWidth={1.75} />
                 </div>
                 <div className="space-y-1">
-                  <h2 className="text-sm font-medium text-white">{title}</h2>
+                  <h2 className="text-sm font-medium text-foreground">{title}</h2>
                   <p className="text-sm leading-relaxed text-muted-foreground">
                     {description}
                   </p>

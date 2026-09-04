@@ -36,13 +36,13 @@ export function AdminDialog({
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="section-label">Administration</p>
-            <h3 className="mt-1 text-xl font-semibold text-white">{title}</h3>
+            <h3 className="mt-1 text-xl font-semibold text-foreground">{title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{description}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-[var(--surface-secondary)] hover:text-white"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-[var(--surface-secondary)] hover:text-foreground"
             aria-label="Close"
           >
             <X className="size-4" />

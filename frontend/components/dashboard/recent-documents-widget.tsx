@@ -27,11 +27,11 @@ export function RecentDocumentsWidget({
       {isLoading ? (
         <ul className="flex flex-1 flex-col gap-3">
           {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-20 w-full rounded-xl" />
+            <Skeleton key={index} className="h-20 w-full rounded-md" />
           ))}
         </ul>
       ) : documents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           No documents uploaded yet. Upload documents to see them here.
         </p>
       ) : (
@@ -39,14 +39,14 @@ export function RecentDocumentsWidget({
           {documents.map((doc) => (
             <li
               key={doc.id}
-              className="flex gap-4 rounded-xl border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
+              className="flex gap-4 rounded-md border border-border bg-[var(--surface-secondary)] p-4 transition-industrial hover:border-[var(--accent-steel)]/20"
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface)] text-[var(--accent-steel-muted)]">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-[var(--surface)] text-[var(--accent-steel-muted)]">
                 <FileText className="size-4.5" strokeWidth={1.75} />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-white">{doc.title}</p>
+                  <p className="text-[12px] font-medium text-foreground">{doc.title}</p>
                   <DocumentStatusBadge status={doc.status} />
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

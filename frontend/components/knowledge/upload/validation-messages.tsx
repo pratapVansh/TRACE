@@ -33,7 +33,7 @@ export function ValidationMessages({ messages }: ValidationMessagesProps) {
           <li
             key={message.id}
             className={cn(
-              "flex items-start gap-3 rounded-xl border px-4 py-3 text-sm",
+              "flex items-start gap-3 rounded-md border px-4 py-3 text-[12px]",
               STYLES[message.type],
             )}
           >

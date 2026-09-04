@@ -3,7 +3,6 @@ import {
   Bot,
   ClipboardList,
   Cog,
-  Cpu,
   LayoutDashboard,
   Network,
   ScrollText,
@@ -76,52 +75,11 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Network,
         permission: PERMISSIONS.KNOWLEDGE_GRAPH,
       },
-      {
-        href: APP_ROUTES.aiAgents,
-        label: "AI Agents",
-        icon: Cpu,
-        permission: PERMISSIONS.AI_AGENTS,
-      },
-      {
-        href: APP_ROUTES.sopLibrary,
-        label: "SOP Library",
-        icon: BookOpen,
-        permission: PERMISSIONS.SOP_LIBRARY,
-      },
-    ],
-  },
-  {
-    title: "Asset & Maintenance",
-    items: [
-      {
-        href: APP_ROUTES.assets,
-        label: "Assets",
-        icon: Cog,
-        permission: PERMISSIONS.ASSETS_READ,
-      },
-      {
-        href: APP_ROUTES.assetHierarchy,
-        label: "Asset Hierarchy",
-        icon: Network,
-        permission: PERMISSIONS.ASSETS_READ,
-      },
-      {
-        href: APP_ROUTES.maintenance,
-        label: "Maintenance",
-        icon: ClipboardList,
-        permission: PERMISSIONS.MAINTENANCE,
-      },
     ],
   },
   {
     title: "Governance",
     items: [
-      {
-        href: APP_ROUTES.compliance,
-        label: "Compliance Center",
-        icon: Shield,
-        permission: PERMISSIONS.COMPLIANCE,
-      },
       {
         href: APP_ROUTES.auditLogs,
         label: "Audit Logs",
@@ -139,18 +97,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Users,
         permission: PERMISSIONS.USER_MANAGEMENT,
       },
-      {
-        href: APP_ROUTES.settingsRoles,
-        label: "Roles & Permissions",
-        icon: UserCog,
-        permission: PERMISSIONS.ROLE_MANAGEMENT,
-      },
-      {
-        href: APP_ROUTES.settings,
-        label: "System Settings",
-        icon: Settings,
-        permission: PERMISSIONS.SYSTEM_SETTINGS,
-      },
     ],
   },
 ];
@@ -161,7 +107,7 @@ export function isNavItemActive(pathname: string, href: string): boolean {
       ? pathname.slice(0, -1)
       : pathname;
 
-  if (href === APP_ROUTES.dashboard || href === APP_ROUTES.settings) {
+  if (href === APP_ROUTES.dashboard) {
     return normalizedPath === href;
   }
 

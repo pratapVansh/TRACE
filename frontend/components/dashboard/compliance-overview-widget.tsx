@@ -41,11 +41,11 @@ export function ComplianceOverviewWidget({ metrics }: ComplianceOverviewWidgetPr
         action={<Badge variant="success">{averageScore}% avg score</Badge>}
       />
 
-      <div className="flex flex-1 flex-col gap-5">
+      <div className="flex flex-1 flex-col gap-2.5">
         {metrics.map((metric) => (
           <div key={metric.id} className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-white">{metric.standard}</p>
+              <p className="text-[12px] font-medium text-foreground">{metric.standard}</p>
               <Badge variant={STATUS_VARIANT[metric.status]}>
                 {STATUS_LABEL[metric.status]}
               </Badge>

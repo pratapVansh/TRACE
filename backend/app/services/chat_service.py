@@ -26,7 +26,12 @@ from app.schemas.chat import (
     SnapshotResponse,
 )
 from app.schemas.memory import MemorySearchResult
+from app.schemas.rag import Citation
 from app.schemas.retrieval import RetrievalFilter
+from app.services.evidence_classification import (
+    classify_statements,
+    summarize_statements,
+)
 from app.services.rag_service import GraphRagService, RagService
 from app.services.user_graph_service import UserGraphService
 
@@ -305,6 +310,10 @@ class ChatService:
             rag_response.confidence,
         )
 
+        statements = classify_statements(
+            rag_response.answer, rag_response.citations,
+        )
+
         return ChatResponse(
             answer=rag_response.answer,
             citations=rag_response.citations,
@@ -312,6 +321,8 @@ class ChatService:
             confidence=rag_response.confidence,
             processing_time=round(elapsed, 3),
             conversation_id=str(conv.id),
+            classified_statements=statements,
+            evidence=summarize_statements(statements),
         )
 
     async def chat_stream(
@@ -352,20 +363,26 @@ class ChatService:
             history=history_dicts,
             additional_system_context=combined_context or None,
         ):  # GraphRagService.query_stream (falls back to semantic if hybrid fails)
-            yield event
             if event.startswith("event: citations"):
+                yield event
                 for line in event.split("\n"):
                     if line.startswith("data: "):
                         payload = json.loads(line[6:])
                         citations_data = payload.get("citations")
                         break
             elif event.startswith("event: token"):
+                yield event
                 for line in event.split("\n"):
                     if line.startswith("data: "):
                         payload = json.loads(line[6:])
                         full_answer += payload.get("token", "")
                         break
             elif event.startswith("event: done"):
+                # Emitted before `done` on purpose: `done` is the terminal
+                # event, and clients stop reading once they see it.
+                yield self._evidence_event(full_answer, citations_data)
+                yield event
+
                 await self._persist_turn(
                     conversation_id=conv.id,
                     question=question,
@@ -391,6 +408,24 @@ class ChatService:
                         await self._user_graph.process_message(str(conv.user_id), question)
                     except Exception:
                         logger.warning("UserGraph extraction failed (non-fatal)", exc_info=True)
+            else:
+                # `error`, and anything added later, still reaches the client.
+                yield event
+
+    @staticmethod
+    def _evidence_event(answer: str, citations_data: list[dict] | None) -> str:
+        """Build the `evidence` SSE frame for a finished streamed answer.
+
+        `citations_data` arrives as raw JSON dicts off the wire, so it is
+        re-validated into `Citation` before classification.
+        """
+        citations = [Citation(**c) for c in (citations_data or [])]
+        statements = classify_statements(answer, citations)
+        payload = {
+            "classified_statements": [s.model_dump() for s in statements],
+            "evidence": summarize_statements(statements).model_dump(),
+        }
+        return f"event: evidence\ndata: {json.dumps(payload)}\n\n"
 
     async def add_message(
         self,

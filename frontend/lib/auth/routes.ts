@@ -12,18 +12,10 @@ export const APP_ROUTES = {
   documents: "/documents",
   documentsUpload: "/documents/upload",
   search: "/search",
-  assets: "/assets",
-  assetHierarchy: "/assets/hierarchy",
-  maintenance: "/maintenance",
-  compliance: "/compliance",
   auditLogs: "/audit-logs",
-  sopLibrary: "/sop-library",
   copilot: "/copilot",
   knowledgeGraph: "/knowledge-graph",
-  aiAgents: "/ai-agents",
-  settings: "/settings",
   settingsUsers: "/settings/users",
-  settingsRoles: "/settings/roles",
   accessDenied: "/access-denied",
 } as const;
 
@@ -34,18 +26,10 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   [APP_ROUTES.documents]: PERMISSIONS.DOCUMENTS_READ,
   [APP_ROUTES.documentsUpload]: PERMISSIONS.DOCUMENTS_UPLOAD,
   [APP_ROUTES.search]: PERMISSIONS.SEARCH,
-  [APP_ROUTES.assets]: PERMISSIONS.ASSETS_READ,
-  [APP_ROUTES.assetHierarchy]: PERMISSIONS.ASSETS_READ,
-  [APP_ROUTES.maintenance]: PERMISSIONS.MAINTENANCE,
-  [APP_ROUTES.compliance]: PERMISSIONS.COMPLIANCE,
   [APP_ROUTES.auditLogs]: PERMISSIONS.COMPLIANCE,
-  [APP_ROUTES.sopLibrary]: PERMISSIONS.SOP_LIBRARY,
   [APP_ROUTES.copilot]: PERMISSIONS.COPILOT,
   [APP_ROUTES.knowledgeGraph]: PERMISSIONS.KNOWLEDGE_GRAPH,
-  [APP_ROUTES.aiAgents]: PERMISSIONS.AI_AGENTS,
-  [APP_ROUTES.settings]: PERMISSIONS.SYSTEM_SETTINGS,
   [APP_ROUTES.settingsUsers]: PERMISSIONS.USER_MANAGEMENT,
-  [APP_ROUTES.settingsRoles]: PERMISSIONS.ROLE_MANAGEMENT,
 };
 
 export function getPermissionForRoute(pathname: string): Permission | null {

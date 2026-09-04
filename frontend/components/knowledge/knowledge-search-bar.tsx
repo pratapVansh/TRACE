@@ -33,7 +33,7 @@ export function KnowledgeSearchBar({
         <button
           type="button"
           onClick={() => onChange("")}
-          className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-industrial hover:text-white"
+          className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-industrial hover:text-foreground"
           aria-label="Clear search"
         >
           <X className="size-4" />

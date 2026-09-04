@@ -29,36 +29,34 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <button
           type="button"
           aria-label="Close navigation"
-          className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-150 lg:hidden"
           onClick={onClose}
         />
       ) : null}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-border bg-[var(--sidebar)] transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-56 shrink-0 flex-col border-r border-border bg-[var(--sidebar)] transition-transform duration-150 lg:static lg:z-auto lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-5">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
           <TraceLogo size="sm" />
           <button
             type="button"
             aria-label="Close menu"
-            className="rounded-lg p-2 text-muted-foreground transition-industrial hover:bg-[var(--surface)] hover:text-white lg:hidden"
+            className="rounded p-1 text-muted-foreground transition-industrial hover:bg-[var(--surface-secondary)] hover:text-foreground lg:hidden"
             onClick={onClose}
           >
-            <X className="size-4" />
+            <X className="size-3.5" />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 py-6">
+        <nav className="flex-1 overflow-y-auto px-2 py-2">
           {visibleSections.map((section) => (
-            <div key={section.title} className="mb-8 last:mb-0">
-              <p className="mb-3 px-3 text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                {section.title}
-              </p>
-              <ul className="space-y-1">
+            <div key={section.title} className="mb-3 last:mb-0">
+              <p className="section-label mb-1 px-2">{section.title}</p>
+              <ul>
                 {section.items.map(({ href, label, icon: Icon }) => {
                   const isActive = isNavItemActive(pathname, href);
 
@@ -67,15 +65,32 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                       <Link
                         href={href}
                         onClick={onClose}
+                        aria-current={isActive ? "page" : undefined}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-industrial",
+                          "relative flex h-7 items-center gap-2 rounded px-2 text-[12px] transition-industrial",
                           isActive
-                            ? "border border-[var(--accent-steel)]/25 bg-[var(--surface)] text-white shadow-sm"
-                            : "text-muted-foreground hover:bg-[var(--surface)]/70 hover:text-foreground",
+                            ? "bg-[var(--surface-secondary)] font-medium text-foreground"
+                            : "text-muted-foreground hover:bg-[var(--surface-secondary)]/60 hover:text-foreground",
                         )}
                       >
-                        <Icon className="size-4 shrink-0" strokeWidth={1.75} />
-                        <span>{label}</span>
+                        {/* Active marker as a rule, not a filled pill. */}
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full transition-industrial",
+                            isActive ? "bg-[var(--accent-steel)]" : "bg-transparent",
+                          )}
+                        />
+                        <Icon
+                          className={cn(
+                            "size-3.5 shrink-0",
+                            isActive
+                              ? "text-[var(--accent-steel)]"
+                              : "text-muted-foreground/70",
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        <span className="truncate">{label}</span>
                       </Link>
                     </li>
                   );
@@ -85,9 +100,9 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="border-t border-border px-5 py-5">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Industrial knowledge intelligence for critical asset operations.
+        <div className="shrink-0 border-t border-border px-3 py-2">
+          <p className="font-mono text-[10px] text-muted-foreground/60">
+            TRACE · knowledge intelligence
           </p>
         </div>
       </aside>

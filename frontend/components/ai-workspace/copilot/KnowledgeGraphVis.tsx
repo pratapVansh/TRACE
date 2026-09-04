@@ -44,7 +44,7 @@ export function KnowledgeGraphVis({ data }: { data: string | GraphData }) {
             <div className="size-12 rounded-full bg-indigo-500/20 border-2 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)] flex items-center justify-center transition-transform group-hover:scale-110 group-hover:bg-indigo-500/30">
                <Network className="size-5 text-indigo-300" />
             </div>
-            <span className="mt-2 px-2 py-1 bg-[var(--surface-tertiary)] border border-white/10 rounded-md text-xs font-medium text-white shadow-lg whitespace-nowrap">
+            <span className="mt-2 px-2 py-1 bg-[var(--surface-tertiary)] border border-border rounded-md text-xs font-medium text-foreground shadow-lg whitespace-nowrap">
               {graphData.nodes[0].label}
             </span>
           </div>
@@ -60,7 +60,7 @@ export function KnowledgeGraphVis({ data }: { data: string | GraphData }) {
           return (
             <div key={node.id} className="absolute top-1/2 left-1/2 z-10 flex flex-col items-center group cursor-pointer" style={{ transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))` }}>
               <div className="size-8 rounded-full bg-sky-500/20 border border-sky-500/50 shadow-[0_0_10px_rgba(14,165,233,0.1)] transition-transform group-hover:scale-110 group-hover:bg-sky-500/30"></div>
-              <span className="mt-1 px-1.5 py-0.5 bg-[var(--surface-tertiary)] border border-white/10 rounded text-[10px] font-medium text-white/90 shadow-lg whitespace-nowrap">
+              <span className="mt-1 px-1.5 py-0.5 bg-[var(--surface-tertiary)] border border-border rounded text-[10px] font-medium text-foreground/90 shadow-lg whitespace-nowrap">
                 {node.label}
               </span>
             </div>
@@ -92,7 +92,7 @@ export function KnowledgeGraphVis({ data }: { data: string | GraphData }) {
       </div>
       
       <div className="absolute top-4 left-4 flex flex-col gap-1">
-        <div className="text-xs font-semibold text-white/80 uppercase tracking-wider">Entity Graph</div>
+        <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Entity Graph</div>
         <div className="text-[10px] text-muted-foreground">{graphData.nodes.length} Nodes &middot; {graphData.edges.length} Relationships</div>
       </div>
     </div>
@@ -104,9 +104,9 @@ export function KnowledgeGraphVis({ data }: { data: string | GraphData }) {
         <div className="flex w-full items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-[var(--accent-steel)]">
             <Network className="size-4" />
-            <span className="font-semibold text-white/90">Knowledge Graph View</span>
+            <span className="font-semibold text-foreground/90">Knowledge Graph View</span>
           </div>
-          <button onClick={() => setIsFullscreen(true)} className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-white transition-colors">
+          <button onClick={() => setIsFullscreen(true)} className="p-1.5 hover:bg-[var(--surface)]/10 rounded-md text-muted-foreground hover:text-foreground transition-colors">
             <Maximize2 className="size-4" />
           </button>
         </div>
@@ -118,15 +118,15 @@ export function KnowledgeGraphVis({ data }: { data: string | GraphData }) {
           <div className="flex items-center justify-between border-b border-[var(--accent-steel)]/10 px-6 py-4 bg-[var(--surface-secondary)]">
             <div className="flex items-center gap-3">
               <Network className="size-5 text-[var(--accent-steel)]" />
-              <h3 className="font-semibold text-white">Interactive Knowledge Graph</h3>
-              <div className="ml-4 flex items-center px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+              <h3 className="font-semibold text-foreground">Interactive Knowledge Graph</h3>
+              <div className="ml-4 flex items-center px-3 py-1 bg-[var(--surface)]/5 border border-border rounded-full">
                 <Search className="size-3.5 text-muted-foreground mr-2" />
-                <input type="text" placeholder="Search entities..." className="bg-transparent border-none outline-none text-sm text-white w-48 placeholder:text-white/30" />
+                <input type="text" placeholder="Search entities..." className="bg-transparent border-none outline-none text-sm text-foreground w-48 placeholder:text-foreground/30" />
               </div>
             </div>
             <button 
               onClick={() => setIsFullscreen(false)}
-              className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+              className="p-1.5 rounded-md hover:bg-[var(--surface)]/10 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="size-5" />
             </button>
