@@ -8,7 +8,11 @@ from app.core.logging import logger
 from app.repositories.document_repository import DocumentRepository
 from app.services.audit_service import AuditService
 from app.services.document_processing_service import DocumentProcessingService
-from app.services.processing_status import ProcessingStatus
+from app.services.processing_status import (
+    PROCESSING_TO_DOCUMENT_STATUS,
+    ProcessingStage,
+    ProcessingStatus,
+)
 
 
 class DocumentProcessingQueueService:
@@ -83,11 +87,51 @@ class DocumentProcessingQueueService:
             return
 
         if job.retry_count >= job.max_retries:
-            logger.warning(
-                "Ingestion job exhausted retries job_id=%s retry_count=%d",
+            # Land the job on a terminal state. Returning here left the job and
+            # its document in whatever non-terminal state the failed attempt
+            # had set — 'processing' or 'queued', with finished_at null — so a
+            # document that could never be processed was indistinguishable from
+            # one still in flight, and delete_document refused to touch it
+            # forever. Written explicitly rather than relied on from
+            # process_document's own failure path, because the errors raised
+            # before that path opens (unknown job, missing document) skip it.
+            document_id = job.document_id
+            finished_at = datetime.now(UTC)
+            final_error = (
+                f"Failed after {job.retry_count}/{job.max_retries} attempts: "
+                f"{error[:500]}"
+            )
+            await self._document_repository.update_ingestion_job(
                 job_id,
+                status=ProcessingStatus.FAILED.value,
+                stage=ProcessingStage.FAILED.value,
+                error=final_error,
+                finished_at=finished_at,
+            )
+            await self._document_repository.update_document(
+                document_id,
+                status=PROCESSING_TO_DOCUMENT_STATUS[ProcessingStatus.FAILED.value],
+            )
+            await self._session.commit()
+
+            logger.warning(
+                "Ingestion job exhausted retries job_id=%s document_id=%s "
+                "retry_count=%d — marked failed",
+                job_id,
+                document_id,
                 job.retry_count,
             )
+
+            await self._audit_service.log(
+                user_id=None,
+                username=None,
+                action="processing_failed",
+                entity_type="ingestion_job",
+                entity_id=job_id,
+                status="failure",
+                error_message=final_error,
+            )
+            await self._audit_service.flush()
             return
 
         retry_count = job.retry_count + 1

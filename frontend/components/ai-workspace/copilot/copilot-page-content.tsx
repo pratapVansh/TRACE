@@ -10,6 +10,8 @@ import {
 import { ConversationSidebar } from "@/components/ai-workspace/copilot/conversation-sidebar";
 import type { RetrievalTraceState } from "@/components/ai-workspace/copilot/retrieval-trace";
 import { SourcesPanel } from "@/components/ai-workspace/copilot/sources-panel";
+import { DocumentPreviewDialog } from "@/components/knowledge/documents/document-preview-dialog";
+import { useDocumentActions } from "@/hooks/use-document-actions";
 import {
   CURATED_SUGGESTIONS,
   type Suggestion,
@@ -111,7 +113,37 @@ function restoreConversationState(
   setters.turnIndexRef.current = assistantCount;
 }
 
+/**
+ * Whether two citations point at the same retrieved passage.
+ *
+ * Identity is the chunk id. An unidentified chunk (`null`) matches nothing,
+ * including another unidentified chunk — otherwise "missing" collapses into a
+ * single value that everything compares equal to.
+ */
+function isSameCitation(
+  a: Citation | undefined,
+  b: Citation | undefined,
+): boolean {
+  if (!a?.chunk_id || !b?.chunk_id) return false;
+  return a.chunk_id === b.chunk_id;
+}
+
 export function CopilotPageContent() {
+  // Opening a cited source reuses the Documents page's preview stack —
+  // same fetch, same dialog — so a citation lands on the real file rather
+  // than on the passage the model was already shown.
+  const {
+    previewDocument,
+    previewUrl,
+    previewText,
+    isPreviewLoading,
+    closePreview,
+    handlePreviewById,
+    handleDownload,
+    actionError: previewError,
+    setActionError: setPreviewError,
+  } = useDocumentActions();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [isWaiting, setIsWaiting] = useState(false);
@@ -277,8 +309,14 @@ export function CopilotPageContent() {
 
       // The panel lists the latest turn. A passage from an older turn is not
       // in that list, so pin it instead of expanding the wrong row.
-      const inPanel =
-        citation != null && lastCitations[index]?.chunk_id === citation.chunk_id;
+      //
+      // This has to be an identity check on the chunk. While `chunk_id` was a
+      // `str` defaulting to "", every citation carried "" and this compared
+      // equal for any index that existed — so passages from older turns were
+      // taken for current ones and the panel expanded the wrong row. A null id
+      // means the chunk is unidentified, and two unidentified chunks are not
+      // thereby the same chunk, so it never matches.
+      const inPanel = citation != null && isSameCitation(lastCitations[index], citation);
       setPinnedCitation(inPanel || citation == null ? null : citation);
       setExpandedSourceIndex(inPanel ? index : null);
     },
@@ -743,6 +781,7 @@ export function CopilotPageContent() {
         onToggle={setExpandedSourceIndex}
         pinned={pinnedCitation}
         onClearPinned={() => setPinnedCitation(null)}
+        onOpenDocument={handlePreviewById}
       />
     );
   }
@@ -851,6 +890,7 @@ export function CopilotPageContent() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             onCitationSelect={handleCitationSelect}
+            onOpenDocument={handlePreviewById}
             activeCitation={activeCitation}
             streamingMessageId={streamingMessageId}
             restoreNotice={restoreNotice}
@@ -864,6 +904,32 @@ export function CopilotPageContent() {
           {renderSources()}
         </aside>
       </div>
+
+      {previewError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12px] text-destructive"
+        >
+          {previewError}
+          <button
+            type="button"
+            onClick={() => setPreviewError(null)}
+            className="ml-3 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <DocumentPreviewDialog
+        open={previewDocument !== null}
+        document={previewDocument}
+        previewUrl={previewUrl}
+        previewText={previewText}
+        isLoading={isPreviewLoading}
+        onClose={closePreview}
+        onDownload={handleDownload}
+      />
     </div>
   );
 }

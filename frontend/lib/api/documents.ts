@@ -84,6 +84,15 @@ export async function listDocuments(
   return data;
 }
 
+export async function getDocument(
+  documentId: string,
+): Promise<DocumentDetailApiResponse> {
+  const { data } = await apiClient.get<DocumentDetailApiResponse>(
+    `/api/documents/${documentId}`,
+  );
+  return data;
+}
+
 export async function updateDocument(
   documentId: string,
   payload: UpdateDocumentPayload,

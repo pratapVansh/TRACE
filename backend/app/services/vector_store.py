@@ -712,7 +712,11 @@ class QdrantVectorStore(VectorStore):
             reverse=True,
         )[:top_k]
 
+        # ``pid`` is the point id. Both arms return it as "id" and callers rely
+        # on that key to identify a chunk, so fusion has to put it back —
+        # dropping it here is what made hybrid results the only ones without an
+        # identifiable chunk.
         return [
-            {"score": rrf_scores[pid], "payload": payloads[pid]}
+            {"id": pid, "score": rrf_scores[pid], "payload": payloads[pid]}
             for pid in sorted_ids
         ]

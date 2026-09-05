@@ -140,6 +140,7 @@ class RagService:
         citations = [
             Citation(
                 chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
                 document_name=chunk.document_name,
                 page_number=chunk.page_number,
                 chunk_content=chunk.content,
@@ -190,6 +191,7 @@ class RagService:
         citations = [
             Citation(
                 chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
                 document_name=chunk.document_name,
                 page_number=chunk.page_number,
                 chunk_content=chunk.content,
@@ -242,6 +244,7 @@ class RagService:
 def _extract_chunks_from_unified(unified: UnifiedContext) -> list[RetrievedChunk]:
     return [
         RetrievedChunk(
+            chunk_id=item.chunk_id,
             score=item.score,
             document_id=item.document_id,
             document_name=item.document_name,
@@ -416,6 +419,7 @@ class GraphRagService:
         citations = [
             Citation(
                 chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
                 document_name=chunk.document_name,
                 page_number=chunk.page_number,
                 chunk_content=chunk.content,
@@ -501,6 +505,7 @@ class GraphRagService:
         citations = [
             Citation(
                 chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
                 document_name=chunk.document_name,
                 page_number=chunk.page_number,
                 chunk_content=chunk.content,

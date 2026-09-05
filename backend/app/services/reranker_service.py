@@ -31,17 +31,64 @@ _MODEL_LOAD_FAILED = False
 # never returned). Sticky, because the worker thread it stalled is not
 # recoverable and retrying would stall every later request the same way.
 _DISABLED = False
+# Why reranking stopped, kept so /api/health can say more than "off".
+_DISABLED_REASON: str | None = None
 
 
 def _disable(reason: str) -> None:
-    global _DISABLED
+    global _DISABLED, _DISABLED_REASON
     if not _DISABLED:
         _DISABLED = True
+        _DISABLED_REASON = reason
         logger.warning(
             "Reranking disabled for this process (%s) — retrieval continues "
             "with unreranked results.",
             reason,
         )
+
+
+def status() -> dict[str, object]:
+    """Current reranking state, for health reporting.
+
+    Reranking degrades silently by design — every failure path falls back to
+    retrieval order so a bad model cannot take retrieval down. That makes it
+    invisible from the outside, which is the wrong trade in a product whose
+    claim is grounded answers: results are still returned, just ranked worse,
+    with nothing to distinguish them from good ones. This is what lets the
+    health endpoint say so.
+
+    Cheap and synchronous — reads process-local flags, touches no network.
+    """
+    if not settings.rerank_enabled:
+        state, detail = "off", "disabled by configuration (RERANK_ENABLED)"
+    elif _DISABLED:
+        state = "degraded"
+        detail = (
+            f"reranking switched off at runtime ({_DISABLED_REASON}); "
+            "retrieval is returning unreranked results"
+        )
+    elif _MODEL_LOAD_FAILED:
+        state = "degraded"
+        detail = (
+            f"model {settings.rerank_model_name!r} failed to load; "
+            "retrieval is returning unreranked results"
+        )
+    elif _MODEL is None:
+        state = "degraded"
+        detail = (
+            "model not loaded — warmup did not run, so the load cost will land "
+            "inside the first query's scoring budget and may disable reranking"
+        )
+    else:
+        state, detail = "ok", None
+
+    return {
+        "status": state,
+        "enabled": settings.rerank_enabled,
+        "model": settings.rerank_model_name,
+        "loaded": _MODEL is not None,
+        "detail": detail,
+    }
 
 
 class _Scorable(Protocol):

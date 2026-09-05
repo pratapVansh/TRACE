@@ -3,12 +3,14 @@
 import asyncio
 import re
 
+from app.core.config import settings
 from app.core.logging import logger
 from app.graph.graph_query import GraphQueryService
 from app.schemas.hybrid import GraphFact, UnifiedContext, UnifiedContextItem
 from app.schemas.retrieval import RetrievedChunk
 from app.services.embedding_service import _encode_batch_async
 from app.services.reranker_service import candidate_count, rerank
+from app.services.retrieval_dedup import dedup_by_document
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 
@@ -42,6 +44,11 @@ class VectorRetriever:
 
         chunks = [
             RetrievedChunk(
+                # The point id is the chunk's own id; the payload copy is the
+                # fallback. Omitting this is what left every Copilot citation
+                # unresolvable — the chat pipeline runs through this retriever,
+                # not the one in retriever_service.
+                chunk_id=r.get("id") or r["payload"].get("chunk_id") or None,
                 score=r["score"],
                 document_id=r["payload"].get("document_id", ""),
                 document_name=r["payload"].get("filename", ""),
@@ -57,7 +64,20 @@ class VectorRetriever:
         # Hybrid fusion returns RRF scores (~0.01-0.03), which are ranking
         # weights and not comparable to the similarity thresholds callers
         # apply, so this normalization is what keeps those checks honest.
-        return await rerank(query, chunks, top_k=top_k)
+        #
+        # Reranked untrimmed, then collapsed to one chunk per document, then
+        # cut to *top_k* — so ``top_k`` counts documents. This path had no
+        # dedup at all, which was harmless while a document was a single chunk
+        # and became visible the moment chunking moved to passage scale:
+        # Copilot's sources panel began listing the same document once per
+        # matching passage. Deliberately not applying a score threshold here —
+        # this is the path Copilot depends on, and the cross-encoder's absolute
+        # values do not separate hits from misses (see
+        # ``retrieval_similarity_threshold``).
+        reranked = await rerank(query, chunks)
+        if not settings.retrieval_dedup_documents:
+            return reranked[:top_k]
+        return dedup_by_document(reranked, top_k=top_k)
 
 
 class GraphRetriever:
@@ -175,6 +195,7 @@ class ContextMerger:
                 content=chunk.content,
                 score=self._combined_score(chunk.score, matched_facts),
                 source="merged" if matched_facts else "vector",
+                chunk_id=chunk.chunk_id,
                 document_id=chunk.document_id,
                 document_name=doc_name,
                 chunk_index=chunk.chunk_index,

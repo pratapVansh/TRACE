@@ -14,6 +14,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import {
   deleteDocument as deleteDocumentRequest,
   downloadDocument,
+  getDocument as getDocumentRequest,
   listDocuments,
   updateDocument as updateDocumentRequest,
   uploadDocument as uploadDocumentRequest,
@@ -54,6 +55,8 @@ type DocumentsContextValue = {
     payload: UpdateDocumentPayload,
   ) => Promise<KnowledgeDocument>;
   deleteDocument: (documentId: string) => Promise<void>;
+  /** One document by id, for callers holding only an id — e.g. a citation. */
+  fetchDocument: (documentId: string) => Promise<KnowledgeDocument>;
   fetchDocumentBlob: (documentId: string, download?: boolean) => Promise<Blob>;
   queryVersion: number;
   invalidateQueries: () => void;
@@ -117,6 +120,10 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
     [invalidateQueries],
   );
 
+  const fetchDocument = useCallback(async (documentId: string) => {
+    return mapDocumentFromApi(await getDocumentRequest(documentId));
+  }, []);
+
   const fetchDocumentBlob = useCallback(
     async (documentId: string, download = false) => {
       return downloadDocument(documentId, { download });
@@ -130,12 +137,14 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
       uploadDocument,
       updateDocument,
       deleteDocument,
+      fetchDocument,
       fetchDocumentBlob,
       queryVersion,
       invalidateQueries,
     }),
     [
       deleteDocument,
+      fetchDocument,
       fetchDocumentBlob,
       fetchDocuments,
       invalidateQueries,

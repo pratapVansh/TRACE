@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChevronRight, FileText, X } from "lucide-react";
+import { ChevronRight, ExternalLink, FileText, X } from "lucide-react";
 
 import type { Citation } from "@/types/chat";
 import { cn } from "@/lib/utils";
@@ -20,13 +20,48 @@ type SourcesPanelProps = {
    */
   pinned: Citation | null;
   onClearPinned: () => void;
+  /**
+   * Open the source document a citation came from. Given the citation's
+   * `document_id`, not its retrieved text — the passage below is what the
+   * model was shown, and checking it against itself proves nothing.
+   */
+  onOpenDocument?: (documentId: string) => void;
 };
+
+/** The "open the source" control, shown only when the passage can be traced. */
+function OpenSourceButton({
+  citation,
+  onOpenDocument,
+}: {
+  citation: Citation;
+  onOpenDocument?: (documentId: string) => void;
+}) {
+  const documentId = citation.document_id;
+  if (!documentId || !onOpenDocument) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenDocument(documentId)}
+      className="mt-1.5 inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/40 hover:text-foreground"
+    >
+      <ExternalLink className="size-2.5" strokeWidth={2} />
+      Open source document
+    </button>
+  );
+}
 
 function scorePercent(citation: Citation): number {
   return Math.round(citation.similarity_score * 100);
 }
 
-function CitationBody({ citation }: { citation: Citation }) {
+function CitationBody({
+  citation,
+  onOpenDocument,
+}: {
+  citation: Citation;
+  onOpenDocument?: (documentId: string) => void;
+}) {
   return (
     <div className="mt-1.5 border-t border-border pt-1.5">
       {citation.highlighted_excerpt && (
@@ -43,6 +78,7 @@ function CitationBody({ citation }: { citation: Citation }) {
           chunk {citation.chunk_id.slice(0, 12)}
         </p>
       )}
+      <OpenSourceButton citation={citation} onOpenDocument={onOpenDocument} />
     </div>
   );
 }
@@ -52,11 +88,13 @@ function CitationRow({
   index,
   expanded,
   onToggle,
+  onOpenDocument,
 }: {
   citation: Citation;
   index: number;
   expanded: boolean;
   onToggle: () => void;
+  onOpenDocument?: (documentId: string) => void;
 }) {
   const ref = useRef<HTMLLIElement>(null);
 
@@ -109,7 +147,7 @@ function CitationRow({
 
       {expanded ? (
         <div className="px-2 pb-2">
-          <CitationBody citation={citation} />
+          <CitationBody citation={citation} onOpenDocument={onOpenDocument} />
         </div>
       ) : (
         <p className="line-clamp-2 px-2 pb-1.5 pl-[38px] text-[11px] leading-[1.45] text-muted-foreground">
@@ -127,6 +165,7 @@ export function SourcesPanel({
   onToggle,
   pinned,
   onClearPinned,
+  onOpenDocument,
 }: SourcesPanelProps) {
   const hasCitations = citations.length > 0;
 
@@ -162,7 +201,7 @@ export function SourcesPanel({
                 <X className="size-3" strokeWidth={2} />
               </button>
             </div>
-            <CitationBody citation={pinned} />
+            <CitationBody citation={pinned} onOpenDocument={onOpenDocument} />
           </div>
         )}
 
@@ -175,6 +214,7 @@ export function SourcesPanel({
                 index={index}
                 expanded={expandedIndex === index}
                 onToggle={() => onToggle(expandedIndex === index ? null : index)}
+                onOpenDocument={onOpenDocument}
               />
             ))}
           </ul>

@@ -393,14 +393,27 @@ class ChunkingService:
         filename: str | None = None,
         language: str | None = None,
     ) -> Sequence[DocumentChunk]:
-        """Chunk full document text and persist the resulting chunks.
+        """Replace a document's chunks with ones derived from *text*.
 
         Each chunk's metadata includes document_id, filename, language,
         total_chunks, and processing_timestamp.
+
+        Replaces rather than appends. This runs on every pass of the ingestion
+        pipeline, including retries, and it used to only insert — so a document
+        that failed after chunking and was retried ended up with two full sets
+        of chunks in Postgres, each claiming its own ``total_chunks``. Qdrant
+        never showed it, because the indexer deletes a document's vectors
+        before upserting, so the duplicates sat in the database feeding chunk
+        listings and counts while retrieval looked fine.
         """
         raw = self._chunk_text(text, pages=pages)
         if not raw:
+            # Nothing to write, so nothing is replaced: keeping the previous
+            # chunks is better than emptying the document because one pass
+            # produced no regions.
             return []
+
+        await self._chunk_repository.delete_document_chunks(document_id)
 
         total = len(raw)
         now = datetime.now(UTC)

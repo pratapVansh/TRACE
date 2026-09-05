@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.ai.base import LLMGenerationError
+from app.core.config import settings
 from app.api.deps import (
     get_current_user,
     get_graph_rag_service,
@@ -783,7 +784,10 @@ class TestGraphRagAPI:
         assert kwargs["vector_top_k"] == 10
         assert kwargs["graph_top_k"] == 5
         assert kwargs["top_k"] == 15
-        assert kwargs["similarity_threshold"] == 0.25
+        # Pinned to the configured value, not a literal: the threshold is a
+        # tuning decision (currently 0.0 — rank-limit only), while what this
+        # test protects is that the request default is wired to config.
+        assert kwargs["similarity_threshold"] == settings.retrieval_similarity_threshold
         assert kwargs["filters"] is None
 
 

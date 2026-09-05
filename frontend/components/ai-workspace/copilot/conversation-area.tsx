@@ -42,6 +42,7 @@ type ConversationAreaProps = {
   onCancel?: () => void;
   disabled?: boolean;
   onCitationSelect?: (messageId: string, index: number, citation?: Citation) => void;
+  onOpenDocument?: (documentId: string) => void;
   activeCitation?: { messageId: string; index: number } | null;
   streamingMessageId?: string | null;
   onEditMessage?: (id: string, newContent: string) => void;
@@ -61,6 +62,7 @@ export function ConversationArea({
   onCancel,
   disabled,
   onCitationSelect,
+  onOpenDocument,
   activeCitation = null,
   streamingMessageId,
   onEditMessage,
@@ -129,6 +131,7 @@ export function ConversationArea({
               role={msg.role}
               content={msg.content}
               citations={msg.citations}
+              onOpenDocument={onOpenDocument}
               onCitationSelect={(index) =>
                 onCitationSelect?.(msg.id, index, msg.citations?.[index])
               }

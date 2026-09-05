@@ -16,7 +16,11 @@ class RetrievalFilter(BaseModel):
 
 
 class RetrievedChunk(BaseModel):
-    chunk_id: str = ""
+    # None means "this retriever could not identify the chunk", which is a
+    # different thing from an empty id. As `str = ""` it passed every
+    # truthiness and equality check, so a missing id silently compared equal
+    # to every other missing id.
+    chunk_id: str | None = None
     score: float = Field(ge=0.0, le=1.0)
     document_id: str
     document_name: str

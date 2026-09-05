@@ -16,6 +16,10 @@ class UnifiedContextItem(BaseModel):
     content: str
     score: float = Field(ge=0.0, le=1.0)
     source: Literal["vector", "graph", "merged"] = "vector"
+    # Carried so a citation built from merged context can still name the exact
+    # passage it came from. Stays None for ``source="graph"`` items, which are
+    # synthesised from entities rather than drawn from a single chunk.
+    chunk_id: str | None = None
     document_id: str = ""
     document_name: str = ""
     chunk_index: int | None = None

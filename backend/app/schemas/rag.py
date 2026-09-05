@@ -6,7 +6,10 @@ from app.schemas.retrieval import RetrievalFilter
 
 
 class Citation(BaseModel):
-    chunk_id: str = ""
+    chunk_id: str | None = None
+    # Without this a citation named only a filename, so nothing downstream
+    # could open the document it came from.
+    document_id: str | None = None
     document_name: str
     page_number: int | None = None
     chunk_content: str

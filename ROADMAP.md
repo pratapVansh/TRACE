@@ -515,9 +515,67 @@ verification, not quality testing. Quality was settled in stages 1 and 5.
 
 ---
 
+## Resolved — was known debt
+
+Kept rather than deleted: the diagnosis is the useful part, and the measurement
+is what justifies the change.
+
+**Scanned tables were silently lost to OCR misconfiguration.** *Resolved
+6 September 2026.* A three-page scanned permit ingested clean — `indexed`, six
+chunks, no warning — having dropped every data row of the gas test record it
+exists to capture. Cause: `--psm 3` in `processing/ocr/engine.py` performs
+automatic page segmentation, analyses the ruled table as layout, and discards
+the region. Fix: `--psm 11`, sparse text, which performs no layout analysis and
+reads the glyphs. **9/18 → 17/18 known markers recovered across the three pages,
+for +0.3 s per page.** All five gas-test rows now survive re-ingestion, and the
+detector serial corrected itself from `ASX-88214` to the true `A5X-88214`. All
+13 probe questions re-ran with every rank and score byte-identical, and the
+prose OCR result held at 0.9951 against 0.9975. Measured in
+`backend/eval/probe_results.md`, run 5.
+
+`_adaptive_threshold` was the other suspect and was **kept**, on measurement. It
+was the stage that destroyed the digits at PSM 3, but at PSM 11 it is not
+implicated: it wins or ties on every scan condition tested and is faster on all
+of them, and removing it made a heavy-noise page exceed **twelve minutes**
+without completing, against 4.9 s with it. Two residual issues are recorded
+below rather than hidden by this fix.
+
+**Residual, narrower than the bug it replaced:** PSM 11 recovers a table's values
+but not its row structure — it emits roughly one cell per line, so a reading is
+no longer bound to its timestamp, and the LEL/H₂S/CO columns did not survive at
+all. No thresholded configuration preserves rows. Separately, heavy scanner noise
+defeats the pipeline entirely (0/12 markers with thresholding on). Both need real
+noisy scans to tune against rather than synthetic ones, and neither is a
+regression — they were masked by the larger failure.
+
 ## Known debt — not scheduled
 
 Real problems, deliberately unscheduled. Each entry says why it can wait.
+
+**Retrieval scores whole questions against whole passages.**
+The cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) scores one query
+against one passage as wholes, and two question shapes fail because of it. A
+compound question buries the passage answering its second half: asking the
+bearing heating temperature *and* the locknut torque together drops the torque
+table from rank 4 to **rank 22**, score 0.100131 to **0.000083** — a **1,200×**
+difference on the same passage, from the same index, caused only by the question
+also asking something else. A naturally-phrased question loses a table to prose
+about that table: asking for a thickness reading held only in table rows returns
+the paragraph discussing a *different* grid position, with the table itself at
+**rank 20**, 0.000088, against **rank 1**, 0.217502, when the grid is named
+explicitly — a **2,470×** difference. Both cases score as *hits* under a
+document-level metric, because the right document does reach the top 5; only
+reading the passage shows it cannot support an answer. Document dedup was the
+expected cause and is not: with dedup disabled the answer-bearing chunk is still
+absent in both. Measured in `backend/eval/probe_results.md` run 4, against a
+7,444-word manual and a 15-section inspection report. The fix is query
+decomposition — split a multi-part question, retrieve per part, merge — plus
+either table-aware sub-queries or serialising table rows into sentence-shaped
+text at ingestion. *Deferred because:* decomposition puts an LLM call ahead of
+every retrieval, changing latency and cost on the hot path and changing what
+every consumer of the RAG path receives; stage 5's harness is what would show
+whether it pays for itself. Until then, treat the probe's headline score as an
+upper bound: it counts documents, not answers.
 
 **The answer prompt never asks for inline citation markers.**
 `services/prompt_builder.py` numbers the retrieved chunks `[1] [2] [3]` when it

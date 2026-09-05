@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 
 from app.core.config import settings
@@ -6,6 +5,7 @@ from app.core.logging import logger
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk, RetrievalResult
 from app.services.embedding_service import _encode_batch_async
 from app.services.reranker_service import candidate_count, rerank
+from app.services.retrieval_dedup import dedup_by_document
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 # Lazy import for qdrant types that may not be available in all environments
@@ -110,16 +110,28 @@ class RetrieverService:
         # search is an RRF ranking weight, not a similarity, so filtering on
         # it against ``similarity_threshold`` would discard everything.
         # Reranking replaces it with a calibrated 0-1 relevance.
-        reranked = await rerank(query, candidates, top_k=top_k)
-        chunks = [c for c in reranked if c.score >= similarity_threshold]
+        #
+        # The threshold defaults to 0.0 — retrieval rank-limits instead of
+        # score-filtering. The cross-encoder orders results well but its
+        # absolute values do not separate hits from misses, so a non-zero
+        # default silently returned nothing for almost every conversational
+        # question. See the note on ``retrieval_similarity_threshold``.
+        # Rerank the full candidate set without trimming: dedup runs next and
+        # needs the surplus to refill slots freed by collapsing a document's
+        # repeat passages. Trimming here first is what made ``top_k=5`` return
+        # four results whenever one document held two of the top five chunks.
+        reranked = await rerank(query, candidates)
+        chunks = (
+            [c for c in reranked if c.score >= similarity_threshold]
+            if similarity_threshold > 0.0
+            else list(reranked)
+        )
 
-        if dedup_documents:
-            seen: dict[str, RetrievedChunk] = OrderedDict()
-            for chunk in chunks:
-                doc_id = chunk.document_id
-                if doc_id not in seen or chunk.score > seen[doc_id].score:
-                    seen[doc_id] = chunk
-            chunks = list(seen.values())
+        chunks = (
+            dedup_by_document(chunks, top_k=top_k)
+            if dedup_documents
+            else chunks[:top_k]
+        )
 
         logger.info(
             "Retrieved %d chunks (requested top_k=%d, threshold=%.2f, dedup=%s)",

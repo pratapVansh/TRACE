@@ -1,5 +1,8 @@
 export interface Citation {
-  chunk_id: string;
+  /** Null when the retriever could not identify the chunk — not "". */
+  chunk_id: string | null;
+  /** Null when the passage could not be traced back to a document. */
+  document_id: string | null;
   document_name: string;
   page_number: number | null;
   chunk_content: string;

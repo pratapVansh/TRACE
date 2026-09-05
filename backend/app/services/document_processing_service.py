@@ -95,20 +95,30 @@ class DocumentProcessingService:
         if document is None:
             raise IngestionJobNotFoundError()
 
+        # Read what we need off the instance once, while it is freshly loaded.
+        # Both the commits below and the rollback in the failure path expire
+        # every attribute on it, and reading one back afterwards triggers a
+        # lazy refresh outside the async greenlet. That is what killed the
+        # failure path here: ``_mark_failed`` wrote FAILED, the next line
+        # raised MissingGreenlet reading ``document.id``, and the commit that
+        # would have persisted the write never ran.
+        document_id = document.id
+        uploaded_by = document.uploaded_by
+
         started_at = datetime.now(UTC)
         job = await self._mark_processing(job.id, started_at)
-        await self._sync_document_status(document.id, ProcessingStatus.PROCESSING.value)
+        await self._sync_document_status(document_id, ProcessingStatus.PROCESSING.value)
         await self._session.commit()
 
         logger.info(
             "Processing document document_id=%s job_id=%s processor_count=%d",
-            document.id,
+            document_id,
             job_id,
             len(self._processors),
         )
 
         await self._audit_service.log(
-            user_id=document.uploaded_by,
+            user_id=uploaded_by,
             username=None,
             action="ocr_processing_started",
             entity_type="ingestion_job",
@@ -131,7 +141,7 @@ class DocumentProcessingService:
             if not self._processors:
                 logger.info(
                     "No processors registered; completing stub run document_id=%s job_id=%s",
-                    document.id,
+                    document_id,
                     job_id,
                 )
             else:
@@ -139,7 +149,7 @@ class DocumentProcessingService:
                     logger.info(
                         "Running processor=%s document_id=%s job_id=%s",
                         processor.name,
-                        document.id,
+                        document_id,
                         job_id,
                     )
                     await processor.process(context)
@@ -154,17 +164,17 @@ class DocumentProcessingService:
             if completed is None:
                 raise IngestionJobNotFoundError()
 
-            await self._apply_completion_status(document.id)
+            await self._apply_completion_status(document_id)
             await self._session.commit()
 
             logger.info(
                 "Completed document processing document_id=%s job_id=%s",
-                document.id,
+                document_id,
                 job_id,
             )
 
             await self._audit_service.log(
-                user_id=document.uploaded_by,
+                user_id=uploaded_by,
                 username=None,
                 action="ocr_processing_finished",
                 entity_type="ingestion_job",
@@ -178,11 +188,11 @@ class DocumentProcessingService:
         except Exception as exc:
             await self._session.rollback()
             await self._mark_failed(job_id, str(exc))
-            await self._sync_document_status(document.id, ProcessingStatus.FAILED.value)
+            await self._sync_document_status(document_id, ProcessingStatus.FAILED.value)
             await self._session.commit()
 
             await self._audit_service.log(
-                user_id=document.uploaded_by,
+                user_id=uploaded_by,
                 username=None,
                 action="ocr_processing_finished",
                 entity_type="ingestion_job",

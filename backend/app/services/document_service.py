@@ -168,26 +168,49 @@ class DocumentService:
                 stage=ProcessingStage.UPLOAD.value,
                 max_retries=settings.processing_queue_max_retries,
             )
-            if self._processing_queue is not None:
-                await self._processing_queue.enqueue(document.id, ingestion_job.id)
-            response_job_id = ingestion_job.id
-            response = to_upload_response(document, document_version, response_job_id)
+
+            # Build the response, and keep the ids as plain values, *before*
+            # anything commits. A commit expires every attribute on these
+            # instances, and reading one back then triggers a lazy refresh
+            # outside the async greenlet — the MissingGreenlet that turned
+            # every upload into a 500.
+            document_id = document.id
+            job_id = ingestion_job.id
+            response = to_upload_response(document, document_version, job_id)
+
+            await self._audit_service.log(
+                user_id=actor.id,
+                username=actor.full_name,
+                action="document_uploaded",
+                entity_type="document",
+                entity_id=document_id,
+                ip_address=ip_address,
+            )
+            await self._audit_service.flush()
             await self._session.commit()
         except Exception:
+            # Nothing here reached the database, so the stored file has no row
+            # referring to it and would otherwise be orphaned on disk.
             await self._session.rollback()
             self._storage.delete(stored_uri)
             raise
 
-        await self._audit_service.log(
-            user_id=actor.id,
-            username=actor.full_name,
-            action="document_uploaded",
-            entity_type="document",
-            entity_id=document.id,
-            ip_address=ip_address,
-        )
-        await self._audit_service.flush()
-        await self._session.commit()
+        # Past this point the document row is durable, so the file must never
+        # be deleted: doing so would leave a committed row pointing at a
+        # missing object, which is what the worker then died on. The job row
+        # is already PENDING and ``run_cycle`` polls for exactly that, so the
+        # document still gets processed even if this hand-off fails.
+        if self._processing_queue is not None:
+            try:
+                await self._processing_queue.enqueue(document_id, job_id)
+            except Exception:
+                logger.exception(
+                    "Failed to hand document to the processing queue "
+                    "document_id=%s job_id=%s — the job stays pending and the "
+                    "background worker will pick it up",
+                    document_id,
+                    job_id,
+                )
 
         return response
 

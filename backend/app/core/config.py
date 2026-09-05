@@ -87,8 +87,23 @@ class Settings(BaseSettings):
     global_rate_limit_enabled: bool = True
 
     # Chunking & Embeddings (Milestone 6+)
-    chunk_size: int = 512
-    chunk_overlap: int = 64
+    #
+    # Passage scale, not document scale. The reranker
+    # (``cross-encoder/ms-marco-MiniLM-L-6-v2``) is trained on MS MARCO
+    # passages; handed a whole document it scores poorly even when the answer
+    # is in there, because most of the text is unrelated to the query and every
+    # document opens with the same letterhead.
+    #
+    # Measured over the probe corpus by scoring candidate sizes with the real
+    # cross-encoder (see backend/eval/probe_results.md). Going 512 -> 256:
+    # retrieval hits 8/9 -> 9/9, the top score for the no-answer control drops
+    # 0.0049 -> 0.0015, and the tag questions improve markedly (T3 0.70 -> 0.95,
+    # T1 0.21 -> 0.30). 128 scored higher still on this corpus but fragmented
+    # the context two questions needed, and part of that gain is the known
+    # short-passage bias of ms-marco rather than better relevance — revisit
+    # once the corpus contains genuinely long documents.
+    chunk_size: int = 256
+    chunk_overlap: int = 40
     chunk_min_size: int = 50
     embedding_model_name: str = "all-MiniLM-L6-v2"
     embedding_batch_size: int = 32
@@ -117,7 +132,17 @@ class Settings(BaseSettings):
 
     # Retrieval (Milestone 8.1)
     retrieval_top_k: int = 15
-    retrieval_similarity_threshold: float = 0.25
+    # Off by default: retrieval rank-limits rather than score-filters.
+    #
+    # The cross-encoder score is a good *ordering* signal and a poor *absolute*
+    # one, so no cut point separates hits from misses. Measured over the 10-query
+    # probe in ``backend/eval/probe_results.md``: correct rank-1 answers scored
+    # 0.0001 to 0.6998, while the top result for a question about equipment that
+    # exists in no document scored 0.0049 — above two of the correct answers.
+    # Any threshold that rejected that miss also discarded real hits, and the
+    # previous default of 0.25 returned an empty list for 9 of 10 questions.
+    # Callers who want a floor can still pass ``similarity_threshold``.
+    retrieval_similarity_threshold: float = 0.0
     retrieval_dedup_documents: bool = True
 
     # Reranking.

@@ -83,7 +83,16 @@ class OcrEngine:
             processed,
             lang=self._lang,
             output_type=pytesseract.Output.DICT,
-            config="--psm 3 --oem 3",
+            # PSM 11 (sparse text) rather than 3 (automatic page segmentation).
+            # Automatic segmentation analyses layout and discards regions it
+            # reads as structure, which silently deleted every data row of a
+            # ruled table on a scanned permit — the document indexed clean with
+            # the readings it existed to capture simply absent. Sparse text
+            # attempts no layout analysis and reads whatever glyphs it finds.
+            # Measured over a 3-page scanned form: 9/18 known markers recovered
+            # at psm 3, 17/18 at psm 11, with no measurable change in OCR time.
+            # See backend/eval/probe_results.md, run 5.
+            config="--psm 11 --oem 3",
         )
 
         full_text, confidences = self._assemble(ocr_data)

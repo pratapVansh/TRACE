@@ -31,6 +31,8 @@ type EnterpriseReportRendererProps = {
   citations?: Citation[];
   activeCitationIndex?: number | null;
   onCitationSelect?: (index: number) => void;
+  /** Open a source document by id. See SourcesPanel's `onOpenDocument`. */
+  onOpenDocument?: (documentId: string) => void;
 };
 
 export function EnterpriseReportRenderer({
@@ -38,6 +40,7 @@ export function EnterpriseReportRenderer({
   citations = [],
   activeCitationIndex = null,
   onCitationSelect,
+  onOpenDocument,
 }: EnterpriseReportRendererProps) {
   const documentNames = React.useMemo(
     () => citations.map((c) => c.document_name),
@@ -162,7 +165,16 @@ export function EnterpriseReportRenderer({
               }
 
               if (alert.type === "document" || alert.type === "source") {
-                return <DocumentPreview data={alert.content} />;
+                // The model writes these cards, so they carry a document name
+                // and no id. Resolve the id from this turn's citations, which
+                // is the only place the real one exists.
+                return (
+                  <DocumentPreview
+                    data={alert.content}
+                    citations={citations}
+                    onOpenDocument={onOpenDocument}
+                  />
+                );
               }
 
               return (

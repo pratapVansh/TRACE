@@ -22,7 +22,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export function useDocumentActions() {
-  const { deleteDocument, fetchDocumentBlob } = useDocumentsContext();
+  const { deleteDocument, fetchDocument, fetchDocumentBlob } = useDocumentsContext();
   const [actionError, setActionError] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<KnowledgeDocument | null>(
     null,
@@ -85,6 +85,28 @@ export function useDocumentActions() {
     [closePreview, fetchDocumentBlob],
   );
 
+  /**
+   * Open the preview for a document known only by id — the case for a Copilot
+   * citation, which carries `document_id` but not the document record.
+   */
+  const handlePreviewById = useCallback(
+    async (documentId: string) => {
+      setActionError(null);
+      setIsPreviewLoading(true);
+      try {
+        await handlePreview(await fetchDocument(documentId));
+      } catch (lookupError) {
+        setIsPreviewLoading(false);
+        setActionError(
+          lookupError instanceof Error
+            ? lookupError.message
+            : "Failed to open the source document.",
+        );
+      }
+    },
+    [fetchDocument, handlePreview],
+  );
+
   const handleDownload = useCallback(
     async (document: KnowledgeDocument) => {
       setActionError(null);
@@ -138,6 +160,7 @@ export function useDocumentActions() {
     isPreviewLoading,
     closePreview,
     handlePreview,
+    handlePreviewById,
     handleDownload,
     handleDelete,
   };
