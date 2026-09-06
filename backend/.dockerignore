@@ -1,0 +1,58 @@
+# Build context is ./backend. Everything here either bloats the image, breaks
+# reproducibility, or leaks host state into the container.
+#
+# Note on patterns: .dockerignore matches with Go's filepath.Match, which does
+# NOT recurse. "__pycache__/" matches only a __pycache__ directory at the root
+# of the context — nested ones are still copied. Anything that can appear at any
+# depth therefore needs an explicit "**/" prefix. Patterns deliberately left
+# without one are anchored to the context root because a recursive version would
+# match real source (see storage/ below).
+
+# Host virtualenv — Windows-built, cp314 Windows wheels, ~5GB with torch.
+# Copying it in would shadow /opt/venv's Linux packages.
+.venv/
+venv/
+env/
+**/.venv/
+
+# Bytecode compiled against the host interpreter/platform. These MUST be
+# excluded at every depth: CPython will happily load a cached .pyc whose source
+# mtime and size still match, so a Windows-built cache shipped into the image
+# gets executed in place of the code that was copied in — which surfaces as
+# tracebacks citing C:\ paths from inside the container.
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+
+# Test and lint caches.
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/htmlcov/
+**/.coverage
+
+# Uploaded documents live in a named volume, never in the image. Baking the
+# host's uploads in would ship real documents to every environment.
+#
+# Root-anchored on purpose: app/core/storage/ is application source, and a
+# recursive "**/storage/" would silently drop it and break the build.
+storage/
+
+# Secrets. Config comes from the environment (compose env_file), and an .env
+# copied into the image would silently win over it for anything unset.
+.env
+.env.*
+!.env.example
+
+# Scratch output from local runs.
+uvicorn_err.txt
+uvicorn_out.txt
+**/*.log
+
+# Editor/OS noise.
+**/.vscode/
+**/.idea/
+**/*.swp
+**/.DS_Store
+**/Thumbs.db

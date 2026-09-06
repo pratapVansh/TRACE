@@ -11,6 +11,10 @@
 # This is the reproducible install path. requirements.txt lists the direct
 # dependencies and is the file you edit; regenerate this lockfile from a
 # fresh clean venv whenever requirements.txt changes.
+#
+# One line carries a hand-added environment marker (pywin32, see below).
+# pip freeze does not emit markers, so re-add it after any regeneration —
+# otherwise the Linux install breaks again.
 alembic==1.18.5
 annotated-doc==0.0.5
 annotated-types==0.8.0
@@ -90,7 +94,12 @@ python-jose==3.5.0
 python-multipart==0.0.32
 python-pptx==1.0.2
 pytz==2026.3.post1
-pywin32==312
+# pywin32 has no Linux or macOS distribution. It is a transitive dependency
+# of portalocker, which uses it only on Windows and falls back to fcntl on
+# POSIX. pip freeze does not emit environment markers, so this one is added
+# by hand: without it this lockfile is unsatisfiable on any non-Windows
+# platform, which is not something a lockfile should be.
+pywin32==312; sys_platform == "win32"
 PyYAML==6.0.3
 qdrant-client==1.18.0
 regex==2026.7.19

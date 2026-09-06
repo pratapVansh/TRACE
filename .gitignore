@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+# Container environment (compose env_file). The .example is tracked.
+.env.docker
 *.pem
 
 # Python

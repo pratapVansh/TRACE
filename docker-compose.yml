@@ -1,0 +1,99 @@
+# TRACE — development stack: the API and the one datastore it cannot run
+# without.
+#
+#   docker compose up --build
+#
+# Qdrant and Neo4j are not here. They are optional at runtime (main.py logs a
+# warning and carries on without either) and live in docker-compose.local.yml,
+# which is the overlay to use for development and CI:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# Configuration comes from .env.docker — copy .env.docker.example to it first.
+# It is intentionally a hard requirement: booting with an unset JWT_SECRET_KEY
+# is a failure worth hitting at compose time rather than in the app.
+
+name: trace
+
+# Both services run the same image. Declared once so they cannot drift, and so
+# the second build is a pure cache hit rather than a second real build.
+x-backend-build: &backend-build
+  context: ./backend
+  dockerfile: Dockerfile
+  # "platforms" (a list), not "platform" — the latter is a service-level key and
+  # the Compose schema rejects it here. The Dockerfile also pins --platform on
+  # every FROM, so this only states the intent that the build is amd64-only.
+  platforms:
+    - linux/amd64
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trace}
+      POSTGRES_DB: ${POSTGRES_DB:-trace}
+    ports:
+      # Exposed so host-side tooling (psql, inspect_db.py, Alembic run from a
+      # venv) can reach the same database the containers use.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # depends_on: service_healthy is what orders migrations after the server
+      # is actually accepting connections. The container is "running" several
+      # seconds before that, and the initdb bootstrap restarts it once, so
+      # without this the migration reliably loses the race on a cold volume.
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trace} -d ${POSTGRES_DB:-trace}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  # One-shot. Runs to completion, then exits; nothing restarts it.
+  #
+  # Migrations are deliberately not part of the backend's boot sequence. Run
+  # implicitly on start, they execute once per replica and once per restart
+  # loop, which turns a crash-looping container into repeated concurrent DDL
+  # against a live database. As their own service they run exactly once per
+  # `up`, and the API is gated behind their success.
+  migrate:
+    build: *backend-build
+    image: trace-backend:dev
+    env_file:
+      - .env.docker
+    command: ["alembic", "upgrade", "head"]
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build: *backend-build
+    image: trace-backend:dev
+    env_file:
+      - .env.docker
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      # Uploaded documents are written to the API host's filesystem
+      # (STORAGE_ROOT, LocalStorageService). Without a volume they live in the
+      # container's writable layer and every `down`, rebuild or replacement
+      # silently discards them while their rows stay in Postgres — leaving a
+      # database full of documents whose bytes are gone.
+      - backend_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        # Start only after `alembic upgrade head` has exited 0. A non-zero exit
+        # keeps the API down instead of serving against a stale schema.
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_storage:

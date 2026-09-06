@@ -1,0 +1,99 @@
+# Overlay: the two optional datastores, for development and CI.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# The base stack runs without these — main.py logs a warning and disables
+# vector search and the knowledge graph — but "runs" is not the same as
+# "exercised". This overlay is what makes the integration tests that need a
+# real server actually run instead of skipping:
+#
+#   tests/test_rag_integration.py    7 tests, skipped unless Qdrant answers
+#                                    (module-level skipif on a live probe)
+#   tests/test_chunking_integration.py::TestEmbeddingIntegration
+#                                    1 test, skipped unless the embedding
+#                                    model loads — which it now does from the
+#                                    cache baked into the image
+#
+# Run them:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml \
+#     exec backend pytest -q -rs
+#
+# Credentials here are fixed dev values on purpose: this file is for
+# disposable local and CI environments, and nothing in it should ever be
+# pointed at real data. For cloud services, leave this overlay out and set the
+# cloud URLs in .env.docker instead — see .env.docker.example.
+
+services:
+  qdrant:
+    # Matched to qdrant-client==1.18.0 in requirements.lock.txt. A client
+    # meaningfully newer than its server is how the fulltext-index calls that
+    # test_rag_integration.py exists to guard start failing again.
+    image: qdrant/qdrant:v1.18.3
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      # The image ships no curl or wget, so this checks the listener directly
+      # through bash's /dev/tcp. Good enough for readiness: Qdrant binds the
+      # port once it is ready to serve.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  neo4j:
+    # 5.26 is the current LTS line and is what the neo4j==6.2.0 Python driver
+    # is supported against.
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-tracedevpassword}
+      # The default database is NOT set here. Community edition allows exactly
+      # one database and already names it "neo4j", which is what NEO4J_DATABASE
+      # below expects. Setting it explicitly needs the renamed Neo4j 5 key
+      # (initial.dbms.default_database); the obvious-looking server.default_database
+      # does not exist, and strict config validation turns that into a boot loop
+      # rather than a warning.
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      # Bolt accepts connections well before the database is queryable, so this
+      # runs a real query rather than probing the port.
+      test:
+        ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-tracedevpassword} 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    environment:
+      # Service names, not 127.0.0.1. Docker's embedded DNS returns A records
+      # only, so the IPv6-first delay that makes "localhost" a bad Qdrant host
+      # on the desktop does not apply here.
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-document_chunks}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-tracedevpassword}
+      NEO4J_DATABASE: neo4j
+      # test_rag_integration.py defaults to http://127.0.0.1:6333, which inside
+      # this container is nothing at all. Without this the 7 tests it holds go
+      # on skipping even with Qdrant running one hop away.
+      TRACE_TEST_QDRANT_URL: http://qdrant:6333
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
+volumes:
+  qdrant_data:
+  neo4j_data:
