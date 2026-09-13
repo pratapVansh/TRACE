@@ -1,0 +1,254 @@
+# TRACE Stage 5 evaluation corpus manifest - FROZEN
+#
+# The golden set (golden_set.yaml) is written against exactly these 25 documents.
+# Identity is the file's sha256, not the Postgres document_id: ids are
+# environment-specific and change on re-ingestion, hashes do not.
+#
+# chunk_fingerprint = sha256 of the document's chunk contents joined with U+001E,
+# in chunk_index order. It changes if chunking, extraction or OCR output changes,
+# which invalidates chunk-level expectations (expected_evidence) for that document.
+# The Stage 5 validator (step 2, not built yet) must refuse to run on drift.
+#
+# Generated 13 September 2026 from the native local Postgres (29 active documents,
+# 4 excluded below) and cross-checked against Qdrant (138 points, 384-dim cosine).
+# Source files: every file is in demo_dataset/ and byte-identical to backend/storage/.
+
+manifest_version: 1
+frozen_at: "2026-09-13"
+
+pipeline_at_freeze:
+  chunk_size: 256
+  chunk_overlap: 40
+  embedding_model: all-MiniLM-L6-v2
+  embedding_dim: 384
+  reranker_model: cross-encoder/ms-marco-MiniLM-L-6-v2
+  qdrant_collection: document_chunks
+  ocr: tesseract --psm 11 (probe run 5)
+
+totals:
+  documents: 25
+  chunks: 134
+
+documents:
+  - filename: "Equipment_Register.xlsx"
+    source_path: "demo_dataset/Excel/Equipment_Register.xlsx"
+    sha256: 5c8016b901c57033e75a8e1072494d2367c7c9708d33c7c823cc8996b5496d12
+    doc_type: spreadsheet
+    extraction_method: openpyxl
+    chunk_count: 2
+    extracted_chars: 1211
+    chunk_fingerprint: 34a44197c31eab80fdc9e46fc517468ed67eaf6865db0e2f5d78c42801859206
+  - filename: "INC-001_Pump_Oil_Leakage_P-101.docx"
+    source_path: "demo_dataset/Incidents/INC-001_Pump_Oil_Leakage_P-101.docx"
+    sha256: 942dc875be70ef73be48da043db1a7c08a05c773ab48e714265699247ae48e35
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1539
+    chunk_fingerprint: c7a9a38b2971fa2552401331193d14a0b2f39b6cceb697a52f721028b26068a6
+  - filename: "INC-002_Valve_Failure_V-220.docx"
+    source_path: "demo_dataset/Incidents/INC-002_Valve_Failure_V-220.docx"
+    sha256: ef29371bd193c7b5f210dd8d047b0c3bac824c55153db31f76bdd8e7021a48fb
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1422
+    chunk_fingerprint: 70066eb4f1c0f20b44ece50b9eb74a30de70a139c88c0972d31f9761248ad585
+  - filename: "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+    source_path: "demo_dataset/Inspection/INS-001_Pressure_Vessel_Inspection_T-501.docx"
+    sha256: c0048f1fe80240e930acc8bcf32269a658b878a391ffdf1c1d4b8192fcb51d7a
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1114
+    chunk_fingerprint: a6a593e9ab3878d62901928f9d3da46b14e558429ffb6e0e81525ce99b8dcecb
+  - filename: "INS-002_Vibration_Analysis_C-201.docx"
+    source_path: "demo_dataset/Inspection/INS-002_Vibration_Analysis_C-201.docx"
+    sha256: 9b8685c0f0a7513932469916909a459ab55ddf08dfef330654901574710444a9
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1083
+    chunk_fingerprint: 1b36bee06ca97385a628c8851bb8b426c1aaa89db4f71fe4127b370ffcf29f93
+  - filename: "INS-003_Boiler_Inspection_B-101.docx"
+    source_path: "demo_dataset/Inspection/INS-003_Boiler_Inspection_B-101.docx"
+    sha256: 0401a81ff8bd8ed570774d61ea46ca0fb1e9b3522d71cdbb5a38bd89ace102b7
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1200
+    chunk_fingerprint: 55a79b1dd4d49e49597c6c8f43dbd4c413a3b462b1c36b82e5acff1e9bed041f
+  - filename: "INS-004_Turnaround_Inspection_Report_E-301.docx"
+    source_path: "demo_dataset/Inspection/INS-004_Turnaround_Inspection_Report_E-301.docx"
+    sha256: 8585aef211ababb5d4b73ab763ca31c9899586bb10c6819197634b3e5763b977
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 21
+    extracted_chars: 15260
+    chunk_fingerprint: 192af9109f7ece646535c19b8eae28a610bb429dff2278b3190145527c6ff10f
+  - filename: "LOG-001_Morning_Shift_15-Jul-2026.txt"
+    source_path: "demo_dataset/ShiftLogs/LOG-001_Morning_Shift_15-Jul-2026.txt"
+    sha256: 731667a2361e1ab9ea709e01f295844dddc750729b0fed8e863bc37cd4fbca6c
+    doc_type: document
+    extraction_method: plain_text
+    chunk_count: 4
+    extracted_chars: 2681
+    chunk_fingerprint: 04acd30d2a7f683ccc14322ceae2b8ed69d60e9901678d9d6ff181ed95ec1f04
+  - filename: "LOG-002_Night_Shift_15-16-Jul-2026.txt"
+    source_path: "demo_dataset/ShiftLogs/LOG-002_Night_Shift_15-16-Jul-2026.txt"
+    sha256: 26596018cca0b26cbb620282a2f16201338ac884e38a2b7e6d3de4c7a00d6551
+    doc_type: document
+    extraction_method: plain_text
+    chunk_count: 5
+    extracted_chars: 2614
+    chunk_fingerprint: f7bc5bb800cd9ebc7c1de18625a48054633f64feba0b05bfce7e32263c74b52a
+  - filename: "Maintenance_Schedule.xlsx"
+    source_path: "demo_dataset/Excel/Maintenance_Schedule.xlsx"
+    sha256: 08405bc3d84cc1ec29b782ac0af9454ed745cb518833f36290a7858f7a6d21d3
+    doc_type: spreadsheet
+    extraction_method: openpyxl
+    chunk_count: 3
+    extracted_chars: 1305
+    chunk_fingerprint: cc6cb6f3916055b3eb185610e6cfe798884817cb6a5fb30a2f80b3f585046e64
+  - filename: "MAN-001_Centrifugal_Pump_Manual.docx"
+    source_path: "demo_dataset/Manuals/MAN-001_Centrifugal_Pump_Manual.docx"
+    sha256: c9e66052057d8aafd373a97af76a3853506827afe128f23fa526efbcca6aefc7
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1499
+    chunk_fingerprint: 6ab32f8d54f66a9987b6bd014d40538d3a12addf977a2cb19f1ca704d11fde76
+  - filename: "MAN-002_Air_Compressor_Manual.docx"
+    source_path: "demo_dataset/Manuals/MAN-002_Air_Compressor_Manual.docx"
+    sha256: 4f7d91495b58f5262ea6d5e5ffe185e5acd62cf66c53330df43c74a6bbd89aef
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1218
+    chunk_fingerprint: 9c3e807754b0198dcaeba4dacf9678322211430e6a9ad67e187ba3bad0ee3e76
+  - filename: "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+    source_path: "demo_dataset/Manuals/MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+    sha256: 82e3256532d32006743eca9aece92321b044e4ddd7be9ee034a48b8bc9d08fce
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 53
+    extracted_chars: 47390
+    chunk_fingerprint: 05a491ee4733cc9b57c2a7970ba403f8fb79701a71934e08f6b9e75005a07856
+  - filename: "MNT-001_Quarterly_PM_Cooling_Tower.docx"
+    source_path: "demo_dataset/Maintenance/MNT-001_Quarterly_PM_Cooling_Tower.docx"
+    sha256: 8e875ca85118ceb899584c6c7c087dadf3f8f7db3bc47ce3f3e597f7e0bcc42c
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1138
+    chunk_fingerprint: ac1b35d0b7050d4a95fbd729f1fb2d010d6de0313beaa94c0ed8c16d156e8788
+  - filename: "MNT-002_Bearing_Replacement_P-101.docx"
+    source_path: "demo_dataset/Maintenance/MNT-002_Bearing_Replacement_P-101.docx"
+    sha256: 0ac24fb3c60795adfebdd116b29dbf8b27f91f122c118a61be56b5d1d4238f45
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1252
+    chunk_fingerprint: 78b91dd24c849ec8e56e500e1d1d25cc1ccd53fa3b463644431dd415b4936d59
+  - filename: "MNT-003_Seal_Leakage_Repair_P-102.docx"
+    source_path: "demo_dataset/Maintenance/MNT-003_Seal_Leakage_Repair_P-102.docx"
+    sha256: 476c6a808e499ebcee260914995c69019e889de6b704720bee1d7a091532bd8c
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1382
+    chunk_fingerprint: 3773d7329909a0772d4c75d2e7ec32b9fed36e5d487ff1344c8f2f90d74db7a3
+  - filename: "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+    source_path: "demo_dataset/PowerPoint/PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+    sha256: 7dabfac57417c299e1bbb6f91f4cd0df0235b3aeda56c5e507601d94b8e34906
+    doc_type: manual
+    extraction_method: python-pptx
+    chunk_count: 3
+    extracted_chars: 1674
+    chunk_fingerprint: 5ae5b0aae5e5877c08ebbab1a4400457fbff5fcf0cd6a0f7f117df30c1a68608
+  - filename: "PPT-002_Plant_Overview.pptx"
+    source_path: "demo_dataset/PowerPoint/PPT-002_Plant_Overview.pptx"
+    sha256: b03e2ee7cd2a5f5a35debf2881af44f1fa3fdf62536a4f78f752a93bd51af398
+    doc_type: manual
+    extraction_method: python-pptx
+    chunk_count: 2
+    extracted_chars: 1240
+    chunk_fingerprint: 7693f00196624efedb558283fe85473fb96538f1cecb94a559795227f08fdb57
+  - filename: "SCN-001_Safety_Inspection_Checklist.pdf"
+    source_path: "demo_dataset/Scanned/SCN-001_Safety_Inspection_Checklist.pdf"
+    sha256: 2e478600df1378fc97344610283b67bbdb796ca833616f956b34e44478ffe51e
+    doc_type: manual
+    extraction_method: pymupdf
+    chunk_count: 2
+    extracted_chars: 1140
+    chunk_fingerprint: 7bb3dc93fbc5269eb73ff3b51e2dd2cfb5b6400603653a1e6992dee834fe5685
+  - filename: "SCN-002_P&ID_Cooling_Water.pdf"
+    source_path: "demo_dataset/Scanned/SCN-002_P&ID_Cooling_Water.pdf"
+    sha256: 4cdf75570b427b1ff0212ea31f2f87203ebdd16bf3466d0e38f4427b6548cf33
+    doc_type: manual
+    extraction_method: pymupdf
+    chunk_count: 3
+    extracted_chars: 1769
+    chunk_fingerprint: d9b0a57d7122bd4090ab12a8b4dc08c9bb1efdab3852b6f6417b39d00b6122b2
+  - filename: "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+    source_path: "demo_dataset/Scanned/SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+    sha256: e19d983522d9fb2684c45cc708f3b5627d2669bd5c9ae7383e6f09f1e98e8022
+    doc_type: manual
+    extraction_method: pymupdf+tesseract
+    chunk_count: 8
+    extracted_chars: 2649
+    chunk_fingerprint: 63c3b90ad5e421692d82a3fd724b1ec0d61261178e022f8e8e2f50099a5b76b4
+  - filename: "SOP-001_Pump_Start-Up_Procedure.docx"
+    source_path: "demo_dataset/SOPs/SOP-001_Pump_Start-Up_Procedure.docx"
+    sha256: df49346aa9804c669711f8125af0e8c3bae3004ffadde11d1aa1486378e15f2c
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1638
+    chunk_fingerprint: 0d19b146d32030f4c3a3a1cf8cc553597c4d519e00c2a8c8aaf8e29db39787a9
+  - filename: "SOP-002_Pump_Shut-Down_Procedure.docx"
+    source_path: "demo_dataset/SOPs/SOP-002_Pump_Shut-Down_Procedure.docx"
+    sha256: 3e23418d94555b40e509040035c0ba601884b4565ee6f2f3e6ba31a0cd620898
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1135
+    chunk_fingerprint: 0a715438ffafd024fcaa6a1f6f88b00bc9834839a10f18904d6f926bfd656fb4
+  - filename: "SOP-003_Boiler_Start-Up_Procedure.docx"
+    source_path: "demo_dataset/SOPs/SOP-003_Boiler_Start-Up_Procedure.docx"
+    sha256: 011714a079e624a8adcfc24d7d8fe3cb5a1fb998cb6e71875ff8d7e22431a40e
+    doc_type: manual
+    extraction_method: python-docx
+    chunk_count: 2
+    extracted_chars: 1398
+    chunk_fingerprint: 2ec4d1d9dc7ef17d49d43e4634b500859f9c820d6708c7880d4a748ca77e3ddd
+  - filename: "Spare_Parts_Inventory.xlsx"
+    source_path: "demo_dataset/Excel/Spare_Parts_Inventory.xlsx"
+    sha256: b19cde5be4b225db19e60f582055a63491ace78a7443ddde9b836410662993c2
+    doc_type: spreadsheet
+    extraction_method: openpyxl
+    chunk_count: 2
+    extracted_chars: 1029
+    chunk_fingerprint: 956b4d1fdcf86ddcf277fd436eb11d5f0787b0c2d6b0db91dea09f72d3d06bd6
+
+# Indexed in the dev environment but NOT part of the evaluation corpus.
+# Test uploads left by earlier pipeline fixes. The runner must drop them from
+# retrieval results before scoring (as the probe did), or they must be
+# soft-deleted first - they are not deleted here.
+excluded:
+  - filename: "FAILTEST-143234.txt"
+    sha256: 032f10221ced215bb27401413a90f68815899dd06b6a2127676e6b10a0ae1415
+    chunk_count: 1
+    reason: pipeline test fixture, not corpus content
+  - filename: "FIX1-DOCX-142247.docx"
+    sha256: d8c82bcb370bb7b0d0f88f64efec0d81067a962d52c1ed5837fa8d76da306d49
+    chunk_count: 1
+    reason: pipeline test fixture, not corpus content
+  - filename: "FIX1-PDF-142247.pdf"
+    sha256: 046cfaa51cd486f26bb74a8c70edeaa1b3c950003cee3b1ef20641f440e08589
+    chunk_count: 1
+    reason: pipeline test fixture, not corpus content
+  - filename: "FIX1-TXT-142247.txt"
+    sha256: 7c10846623ddf33d4171d20648f796770389aedc023c6944fd66ca30a4337732
+    chunk_count: 1
+    reason: pipeline test fixture, not corpus content

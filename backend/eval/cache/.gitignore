@@ -1,0 +1,3 @@
+# Cached LLM responses from eval runs - local only, may contain corpus text.
+*
+!.gitignore

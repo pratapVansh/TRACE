@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import logger
 from app.extraction.entity_extractor import EntityExtractor
 from app.extraction.normalizer import merge_entities
+from app.extraction.relationship import Relationship
 from app.extraction.relationship_extractor import RelationshipExtractor
 from app.graph.base import GraphStore
 from app.graph.graph_builder import GraphBuilderService

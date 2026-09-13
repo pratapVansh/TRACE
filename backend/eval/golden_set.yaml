@@ -1,0 +1,1082 @@
+# TRACE Stage 5 golden set - REVIEWED (13 September 2026)
+#
+# 40 questions over the frozen 25-document corpus in corpus_manifest.yaml:
+#   20 single_hop  - answer lives in one document (may need two passages of it)
+#   10 multi_hop   - answer needs two or more documents
+#    5 follow_up   - meaning depends on the prior turn in `history`
+#    5 negative    - the corpus does not contain the answer; correct behaviour is to say so
+#
+# REVIEW STATE
+# All 40 items were reviewed on 13 September 2026 (reviewed_by: pratapVansh).
+# S01-S10 were decided item by item; S11-S40 were reviewed against the files in
+# demo_dataset/ (SCN-003 against its rendered scan image) with every decision in
+# review.notes. S04, S07, S10 and N05 were replaced; see their notes.
+#
+# PROVENANCE AND TRUST
+# Items were drafted by Claude (an LLM) on 13 September 2026 from the extracted
+# chunk text of every corpus document, then reviewed against the SOURCE FILES in
+# demo_dataset/ (not against TRACE's extracted text, so extraction and OCR errors
+# are not copied into the reference). source: probe:<id> = probe question kept
+# verbatim; probe:<id>-revised = probe wording changed; new = written for this set.
+#
+# Machine checks: `python -m eval.validate` (schema, manifest, evidence in the
+# indexed chunks, facts grounded in the expected documents). A passing validator
+# proves the references exist in the corpus - correctness is from the review.
+#
+# HOW TO REVIEW AN ITEM
+#   1. Open the source file(s) and confirm the question is answerable (or, for
+#      negatives, genuinely unanswerable) from them.
+#   2. Correct expected_docs, expected_evidence and expected_facts.
+#   3. Widen any_of with other phrasings a correct answer could reasonably use.
+#   4. Rewrite a question only if it is wrong or ambiguous - never to make it
+#      easier. Probe questions were never revised; if you change one, set
+#      source to "probe:<id>-revised" and say why in review.notes.
+#   5. Set review.status to approved | revised | rejected, fill reviewed_by and
+#      reviewed_on. Rejected items must be replaced to keep the 20/10/5/5 split.
+#
+# FIELD REFERENCE
+#   expected_docs      filenames from corpus_manifest.yaml. For single_hop and
+#                      follow_up every listed doc is required; for multi_hop each
+#                      contributes partial credit; empty for negative items.
+#   expected_evidence  exact text that must appear in a retrieved chunk. Passage-
+#                      level, because document-level hits overstated the probe
+#                      (13/13 while two answers were unsupported). Chosen to
+#                      survive re-chunking: short, from inside one sentence/row.
+#   expected_facts     what a correct answer must state. A fact is covered when
+#                      the normalised answer contains ANY of its any_of strings.
+#                      Matching will normalise case, whitespace, unicode hyphens
+#                      (answers contain U+2011) and "deg C"/"°C" forms.
+#   must_refuse        true only for negative items. For them, expected_facts
+#                      is empty and the answer must say the information is not in
+#                      the documents without inventing a value.
+#   expected_resolution  follow_up only: the resolved search query must contain
+#                      ANY of these (case-insensitive) for the turn to count as resolved.
+#   in_source          per fact, default true: the validator requires one any_of
+#                      phrase to occur in the expected documents. false only when
+#                      a correct answer's wording cannot occur verbatim in the
+#                      indexed text: derived conclusions (a yes/no comparison),
+#                      values in table cells whose unit is only in the header, or
+#                      OCR-garbled source text. Each case is explained in notes.
+#   tags               difficulty labels for slicing results: compound,
+#                      table_row, no_lexical_overlap, entity_resolution,
+#                      ocr_source, false_premise, distractor_doc, long_doc.
+
+golden_set_version: 1
+corpus_manifest: corpus_manifest.yaml
+drafted_by: claude (LLM draft)
+drafted_on: "2026-09-13"
+review_status: reviewed
+
+items:
+
+# ---------------------------------------------------------------------------
+# SINGLE HOP (20) - S01-S12 derive from probe G1-G6, T1-T3, L1-L3; S04, S07 and
+# S10 were replaced, S03 and S08 reworded (see each item's source and notes)
+# ---------------------------------------------------------------------------
+
+- id: S01
+  type: single_hop
+  source: probe:G1
+  question: "When we bring the steam boiler up from cold, how quickly are we allowed to increase the burn, and is there a cap on how fast the metal can heat up?"
+  history: []
+  expected_docs:
+    - SOP-003_Boiler_Start-Up_Procedure.docx
+  expected_evidence:
+    - doc: SOP-003_Boiler_Start-Up_Procedure.docx
+      contains: "Increase firing rate max 5%/minute to avoid thermal stress."
+    - doc: SOP-003_Boiler_Start-Up_Procedure.docx
+      contains: "Bring boiler to 42 barg at <= 50 deg C/hr heating rate."
+  expected_facts:
+    - fact: "Firing rate may be increased by at most 5% per minute"
+      any_of: ["5%/minute", "5% per minute", "5 % per minute", "5 per cent per minute", "5 %/min"]
+    - fact: "Heating rate limited to 50 deg C per hour"
+      any_of: ["50 deg C/hr", "50 °C/hr", "50 °C per hour", "50°C/h", "50 degrees per hour", "50 deg c per hour", "≤ 50 °C/h"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Approved. Added accepted phrasings '5 %/min' and '≤ 50 °C/h'."
+
+- id: S02
+  type: single_hop
+  source: probe:G2
+  question: "How dry is the instrument air meant to be, and at what pressure does its relief device open?"
+  history: []
+  expected_docs:
+    - MAN-002_Air_Compressor_Manual.docx
+  expected_evidence:
+    - doc: MAN-002_Air_Compressor_Manual.docx
+      contains: "Dew Point: -40 deg C PDP"
+    - doc: MAN-002_Air_Compressor_Manual.docx
+      contains: "Pressure safety valve set at 10.5 barg"
+  expected_facts:
+    - fact: "Pressure dew point of -40 deg C"
+      any_of: ["-40 deg C", "-40 °C", "−40 °C", "-40°C", "minus 40"]
+    - fact: "Pressure safety valve set at 10.5 barg"
+      any_of: ["10.5 barg", "10.5 bar"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Approved as drafted. Evidence spans both chunks of MAN-002 (dew point in chunk 0, PSV in chunk 1)."
+
+- id: S03
+  type: single_hop
+  source: probe:G3-revised
+  question: "What was suggested to stop grit in the flush water chewing up the seal faces?"
+  history: []
+  expected_docs:
+    - MNT-003_Seal_Leakage_Repair_P-102.docx
+  expected_evidence:
+    - doc: MNT-003_Seal_Leakage_Repair_P-102.docx
+      contains: "Install Y-strainer on seal water line to prevent particulate damage to seal faces."
+  expected_facts:
+    - fact: "Install a Y-strainer on the seal water line"
+      any_of: ["y-strainer", "y strainer", "strainer on the seal water"]
+  must_refuse: false
+  tags: [no_lexical_overlap]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: removed 'again' from the probe G3 wording - MNT-003 gives worn seal faces as the root cause and never states grit caused a previous failure, so the repeat premise was unsupported. Y-strainer on the seal water line remains the only required fact; 'monitor seal water supply quality' is not required. Not directly comparable with probe G3 runs 1-5."
+
+- id: S04
+  type: single_hop
+  source: new (replaces rejected probe:G4)
+  question: "When we take the condensate return pump off line, how far do we close the discharge valve before pressing stop, and why?"
+  history: []
+  expected_docs:
+    - SOP-002_Pump_Shut-Down_Procedure.docx
+  expected_evidence:
+    - doc: SOP-002_Pump_Shut-Down_Procedure.docx
+      contains: "Close discharge valve slowly to 10% to reduce backflow."
+  expected_facts:
+    - fact: "Close the discharge valve slowly to 10% before stopping"
+      any_of: ["10%", "10 %", "10 per cent"]
+    - fact: "To reduce backflow"
+      any_of: ["backflow", "back flow", "back-flow"]
+  must_refuse: false
+  tags: [entity_resolution, distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Replacement for rejected S04 (probe G4). Verified in demo_dataset/SOPs/SOP-002_Pump_Shut-Down_Procedure.docx, section 2 step 3: 'Close discharge valve slowly to 10% to reduce backflow.' SOP-002 is for P-102, which the Equipment Register names Condensate Return Pump; the question uses the name, not the tag. Distractor: MAN-003 section 19 closes the feed pump discharge valve to 20 per cent before stopping - an answer of 20% has retrieved the wrong procedure. Adds SOP-002, previously unused, to the expected sources."
+
+- id: S05
+  type: single_hop
+  source: probe:G5
+  question: "Which control system vendor runs the site, and what's used for the safety instrumented layer?"
+  history: []
+  expected_docs:
+    - PPT-002_Plant_Overview.pptx
+  expected_evidence:
+    - doc: PPT-002_Plant_Overview.pptx
+      contains: "DCS: Yokogawa CENTUM VP"
+    - doc: PPT-002_Plant_Overview.pptx
+      contains: "SIS: Triconex (SIL-2 / SIL-3)"
+  expected_facts:
+    - fact: "DCS is Yokogawa CENTUM VP"
+      any_of: ["yokogawa", "centum vp"]
+    - fact: "SIS is Triconex"
+      any_of: ["triconex"]
+  must_refuse: false
+  tags: [no_lexical_overlap, compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Approved. 'CENTUM VP' added as an accepted phrasing for the DCS fact (it identifies the Yokogawa product unambiguously). SIL-2 / SIL-3 is an acceptable additional detail but is NOT added to any_of for the SIS fact: a SIL rating alone does not name the SIS vendor, so it must not substitute for 'Triconex'. The only probe question that failed in run 1: question says 'control system vendor' / 'safety instrumented layer', document says 'DCS' / 'SIS'."
+
+- id: S06
+  type: single_hop
+  source: probe:G6
+  question: "Is there any seasonal change recommended to the water treatment chemical programme?"
+  history: []
+  expected_docs:
+    - MNT-001_Quarterly_PM_Cooling_Tower.docx
+  expected_evidence:
+    - doc: MNT-001_Quarterly_PM_Cooling_Tower.docx
+      contains: "Increase biocide dosing frequency during monsoon months."
+  expected_facts:
+    - fact: "For cooling tower CT-01: increase biocide dosing frequency during the monsoon months"
+      any_of: ["monsoon"]
+    - fact: "For cooling tower CT-01: the change concerns biocide dosing"
+      any_of: ["biocide"]
+  must_refuse: false
+  tags: [no_lexical_overlap]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: expected scope clarified as cooling tower CT-01 only. The recommendation is in the CT-01 quarterly PM report (MNT-001, 05-Apr-2026) and is not a site-wide water treatment change. Question text kept verbatim (probe G6); the clarification is in the expected facts. An answer that attributes the change to CT-01 / the cooling tower is the precise answer; the CT-01 attribution is not yet enforced by any_of."
+
+- id: S07
+  type: single_hop
+  source: new (replaces rejected probe:T1)
+  question: "After the V-220 diaphragm job on the 15-16 July night shift, what time did the valve go back into automatic, and what was the downstream pressure then?"
+  history: []
+  expected_docs:
+    - LOG-002_Night_Shift_15-16-Jul-2026.txt
+  expected_evidence:
+    - doc: LOG-002_Night_Shift_15-16-Jul-2026.txt
+      contains: "23:30 -- V-220 returned to service in AUTO mode. Downstream pressure: 7.2 barg."
+  expected_facts:
+    - fact: "Returned to AUTO at 23:30"
+      any_of: ["23:30", "2330 hrs", "11:30 pm", "11.30 pm"]
+    - fact: "Downstream pressure 7.2 barg"
+      any_of: ["7.2 barg", "7.2 bar"]
+  must_refuse: false
+  tags: [distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Replacement for rejected S07 (probe T1). Verified in demo_dataset/ShiftLogs/LOG-002_Night_Shift_15-16-Jul-2026.txt, SHIFT EVENTS: '23:30 -- V-220 returned to service in AUTO mode. Downstream pressure: 7.2 barg.' (the equipment-status block also says AUTO at 23:30). Distractor: INC-002, where the same valve's downstream pressure rose to 8.2 barg in February. Adds LOG-002, previously unused, to the expected sources."
+
+- id: S08
+  type: single_hop
+  source: probe:T2-revised
+  question: "For T-501, what did the grounding cable resistance measurement come out at, and how does that sit against the allowable?"
+  history: []
+  expected_docs:
+    - INS-001_Pressure_Vessel_Inspection_T-501.docx
+  expected_evidence:
+    - doc: INS-001_Pressure_Vessel_Inspection_T-501.docx
+      contains: "Grounding cable resistance measured: 2.3"
+  expected_facts:
+    - fact: "Grounding cable resistance measured 2.3 ohm"
+      any_of: ["2.3 Ω", "2.3Ω", "2.3 Ω", "2.3Ω", "2.3 ohm"]
+    - fact: "Allowable limit is less than 10 ohm"
+      any_of: ["< 10 Ω", "<10 Ω", "< 10Ω", "<10Ω", "< 10 Ω", "<10 Ω", "< 10Ω", "<10Ω", "10 Ω", "10Ω", "10 Ω", "10Ω", "10 ohm"]
+  must_refuse: false
+  tags: []
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: question now uses the source's own terminology, 'grounding cable resistance', instead of 'earth continuity' (a related but different test). Because the question now shares the document's wording, the no_lexical_overlap tag was removed. Matching fixed: the source uses U+03A9 GREEK CAPITAL LETTER OMEGA; any_of now covers both U+03A9 and U+2126 OHM SIGN, with and without a space, and the duplicate entry is gone. The bare '< 10' was removed - every limit phrasing now requires the ohm unit. Not directly comparable with probe T2 runs 1-5."
+
+- id: S09
+  type: single_hop
+  source: probe:T3
+  question: "When V-220 stopped responding, how far was its actual position from what the controller was asking for, and how high did the header pressure climb?"
+  history: []
+  expected_docs:
+    - INC-002_Valve_Failure_V-220.docx
+  expected_evidence:
+    - doc: INC-002_Valve_Failure_V-220.docx
+      contains: "The valve was stuck at 45% open while the controller demanded 25%."
+    - doc: INC-002_Valve_Failure_V-220.docx
+      contains: "Downstream pressure rose to 8.2 barg"
+  expected_facts:
+    - fact: "Valve stuck at 45% open"
+      any_of: ["45%", "45 %", "45 per cent"]
+    - fact: "Controller demanded 25%"
+      any_of: ["25%", "25 %", "25 per cent"]
+    - fact: "Pressure rose to 8.2 barg"
+      any_of: ["8.2 barg", "8.2 bar"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: the required facts are the two stated values - stuck at 45% open and controller demand 25% - plus 8.2 barg. The calculated 20 percentage-point difference is NOT required and is NOT accepted as a substitute for the 45% / 25% facts; an answer giving only '20%' fails both. Question text unchanged (probe T3)."
+
+- id: S10
+  type: single_hop
+  source: new (replaces rejected probe:L1)
+  question: "If the feed pump's vibration spectrum picks up a component at a bit under half running speed, what does that point to, and what should be done first?"
+  history: []
+  expected_docs:
+    - MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+  expected_evidence:
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "A sub synchronous component at 0.42 to 0.48 times running speed indicates oil whirl"
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "Reduce oil temperature by 5 kelvin as a first response and plan a bearing clearance check"
+  expected_facts:
+    - fact: "It indicates oil whirl"
+      any_of: ["oil whirl"]
+    - fact: "First response: reduce oil temperature by 5 K"
+      any_of: ["5 kelvin", "5 k", "5 °c", "5°c", "5 deg c", "5 degrees"]
+    - fact: "Plan a bearing clearance check"
+      any_of: ["clearance check", "bearing clearance"]
+  must_refuse: false
+  tags: [long_doc, no_lexical_overlap]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Replacement for rejected S10 (probe L1), kept as a long-document question. Verified in demo_dataset/Manuals/MAN-003 section 32: 'A sub synchronous component at 0.42 to 0.48 times running speed indicates oil whirl and is considered serious on this machine because the bearings are sleeve type. Reduce oil temperature by 5 kelvin as a first response and plan a bearing clearance check'. Consistent with the manual's sleeve bearings, unlike the rejected L1. The question paraphrases '0.42 to 0.48 times' as 'a bit under half running speed', so keyword search cannot carry it."
+
+- id: S11
+  type: single_hop
+  source: probe:L2
+  question: "Fitting a new bearing to the feed pump - how hot can we take it during the shrink fit, and what does the locknut get tightened to?"
+  history: []
+  expected_docs:
+    - MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+  expected_evidence:
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "Heat the replacement bearing in an induction heater to a maximum of 120 degrees Celsius."
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "Bearing locknut | KM17 | 210 | Hook spanner with adaptor"
+  expected_facts:
+    - fact: "Maximum bearing heating temperature 120 deg C"
+      any_of: ["120 degrees", "120 deg c", "120 °c", "120°c"]
+    - fact: "Bearing locknut KM17 torque 210 Nm"
+      any_of: ["210 nm", "210 n·m", "210 newton"]
+      in_source: false
+  must_refuse: false
+  tags: [long_doc, compound, table_row]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Manuals/MAN-003: section 21 'Heat the replacement bearing in an induction heater to a maximum of 120 degrees Celsius' and section 24 table row 'Bearing locknut | KM17 | 210 | Hook spanner with adaptor'. Probe L2 wording kept, so comparable with probe runs 4-5. Known failure: compound question buries the torque table. Distractor: MNT-002's 'max 110 deg C' is for P-101, not this pump. Validator note: the 210 value is a table cell under the 'Torque (Nm)' header ('Bearing locknut | KM17 | 210 | ...'), so no answer-style phrasing like '210 Nm' occurs verbatim in the chunk; that fact is marked in_source: false."
+
+- id: S12
+  type: single_hop
+  source: probe:L3
+  question: "On the E-301 shell survey, what thickness did the north bottom position measure this time round, and what had it been eight years earlier?"
+  history: []
+  expected_docs:
+    - INS-004_Turnaround_Inspection_Report_E-301.docx
+  expected_evidence:
+    - doc: INS-004_Turnaround_Inspection_Report_E-301.docx
+      contains: "A3 | North, bottom | 13.6 | 12.9 | 0.7 | 0.088"
+  expected_facts:
+    - fact: "North bottom (A3) measured 12.9 mm in 2026"
+      any_of: ["12.9"]
+    - fact: "It was 13.6 mm in 2018"
+      any_of: ["13.6"]
+  must_refuse: false
+  tags: [long_doc, table_row]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Inspection/INS-004 section 8 table row 'A3 | North, bottom | 13.6 | 12.9 | 0.7 | 0.088' (2018 = 13.6 mm, 2026 = 12.9 mm). Probe L3 wording kept. Bare numbers are acceptable here because matching is number-boundary aware and 12.9 appears in no other row. Characteristic wrong answer: 12.4 mm (grid B3, the governing location discussed in prose)."
+
+- id: S13
+  type: single_hop
+  source: new
+  question: "What turned out to be the source of the oil leak on the cooling water pump in April, and what was it torqued to?"
+  history: []
+  expected_docs:
+    - INC-001_Pump_Oil_Leakage_P-101.docx
+  expected_evidence:
+    - doc: INC-001_Pump_Oil_Leakage_P-101.docx
+      contains: "Bearing housing drain plug found to be loose"
+    - doc: INC-001_Pump_Oil_Leakage_P-101.docx
+      contains: "tightened to 35 Nm"
+  expected_facts:
+    - fact: "Loose bearing housing drain plug"
+      any_of: ["drain plug"]
+    - fact: "Tightened to 35 Nm"
+      any_of: ["35 nm", "35 n·m"]
+  must_refuse: false
+  tags: [entity_resolution]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Incidents/INC-001: 'Bearing housing drain plug found to be loose -- tightened to 35 Nm' and root cause that the plug was not fully tightened after MNT-002. 'Cooling water pump' resolves to P-101 (Cooling Water Circulation Pump) in the document header itself."
+
+- id: S14
+  type: single_hop
+  source: new
+  question: "How bad were the vibration levels on the instrument air compressor in the May survey, and what did the analyst think was causing them?"
+  history: []
+  expected_docs:
+    - INS-002_Vibration_Analysis_C-201.docx
+  expected_evidence:
+    - doc: INS-002_Vibration_Analysis_C-201.docx
+      contains: "Overall vibration levels at compressor bearings are in the ALERT zone per ISO 10816-3"
+    - doc: INS-002_Vibration_Analysis_C-201.docx
+      contains: "suggests slight unbalance"
+  expected_facts:
+    - fact: "Compressor bearings in the ALERT zone per ISO 10816-3"
+      any_of: ["alert zone", "alert"]
+    - fact: "Likely cause is slight unbalance (1x RPM peak)"
+      any_of: ["unbalance", "imbalance"]
+  must_refuse: false
+  tags: [entity_resolution]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Inspection/INS-002: 'Overall vibration levels at compressor bearings are in the ALERT zone per ISO 10816-3 (2.8 - 4.5 mm/s, Class II). The dominant frequency peak at 1x RPM (2950 CPM) suggests slight unbalance.' Numeric readings (max 4.1 mm/s) deliberately not required - the question asks how bad (zone) and the cause."
+
+- id: S15
+  type: single_hop
+  source: new
+  question: "On the cooling water P&ID, what is the relief valve on the pump discharge set to?"
+  history: []
+  expected_docs:
+    - SCN-002_P&ID_Cooling_Water.pdf
+  expected_evidence:
+    - doc: SCN-002_P&ID_Cooling_Water.pdf
+      contains: "PSV-101 set at 6.0 barg (pump discharge)."
+  expected_facts:
+    - fact: "PSV-101 set at 6.0 barg"
+      any_of: ["6.0 barg", "6 barg", "6.0 bar"]
+  must_refuse: false
+  tags: []
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Scanned/SCN-002 (vector-text PDF, not OCR), NOTES: 'PSV-101 set at 6.0 barg (pump discharge).' Distractors: MAN-002 PSV 10.5 barg, INS-003 safety valves 44/44.5 barg."
+
+- id: S16
+  type: single_hop
+  source: new
+  question: "For the hot work on the ethylene pipeline in September, how often did the atmosphere have to be retested, and at what LEL did everyone have to stop and evacuate?"
+  history: []
+  expected_docs:
+    - SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf
+  expected_evidence:
+    - doc: SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf
+      contains: "Retest the atmosphere every 2. hours while hot work continues,"
+    - doc: SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf
+      contains: "Stop-work at once if LEL reaches-5 per cent"
+  expected_facts:
+    - fact: "Retest every 2 hours (and after any break over 30 minutes)"
+      any_of: ["every 2 hours", "every two hours", "2 hours", "two hours"]
+      in_source: false
+    - fact: "Stop work and evacuate if LEL reaches 5 per cent"
+      any_of: ["5 per cent", "5%", "5 %", "five per cent"]
+  must_refuse: false
+  tags: [ocr_source, compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified against the scanned image of SCN-003 page 2 (rendered and read directly): Section C reads 'Retest the atmosphere every 2 hours while hot work continues, and immediately after any break in work exceeding 30 minutes. Stop work at once if LEL reaches 5 per cent'. The evidence snippets intentionally keep the OCR artefacts ('every 2. hours', 'reaches-5') because they must match the indexed chunk text; the expected facts use the true wording. Distractor: the 10 per cent LEL acceptance limit. Validator note: the indexed OCR text reads 'every 2. hours', so the true-wording phrasings do not occur in the chunk; that fact is marked in_source: false (verified against the scan instead)."
+
+- id: S17
+  type: single_hop
+  source: new
+  question: "How many SKF 6319 C3 bearings for P-101 are in the stores, and what is the minimum we are supposed to keep?"
+  history: []
+  expected_docs:
+    - Spare_Parts_Inventory.xlsx
+  expected_evidence:
+    - doc: Spare_Parts_Inventory.xlsx
+      contains: "BRG-6319 | Bearing SKF 6319 C3 | P-101 | 3 | 2 | pcs"
+  expected_facts:
+    - fact: "3 in stock"
+      any_of: ["3 in stock", "in stock: 3", "3 pcs", "3 pieces", "3 units", "3 bearings", "three in stock", "stock of 3", "quantity of 3", "3 available"]
+      in_source: false
+    - fact: "Minimum stock 2"
+      any_of: ["minimum stock of 2", "minimum stock is 2", "minimum stock: 2", "min stock: 2", "min stock 2", "minimum of 2", "minimum is 2", "minimum level of 2", "minimum of two", "minimum stock of two", "minimum required stock: 2", "minimum required: 2"]
+      in_source: false
+  must_refuse: false
+  tags: [table_row]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Excel/Spare_Parts_Inventory.xlsx row 'BRG-6319 | Bearing SKF 6319 C3 | P-101 | Qty 3 | Min 2 | pcs'. Revised accepted phrasings: removed bare 'three' / 'two' (they matched almost any answer) and added quantity-qualified forms. Known limitation: BRG-6320 has identical quantities, so a row mix-up cannot be detected by fact matching. Validator note: quantities are bare table cells ('| 3 | 2 | pcs'), so quantity-qualified phrasings do not occur verbatim; both quantity facts are marked in_source: false (verified against the spreadsheet row). Added accepted phrasings minimum required stock: 2 / minimum required: 2 after the baseline answer run showed a correct answer phrased that way."
+
+- id: S18
+  type: single_hop
+  source: new
+  question: "When starting up P-101, what discharge pressure should we see and how quickly, and what's the most the motor should draw?"
+  history: []
+  expected_docs:
+    - SOP-001_Pump_Start-Up_Procedure.docx
+  expected_evidence:
+    - doc: SOP-001_Pump_Start-Up_Procedure.docx
+      contains: "Monitor discharge pressure rise to 4.5 barg within 5 seconds."
+    - doc: SOP-001_Pump_Start-Up_Procedure.docx
+      contains: "must not exceed nameplate FLA (45 A)"
+  expected_facts:
+    - fact: "Discharge pressure 4.5 barg"
+      any_of: ["4.5 barg", "4.5 bar"]
+    - fact: "Within 5 seconds"
+      any_of: ["5 seconds", "five seconds", "5 s"]
+    - fact: "Motor current not above FLA of 45 A"
+      any_of: ["45 a", "45a", "45 amp"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/SOPs/SOP-001 section 3: step 5 'Monitor discharge pressure rise to 4.5 barg within 5 seconds' and step 7 'must not exceed nameplate FLA (45 A)'. Distractors: MAN-003 start-up 92 barg within 8 seconds; LOG-001 M-110 also shows FLA 45 A."
+
+- id: S19
+  type: single_hop
+  source: new
+  question: "What pressures were the two sides of E-301 hydro-tested at after the tubes were plugged, and for how long?"
+  history: []
+  expected_docs:
+    - INS-004_Turnaround_Inspection_Report_E-301.docx
+  expected_evidence:
+    - doc: INS-004_Turnaround_Inspection_Report_E-301.docx
+      contains: "The shell side was tested at 24.1 barg and the tube side at 54.6 barg, each held for 30 minutes"
+  expected_facts:
+    - fact: "Shell side 24.1 barg"
+      any_of: ["24.1 barg", "24.1 bar"]
+    - fact: "Tube side 54.6 barg"
+      any_of: ["54.6 barg", "54.6 bar"]
+    - fact: "Held for 30 minutes"
+      any_of: ["30 minutes", "30 min"]
+  must_refuse: false
+  tags: [long_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Inspection/INS-004 section 10: 'The shell side was tested at 24.1 barg and the tube side at 54.6 barg, each held for 30 minutes'. Distractor: MAN-003 Appendix E casing hydrotest 138 barg for 30 minutes."
+
+- id: S20
+  type: single_hop
+  source: new
+  question: "At what bearing metal temperature does the boiler feed pump alarm, and at what temperature does it trip?"
+  history: []
+  expected_docs:
+    - MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+  expected_evidence:
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "Bearing metal temperature | less than 75 deg C | 85 deg C | 95 deg C"
+  expected_facts:
+    - fact: "Alarm at 85 deg C"
+      any_of: ["85 deg c", "85 °c", "85°c", "85 degrees"]
+    - fact: "Trip at 95 deg C"
+      any_of: ["95 deg c", "95 °c", "95°c", "95 degrees"]
+  must_refuse: false
+  tags: [long_doc, table_row]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified in demo_dataset/Manuals/MAN-003 section 18 table row 'Bearing metal temperature | less than 75 deg C | 85 deg C | 95 deg C' (normal / alarm / trip). Table-row answer in a 53-chunk manual."
+
+# ---------------------------------------------------------------------------
+# MULTI HOP (10) - answer needs more than one document
+# ---------------------------------------------------------------------------
+
+- id: M01
+  type: multi_hop
+  source: new
+  question: "The P-101 oil leak in April was blamed on an earlier maintenance job. Which job was that, and what was its work order number?"
+  history: []
+  expected_docs:
+    - INC-001_Pump_Oil_Leakage_P-101.docx
+    - MNT-002_Bearing_Replacement_P-101.docx
+  expected_evidence:
+    - doc: INC-001_Pump_Oil_Leakage_P-101.docx
+      contains: "not fully tightened during the previous bearing replacement (MNT-002, 12-Mar-2026)"
+    - doc: MNT-002_Bearing_Replacement_P-101.docx
+      contains: "Work Order: WO-2026-0341"
+  expected_facts:
+    - fact: "The bearing replacement of 12 March 2026 (MNT-002)"
+      any_of: ["bearing replacement", "mnt-002"]
+    - fact: "Work order WO-2026-0341"
+      any_of: ["wo-2026-0341", "2026-0341"]
+  must_refuse: false
+  tags: []
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: INC-001 root cause names 'the previous bearing replacement (MNT-002, 12-Mar-2026)'; MNT-002 header gives 'Work Order: WO-2026-0341'. The WO number exists only in MNT-002, so both documents are genuinely needed."
+
+- id: M02
+  type: multi_hop
+  source: new
+  question: "After the V-220 valve failure, what replacement interval was set for its actuator diaphragm, and when is the next replacement due?"
+  history: []
+  expected_docs:
+    - INC-002_Valve_Failure_V-220.docx
+    - Maintenance_Schedule.xlsx
+  expected_evidence:
+    - doc: INC-002_Valve_Failure_V-220.docx
+      contains: "with 2-year diaphragm replacement interval"
+    - doc: Maintenance_Schedule.xlsx
+      contains: "V-220 | Diaphragm replacement | 2 years | 15-Jul-2026 | 15-Jul-2028"
+  expected_facts:
+    - fact: "2-year replacement interval"
+      any_of: ["2-year", "2 year", "two year", "2 years", "two years"]
+    - fact: "Next due 15 July 2028"
+      any_of: ["15-jul-2028", "15 jul 2028", "15 july 2028", "july 2028"]
+  must_refuse: false
+  tags: []
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: INC-002 corrective action 3 'Added V-220 to critical valve PM schedule with 2-year diaphragm replacement interval'; Maintenance_Schedule.xlsx row 'V-220 | Diaphragm replacement | 2 years | 15-Jul-2026 | 15-Jul-2028'. Decision on the corpus contradiction: INC-002 (Feb 2026) says the diaphragm was replaced, while LOG-001/LOG-002 and the schedule record a replacement on 15-16 Jul 2026. The question asks only for the interval and the next due date, which all sources agree on, so the item stands. The contradiction is documented, not resolved."
+
+- id: M03
+  type: multi_hop
+  source: new
+  question: "What are the rated flow and motor power of the pump that circulates cooling water in the cracker unit?"
+  history: []
+  expected_docs:
+    - Equipment_Register.xlsx
+    - MAN-001_Centrifugal_Pump_Manual.docx
+  expected_evidence:
+    - doc: Equipment_Register.xlsx
+      contains: "P-101 | Cooling Water Circulation Pump | Centrifugal Pump | Operations | Cracker Unit"
+    - doc: MAN-001_Centrifugal_Pump_Manual.docx
+      contains: "Flow Rate | 180 m^3/hr | 120 m^3/hr"
+    - doc: MAN-001_Centrifugal_Pump_Manual.docx
+      contains: "Motor Power | 45 kW | 30 kW"
+  expected_facts:
+    - fact: "The pump is P-101"
+      any_of: ["p-101"]
+    - fact: "Rated flow 180 m3/hr"
+      any_of: ["180 m"]
+    - fact: "Motor power 45 kW"
+      any_of: ["45 kw"]
+  must_refuse: false
+  tags: [entity_resolution, table_row]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: Equipment_Register.xlsx 'P-101 | Cooling Water Circulation Pump | Centrifugal Pump | Operations | Cracker Unit'; MAN-001 section 2 table 'Flow Rate | 180 m^3/hr | 120 m^3/hr' and 'Motor Power | 45 kW | 30 kW' (columns P-101 | P-102). Needs entity resolution from description to tag, then the correct column."
+
+- id: M04
+  type: multi_hop
+  source: new
+  question: "How many spares of the mechanical seal that was fitted to P-102 in February do we have in stock?"
+  history: []
+  expected_docs:
+    - MNT-003_Seal_Leakage_Repair_P-102.docx
+    - Spare_Parts_Inventory.xlsx
+  expected_evidence:
+    - doc: MNT-003_Seal_Leakage_Repair_P-102.docx
+      contains: "Installed new mechanical seal (John Crane 5610, 45mm)"
+    - doc: Spare_Parts_Inventory.xlsx
+      contains: "SEAL-5610-45 | Mechanical Seal (John Crane 5610, 45mm) | P-102 | 2 | 1 | pcs"
+  expected_facts:
+    - fact: "Seal type John Crane 5610, 45 mm"
+      any_of: ["john crane 5610", "5610"]
+    - fact: "2 in stock"
+      any_of: ["2 in stock", "in stock: 2", "2 pcs", "2 pieces", "2 units", "two in stock", "stock of 2", "2 spare", "two spare", "quantity of 2"]
+      in_source: false
+  must_refuse: false
+  tags: [table_row]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MNT-003 'Installed new mechanical seal (John Crane 5610, 45mm)'; Spare_Parts_Inventory.xlsx 'SEAL-5610-45 | Mechanical Seal (John Crane 5610, 45mm) | P-102 | 2 | 1 | pcs'. Decision on the part-number mismatch (MNT-003 'JC-5610-45' vs inventory 'SEAL-5610-45'): treated as the same part because description, size and equipment are identical; the question asks by seal type, not part number. Revised accepted phrasings for the stock quantity (quantity-qualified forms added). Validator note: the stock quantity is a bare table cell ('| 2 | 1 | pcs'), so the quantity fact is marked in_source: false (verified against the spreadsheet row)."
+
+- id: M05
+  type: multi_hop
+  source: new
+  question: "Were the gas test acceptance limits on the September hot work permit the same values as the gas testing limits taught in the July safety training?"
+  history: []
+  expected_docs:
+    - SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf
+    - PPT-001_Monthly_Safety_Training_Jul2026.pptx
+  expected_evidence:
+    - doc: SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf
+      contains: "Oxygen must be between 19.5 and 23.5 per cent."
+    - doc: PPT-001_Monthly_Safety_Training_Jul2026.pptx
+      contains: "CO: < 25 ppm"
+  expected_facts:
+    - fact: "Yes, the values are the same"
+      any_of: ["same", "identical", "match", "consistent"]
+      in_source: false
+    - fact: "Oxygen 19.5 to 23.5 per cent"
+      any_of: ["19.5"]
+    - fact: "LEL below 10 per cent"
+      any_of: ["10 per cent", "10%", "< 10%", "10 %"]
+    - fact: "H2S below 10 ppm"
+      any_of: ["10 ppm"]
+    - fact: "CO below 25 ppm"
+      any_of: ["25 ppm"]
+  must_refuse: false
+  tags: [ocr_source, compound]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: SCN-003 scan page 2 ACCEPTANCE LIMITS (O2 19.5-23.5 per cent, LEL below 10 per cent, H2S below 10 ppm, CO below 25 ppm) and PPT-001 slide 'Confined Space Entry Refresher' (O2 19.5%-23.5%, LEL < 10%, H2S < 10 ppm, CO < 25 ppm). Decision: PPT-001 teaches these as confined-space gas testing limits, not hot-work limits, so the question was reworded to compare the values ('the same values as the gas testing limits taught'). The values are identical, so the expected conclusion is yes. The 'same' fact is a comparison, not text in either source, so it is marked in_source: false."
+
+- id: M06
+  type: multi_hop
+  source: new
+  question: "According to the maintenance schedule, when was the internal inspection of boiler B-101 due, and what did the May 2026 inspection report decide about it?"
+  history: []
+  expected_docs:
+    - Maintenance_Schedule.xlsx
+    - INS-003_Boiler_Inspection_B-101.docx
+  expected_evidence:
+    - doc: Maintenance_Schedule.xlsx
+      contains: "B-101 | Internal inspection | 5 years | 15-May-2021 | 15-May-2026"
+    - doc: INS-003_Boiler_Inspection_B-101.docx
+      contains: "Internal inspection deferred to next shutdown."
+  expected_facts:
+    - fact: "It was due 15 May 2026 (5-yearly, last done 15 May 2021)"
+      any_of: ["15-may-2026", "15 may 2026", "may 2026"]
+    - fact: "It was deferred to the next shutdown"
+      any_of: ["deferred", "next shutdown"]
+    - fact: "Must be completed within 6 months"
+      any_of: ["6 months", "six months"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: the original asked whether the inspection is 'overdue', which depends on a reference date the corpus never gives (latest documents are Sep 2026; INS-003 also allows six months). Reworded to ask for facts both sources state. Verified: Maintenance_Schedule.xlsx 'B-101 | Internal inspection | 5 years | 15-May-2021 | 15-May-2026'; INS-003 (15-May-2026) 'Internal inspection deferred to next shutdown' and action 'Internal inspection to be completed within 6 months'."
+
+- id: M07
+  type: multi_hop
+  source: new
+  question: "Which boiler do the HPX-4000 feed pumps supply, and how critical does the equipment register rate that boiler?"
+  history: []
+  expected_docs:
+    - MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+    - Equipment_Register.xlsx
+  expected_evidence:
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "feeding high pressure steam boiler B-101"
+    - doc: Equipment_Register.xlsx
+      contains: "B-101 | High Pressure Steam Boiler | Steam Boiler | Operations | Boiler House | 05-Nov-1998 | Active | Critical"
+  expected_facts:
+    - fact: "They feed B-101"
+      any_of: ["b-101"]
+    - fact: "B-101 criticality is Critical"
+      any_of: ["critical"]
+  must_refuse: false
+  tags: [long_doc, table_row]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MAN-003 section 1 'P-401 (duty) and P-402 (standby), feeding high pressure steam boiler B-101'; Equipment_Register.xlsx 'B-101 | High Pressure Steam Boiler | ... | Active | Critical'. P-401/P-402 are not in the register - resolution goes pump manual -> B-101 -> register."
+
+- id: M08
+  type: multi_hop
+  source: new
+  question: "On the 15 July morning shift, was P-101's vibration inside the start-up alert limit, and how did its bearing temperature compare with where it settled after the March bearing job?"
+  history: []
+  expected_docs:
+    - LOG-001_Morning_Shift_15-Jul-2026.txt
+    - SOP-001_Pump_Start-Up_Procedure.docx
+    - MNT-002_Bearing_Replacement_P-101.docx
+  expected_evidence:
+    - doc: LOG-001_Morning_Shift_15-Jul-2026.txt
+      contains: "Bearing temp 54 deg C, vibration 2.1 mm/s."
+    - doc: SOP-001_Pump_Start-Up_Procedure.docx
+      contains: "Verify pump vibration < 4.5 mm/s (alert limit)."
+    - doc: MNT-002_Bearing_Replacement_P-101.docx
+      contains: "Bearing Temperature: 52 deg C (stabilized)"
+  expected_facts:
+    - fact: "Vibration 2.1 mm/s, inside the 4.5 mm/s alert limit"
+      any_of: ["4.5 mm/s"]
+    - fact: "Shift reading 2.1 mm/s"
+      any_of: ["2.1 mm/s"]
+    - fact: "Bearing temperature 54 deg C on shift"
+      any_of: ["54 deg c", "54 °c", "54°c", "54 degrees"]
+    - fact: "52 deg C after the bearing replacement, so about 2 deg C higher"
+      any_of: ["52 deg c", "52 °c", "52°c", "52 degrees"]
+  must_refuse: false
+  tags: [compound]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: LOG-001 'P-101 : Running normally. Bearing temp 54 deg C, vibration 2.1 mm/s.'; SOP-001 step 9 'Verify pump vibration < 4.5 mm/s (alert limit)'; MNT-002 'Bearing Temperature: 52 deg C (stabilized)'. Three-document question. Known matching weakness: '2.1 mm/s' is also MNT-002's post-repair NDE vibration, so that fact can be satisfied from the wrong document."
+
+- id: M09
+  type: multi_hop
+  source: new
+  question: "When was E-301's tube bundle cleaning last done and next due according to the maintenance schedule, and what did the August 2026 turnaround inspection find on the shell side of the bundle?"
+  history: []
+  expected_docs:
+    - Maintenance_Schedule.xlsx
+    - INS-004_Turnaround_Inspection_Report_E-301.docx
+  expected_evidence:
+    - doc: Maintenance_Schedule.xlsx
+      contains: "E-301 | Tube bundle cleaning | 2 years | 30-Aug-2024 | 30-Aug-2026"
+    - doc: INS-004_Turnaround_Inspection_Report_E-301.docx
+      contains: "Deposit accumulation was found across the lower quadrant of the bundle"
+  expected_facts:
+    - fact: "Tube bundle cleaning last done 30-Aug-2024"
+      any_of: ["30-aug-2024", "30 aug 2024", "30 august 2024", "august 2024"]
+    - fact: "Next due 30-Aug-2026"
+      any_of: ["30-aug-2026", "30 aug 2026", "30 august 2026"]
+    - fact: "Deposits in the lower quadrant (up to 8 mm)"
+      any_of: ["deposit"]
+    - fact: "Under-deposit pitting up to 43 per cent wall loss"
+      any_of: ["43 per cent", "43%", "43 %", "pitting"]
+  must_refuse: false
+  tags: [long_doc, compound]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Revised: in the draft the maintenance schedule was only context in the question, so the item was not genuinely multi-document. Reworded so the schedule dates are required. Verified: Maintenance_Schedule.xlsx 'E-301 | Tube bundle cleaning | 2 years | 30-Aug-2024 | 30-Aug-2026'; INS-004 section 6.2 deposit accumulation across the lower quadrant, up to 8 mm, under-deposit pitting to 0.9 mm = 43 per cent wall loss. The minimum-flow recommendation fact was dropped (no longer asked)."
+
+- id: M10
+  type: multi_hop
+  source: new
+  question: "The April cooling tower maintenance and the safety checklist on the same day both flagged one problem. What was it, and when was it supposed to be dealt with?"
+  history: []
+  expected_docs:
+    - MNT-001_Quarterly_PM_Cooling_Tower.docx
+    - SCN-001_Safety_Inspection_Checklist.pdf
+  expected_evidence:
+    - doc: MNT-001_Quarterly_PM_Cooling_Tower.docx
+      contains: "Cell #3 fill media shows moderate scaling on the hot side."
+    - doc: SCN-001_Safety_Inspection_Checklist.pdf
+      contains: "Moderate scaling in Cell #3"
+    - doc: MNT-001_Quarterly_PM_Cooling_Tower.docx
+      contains: "Schedule fill media chemical cleaning for Q3 2026."
+  expected_facts:
+    - fact: "Moderate scaling of the fill media in cell 3"
+      any_of: ["scaling"]
+    - fact: "Cell #3"
+      any_of: ["cell #3", "cell 3", "cell three"]
+    - fact: "Chemical cleaning scheduled for Q3 2026"
+      any_of: ["q3"]
+  must_refuse: false
+  tags: [ocr_source]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MNT-001 'Cell #3 fill media shows moderate scaling on the hot side' and 'Schedule fill media chemical cleaning for Q3 2026'; SCN-001 (vector-text PDF) item 4 'Fill media condition [N] [Y]' with '>> Moderate scaling in Cell #3'. Both dated 05-Apr-2026. LOG-002 ('CT-01 chemical cleaning to be planned for Q3') is a valid but not required third source."
+
+# ---------------------------------------------------------------------------
+# FOLLOW UP (5) - `history` is fixed reference text, not a live model answer,
+# so the prior turn is identical on every run. Review the history too.
+# ---------------------------------------------------------------------------
+
+- id: F01
+  type: follow_up
+  source: new
+  question: "What part was used to fix it?"
+  history:
+    - role: user
+      content: "What went wrong with control valve V-220 in February?"
+    - role: assistant
+      content: "On 18-Feb-2026 V-220 stopped responding and stuck at 45% open while the controller demanded 25%, and header pressure rose to 8.2 barg. The root cause was a ruptured actuator diaphragm (INC-002)."
+  expected_resolution: ["V-220", "INC-002"]
+  expected_docs:
+    - INC-002_Valve_Failure_V-220.docx
+  expected_evidence:
+    - doc: INC-002_Valve_Failure_V-220.docx
+      contains: "Replaced actuator diaphragm (Fisher part no. DIA-220-EPDM-01)."
+  expected_facts:
+    - fact: "Fisher actuator diaphragm, part no. DIA-220-EPDM-01"
+      any_of: ["dia-220-epdm"]
+  must_refuse: false
+  tags: []
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: INC-002 corrective action 1 'Replaced actuator diaphragm (Fisher part no. DIA-220-EPDM-01)'. Decision: accepted phrasing widened to 'dia-220-epdm', which also covers Spare_Parts_Inventory.xlsx 'DIA-220-EPDM | Actuator Diaphragm (EPDM) | V-220' - same part, stock code without the -01 suffix. Added expected_resolution (V-220 / INC-002). History text checked against INC-002."
+
+- id: F02
+  type: follow_up
+  source: new
+  question: "What's the minimum continuous flow they can run at?"
+  history:
+    - role: user
+      content: "Tell me about the boiler feed pumps P-401 and P-402."
+    - role: assistant
+      content: "P-401 (duty) and P-402 (standby) are Flowserve HPX-4000 seven-stage barrel casing pumps feeding steam boiler B-101, rated 210 m3/hr at 92 barg discharge (MAN-003)."
+  expected_resolution: ["P-401", "P-402", "HPX-4000"]
+  expected_docs:
+    - MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+  expected_evidence:
+    - doc: MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx
+      contains: "The minimum continuous stable flow is 68 cubic metres per hour"
+  expected_facts:
+    - fact: "68 m3/hr"
+      any_of: ["68 cubic", "68 m3", "68 m³", "68 m^3"]
+  must_refuse: false
+  tags: [long_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MAN-003 section 2 'The minimum continuous stable flow is 68 cubic metres per hour' (also the specification table). History text checked against MAN-003 sections 1 and 4. Added expected_resolution (P-401 / P-402 / HPX-4000). Observation at review time: the current resolver rewrites 'they' as 'B-101' and only appends P-401 - the resolution metric will count that as resolved because P-401 is present."
+
+- id: F03
+  type: follow_up
+  source: new
+  question: "How many of its tubes are plugged now, and when will it hit the plugging limit?"
+  history:
+    - role: user
+      content: "Summarise the E-301 turnaround inspection."
+    - role: assistant
+      content: "E-301 was inspected during turnaround TA-2026-02 (14-22 Aug 2026) and is fit for a further four years, subject to freeing the seized sliding saddle, raising shell side minimum flow and cleaning the north saddle (INS-004)."
+  expected_resolution: ["E-301"]
+  expected_docs:
+    - INS-004_Turnaround_Inspection_Report_E-301.docx
+  expected_evidence:
+    - doc: INS-004_Turnaround_Inspection_Report_E-301.docx
+      contains: "bringing the cumulative plugged count to 34 of 512 tubes, or 6.6 per cent"
+    - doc: INS-004_Turnaround_Inspection_Report_E-301.docx
+      contains: "the limit will be reached at approximately the 2034 turnaround"
+  expected_facts:
+    - fact: "34 of 512 tubes plugged (6.6 per cent)"
+      any_of: ["34 of 512", "34 tubes", "34 plugged", "34 out of 512", "6.6%", "6.6 %", "6.6 per cent"]
+    - fact: "Limit reached around the 2034 turnaround"
+      any_of: ["2034"]
+  must_refuse: false
+  tags: [long_doc, compound]
+  review:
+    status: revised
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: INS-004 section 1 'bringing the cumulative plugged count to 34 of 512 tubes, or 6.6 per cent' and 'the limit will be reached at approximately the 2034 turnaround'. Revised accepted phrasings: bare '34' replaced with qualified forms ('34 of 512', '34 tubes', 6.6 per cent). Distractor: 19 tubes plugged in this turnaround alone. Added expected_resolution (E-301)."
+
+- id: F04
+  type: follow_up
+  source: new
+  question: "Which bearings were fitted in that job?"
+  history:
+    - role: user
+      content: "Who did the bearing replacement on P-101 in March?"
+    - role: assistant
+      content: "Suresh Kumar performed the P-101 bearing replacement on 12-Mar-2026 under work order WO-2026-0341, verified by Priya Sharma (MNT-002)."
+  expected_resolution: ["P-101", "MNT-002", "WO-2026-0341"]
+  expected_docs:
+    - MNT-002_Bearing_Replacement_P-101.docx
+  expected_evidence:
+    - doc: MNT-002_Bearing_Replacement_P-101.docx
+      contains: "Extracted DE bearing (SKF 6319 C3) and NDE bearing (SKF 6320 C3)"
+  expected_facts:
+    - fact: "Drive end SKF 6319 C3"
+      any_of: ["6319"]
+    - fact: "Non drive end SKF 6320 C3"
+      any_of: ["6320"]
+  must_refuse: false
+  tags: []
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MNT-002 'Extracted DE bearing (SKF 6319 C3) and NDE bearing (SKF 6320 C3)' and 'Installed new DE and NDE bearings'; parts used SKF 6319 C3 and SKF 6320 C3. History checked against MNT-002 (Suresh Kumar, WO-2026-0341, verified by Priya Sharma). Added expected_resolution (P-101 / MNT-002 / WO-2026-0341)."
+
+- id: F05
+  type: follow_up
+  source: new
+  question: "And how often should that oil be changed?"
+  history:
+    - role: user
+      content: "What lubricant does the instrument air compressor use?"
+    - role: assistant
+      content: "The C-201 Atlas Copco ZR-160 uses Atlas Copco Oil Roto-Xtend ND, and its motor bearings are greased with SKF LGHP 2 (MAN-002)."
+  expected_resolution: ["C-201", "ZR-160", "air compressor"]
+  expected_docs:
+    - MAN-002_Air_Compressor_Manual.docx
+  expected_evidence:
+    - doc: MAN-002_Air_Compressor_Manual.docx
+      contains: "Oil change interval: 4000 hours."
+  expected_facts:
+    - fact: "Every 4000 hours"
+      any_of: ["4000 hours", "4,000 hours", "4000 hrs", "4000 running hours"]
+  must_refuse: false
+  tags: [distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified: MAN-002 section 4 'Use Atlas Copco Oil Roto-Xtend ND. Oil change interval: 4000 hours.' History checked against MAN-002. Maintenance_Schedule.xlsx ('C-201 | Oil change | 4000 hrs') is a consistent second source. Distractor: MAN-003 '4,000 running hours or six months'. Added expected_resolution (C-201 / ZR-160 / air compressor)."
+
+# ---------------------------------------------------------------------------
+# NEGATIVE (5) - the corpus does not contain the answer
+# ---------------------------------------------------------------------------
+
+- id: N01
+  type: negative
+  source: probe:X1
+  question: "What was the root cause of the K-402 seal gas failure in March, and which parts were replaced?"
+  history: []
+  expected_docs: []
+  expected_evidence: []
+  expected_facts: []
+  must_refuse: true
+  tags: [false_premise]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified negative: 'K-402' and 'seal gas' occur nowhere in the corpus (search over all 25 documents). Probe X1 wording kept. Distractor: MNT-003 (P-102 seal repair)."
+
+- id: N02
+  type: negative
+  source: new
+  question: "What was the root cause of the P-401 boiler feed pump trip last year?"
+  history: []
+  expected_docs: []
+  expected_evidence: []
+  expected_facts: []
+  must_refuse: true
+  tags: [false_premise, distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified negative: P-401 appears only in MAN-003 (manual); no incident, trip record or investigation exists for it. Decision for scoring: an answer that says no trip record exists is a correct refusal even if it also mentions the manual's generic troubleshooting guidance; reciting generic causes as 'the root cause' is the failure."
+
+- id: N03
+  type: negative
+  source: new
+  question: "Which contractor supplied the replacement tubes for E-301 during turnaround TA-2026-02?"
+  history: []
+  expected_docs: []
+  expected_evidence: []
+  expected_facts: []
+  must_refuse: true
+  tags: [false_premise, distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified negative with false premise: INS-004 states 19 tubes were plugged (none replaced) and retubing is planned for the 2034 turnaround. No contractor is named for E-301 anywhere. The only contractor in the corpus is Gujarat Fabrication Services on SCN-003 (L-401 pipeline hot work)."
+
+- id: N04
+  type: negative
+  source: new
+  question: "What did the internal inspection of boiler B-101 find inside the steam drum?"
+  history: []
+  expected_docs: []
+  expected_evidence: []
+  expected_facts: []
+  must_refuse: true
+  tags: [false_premise, distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Verified negative with false premise: INS-003 'Internal inspection deferred to next shutdown'; only external findings and external UT readings on the drum shell exist. Decision: expected_docs stays empty - retrieval metrics for negatives are diagnostic only, so INS-003 appearing in context is expected and not penalised. Reporting the UT readings as internal findings is the failure."
+
+- id: N05
+  type: negative
+  source: new (replaces N05 CO-reading item)
+  question: "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?"
+  history: []
+  expected_docs: []
+  expected_evidence: []
+  expected_facts: []
+  must_refuse: true
+  tags: [distractor_doc]
+  review:
+    status: approved
+    reviewed_by: pratapVansh
+    reviewed_on: "2026-09-13"
+    notes: "Replacement. The original N05 (CO reading at 11:00 on SCN-003) is NOT a genuine negative: the scanned page 2 of demo_dataset/Scanned/SCN-003 visibly shows CO 0 ppm at 11:00; only OCR lost the column. New item verified: PSV-3011 appears once in the corpus, in INS-004 section 2 ('the relief valve PSV-3011 which is on a separate certification cycle' - out of scope); no set pressure exists anywhere. Distractors: PSV-101 at 6.0 barg (SCN-002), the compressor PSV at 10.5 barg (MAN-002), E-301 shell design pressure 18.5 barg and hydrotest 24.1 barg (INS-004). Any of those given as PSV-3011's set pressure is the failure. The OCR-lost CO column remains a documented pipeline limitation, not a golden item."
+

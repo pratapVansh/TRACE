@@ -1,0 +1,2628 @@
+{
+ "kind": "retrieval",
+ "run_at": "2026-09-13T11:27:53+00:00",
+ "git": {
+  "head": "e647562",
+  "dirty": true
+ },
+ "settings": {
+  "name": "baseline",
+  "rerank": true,
+  "graph": true,
+  "collection": null,
+  "description": "Current pipeline: hybrid search + reranker + graph, chunk 256",
+  "qdrant_collection": "document_chunks",
+  "rerank_enabled": true,
+  "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "retrieval_top_k": 15,
+  "vector_top_k": 10,
+  "graph_top_k": 5,
+  "dedup_documents": true,
+  "llm_model": "openai/gpt-oss-120b"
+ },
+ "graph_connected": true,
+ "summary": {
+  "answerable": {
+   "n": 35,
+   "doc_recall_at_5": 0.919047619047619,
+   "doc_hit_rate_at_5": 0.8857142857142857,
+   "passage_recall_at_5": 0.5666666666666667,
+   "evidence_in_context": 0.6142857142857143,
+   "mrr": 0.8603174603174603
+  },
+  "by_type": {
+   "single_hop": {
+    "n": 20,
+    "doc_recall_at_5": 0.9,
+    "doc_hit_rate_at_5": 0.9,
+    "passage_recall_at_5": 0.55,
+    "evidence_in_context": 0.6,
+    "mrr": 0.8138888888888889
+   },
+   "multi_hop": {
+    "n": 10,
+    "doc_recall_at_5": 0.9166666666666666,
+    "doc_hit_rate_at_5": 0.8,
+    "passage_recall_at_5": 0.6833333333333333,
+    "evidence_in_context": 0.75,
+    "mrr": 0.8833333333333334
+   },
+   "follow_up": {
+    "n": 5,
+    "doc_recall_at_5": 1.0,
+    "doc_hit_rate_at_5": 1.0,
+    "passage_recall_at_5": 0.4,
+    "evidence_in_context": 0.4,
+    "mrr": 1.0
+   }
+  },
+  "by_tag": {
+   "compound": {
+    "n": 12,
+    "doc_recall_at_5": 0.8888888888888888,
+    "doc_hit_rate_at_5": 0.8333333333333334,
+    "passage_recall_at_5": 0.611111111111111,
+    "evidence_in_context": 0.611111111111111,
+    "mrr": 0.8842592592592592
+   },
+   "distractor_doc": {
+    "n": 3,
+    "doc_recall_at_5": 1.0,
+    "doc_hit_rate_at_5": 1.0,
+    "passage_recall_at_5": 0.6666666666666666,
+    "evidence_in_context": 0.6666666666666666,
+    "mrr": 0.8333333333333334
+   },
+   "entity_resolution": {
+    "n": 4,
+    "doc_recall_at_5": 0.875,
+    "doc_hit_rate_at_5": 0.75,
+    "passage_recall_at_5": 0.5833333333333334,
+    "evidence_in_context": 0.75,
+    "mrr": 1.0
+   },
+   "long_doc": {
+    "n": 9,
+    "doc_recall_at_5": 1.0,
+    "doc_hit_rate_at_5": 1.0,
+    "passage_recall_at_5": 0.5555555555555556,
+    "evidence_in_context": 0.5555555555555556,
+    "mrr": 1.0
+   },
+   "no_lexical_overlap": {
+    "n": 4,
+    "doc_recall_at_5": 0.5,
+    "doc_hit_rate_at_5": 0.5,
+    "passage_recall_at_5": 0.0,
+    "evidence_in_context": 0.25,
+    "mrr": 0.4444444444444444
+   },
+   "ocr_source": {
+    "n": 3,
+    "doc_recall_at_5": 1.0,
+    "doc_hit_rate_at_5": 1.0,
+    "passage_recall_at_5": 0.7222222222222222,
+    "evidence_in_context": 0.7222222222222222,
+    "mrr": 0.7777777777777778
+   },
+   "table_row": {
+    "n": 7,
+    "doc_recall_at_5": 0.9285714285714286,
+    "doc_hit_rate_at_5": 0.8571428571428571,
+    "passage_recall_at_5": 0.6904761904761905,
+    "evidence_in_context": 0.7857142857142857,
+    "mrr": 0.9285714285714286
+   }
+  },
+  "follow_up_resolution_rate": 1.0,
+  "negative_top_score_mean": 0.6426984,
+  "negative_top_score_max": 1.0,
+  "answerable_top_score_mean": 0.6089212,
+  "latency_ms_p50": 6485.25,
+  "latency_ms_p95": 8402.425
+ },
+ "items": [
+  {
+   "id": "S01",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When we bring the steam boiler up from cold, how quickly are we allowed to increase the burn, and is there a cap on how fast the metal can heat up?",
+   "search_query": "When we bring the steam boiler up from cold, how quickly are we allowed to increase the burn, and is there a cap on how fast the metal can heat up?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SOP-003_Boiler_Start-Up_Procedure.docx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "Equipment_Register.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 13,
+     "score": 0.060549
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 1,
+     "score": 0.04787
+    },
+    {
+     "doc": "INS-003_Boiler_Inspection_B-101.docx",
+     "chunk_index": 0,
+     "score": 0.040393
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.040128
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.040085
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.5,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.060549,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 7,
+   "graph_only_items": 1,
+   "latency_ms": 6604.3
+  },
+  {
+   "id": "S02",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "How dry is the instrument air meant to be, and at what pressure does its relief device open?",
+   "search_query": "How dry is the instrument air meant to be, and at what pressure does its relief device open?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-002_Air_Compressor_Manual.docx",
+    "Equipment_Register.xlsx",
+    "INC-002_Valve_Failure_V-220.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.0668
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.060031
+    },
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 0.020079
+    },
+    {
+     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "chunk_index": 0,
+     "score": 0.020035
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 45,
+     "score": 0.001794
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.0668,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 2,
+   "graph_facts": 8,
+   "graph_only_items": 2,
+   "latency_ms": 6593.8
+  },
+  {
+   "id": "S03",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap"
+   ],
+   "question": "What was suggested to stop grit in the flush water chewing up the seal faces?",
+   "search_query": "What was suggested to stop grit in the flush water chewing up the seal faces?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MNT-003_Seal_Leakage_Repair_P-102.docx"
+   ],
+   "ranked_docs": [
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 1,
+     "score": 0.060015
+    },
+    {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 0,
+     "score": 0.048424
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.040101
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 25,
+     "score": 0.003835
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 1,
+     "score": 2.5e-05
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.5,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.060015,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 16,
+   "graph_only_items": 3,
+   "latency_ms": 6732.6
+  },
+  {
+   "id": "S04",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution",
+    "distractor_doc"
+   ],
+   "question": "When we take the condensate return pump off line, how far do we close the discharge valve before pressing stop, and why?",
+   "search_query": "When we take the condensate return pump off line, how far do we close the discharge valve before pressing stop, and why?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "ranked_docs": [
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SOP-002_Pump_Shut-Down_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.758802
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 21,
+     "score": 0.375257
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.040384
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 2,
+     "score": 0.020704
+    },
+    {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 0,
+     "score": 0.015366
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.758802,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 6,
+   "graph_only_items": 2,
+   "latency_ms": 7797.7
+  },
+  {
+   "id": "S05",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap",
+    "compound"
+   ],
+   "question": "Which control system vendor runs the site, and what's used for the safety instrumented layer?",
+   "search_query": "Which control system vendor runs the site, and what's used for the safety instrumented layer?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "PPT-002_Plant_Overview.pptx"
+   ],
+   "ranked_docs": [
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Equipment_Register.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-002_Plant_Overview.pptx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "top_chunks": [
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 0,
+     "score": 0.080021
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.060021
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 0,
+     "score": 0.020129
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 1,
+     "score": 0.020075
+    },
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 1,
+     "score": 0.020046
+    }
+   ],
+   "doc_recall_at_5": 0.0,
+   "mrr": 0.1111111111111111,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.080021,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 7,
+   "graph_only_items": 0,
+   "latency_ms": 7585.0
+  },
+  {
+   "id": "S06",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap"
+   ],
+   "question": "Is there any seasonal change recommended to the water treatment chemical programme?",
+   "search_query": "Is there any seasonal change recommended to the water treatment chemical programme?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx"
+   ],
+   "ranked_docs": [
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.040014
+    },
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 18,
+     "score": 0.020019
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.020015
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.020012
+    },
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.020012
+    }
+   ],
+   "doc_recall_at_5": 0.0,
+   "mrr": 0.16666666666666666,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.040014,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 10,
+   "graph_only_items": 2,
+   "latency_ms": 7684.8
+  },
+  {
+   "id": "S07",
+   "type": "single_hop",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "After the V-220 diaphragm job on the 15-16 July night shift, what time did the valve go back into automatic, and what was the downstream pressure then?",
+   "search_query": "After the V-220 diaphragm job on the 15-16 July night shift, what time did the valve go back into automatic, and what was the downstream pressure then?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt"
+   ],
+   "ranked_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 0.790429
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.390516
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.157676
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.112725
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.110019
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.5,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.790429,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 15,
+   "graph_only_items": 1,
+   "latency_ms": 7725.0
+  },
+  {
+   "id": "S08",
+   "type": "single_hop",
+   "tags": [],
+   "question": "For T-501, what did the grounding cable resistance measurement come out at, and how does that sit against the allowable?",
+   "search_query": "For T-501, what did the grounding cable resistance measurement come out at, and how does that sit against the allowable?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+   ],
+   "ranked_docs": [
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-002_Plant_Overview.pptx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+     "chunk_index": 0,
+     "score": 0.771092
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.100604
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.100195
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.100057
+    },
+    {
+     "doc": "PPT-002_Plant_Overview.pptx",
+     "chunk_index": 0,
+     "score": 0.10002
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.771092,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 10,
+   "graph_only_items": 2,
+   "latency_ms": 8376.2
+  },
+  {
+   "id": "S09",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When V-220 stopped responding, how far was its actual position from what the controller was asking for, and how high did the header pressure climb?",
+   "search_query": "When V-220 stopped responding, how far was its actual position from what the controller was asking for, and how high did the header pressure climb?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INC-002_Valve_Failure_V-220.docx"
+   ],
+   "ranked_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.111931
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.102155
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.100536
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.100192
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 19,
+   "graph_only_items": 3,
+   "latency_ms": 9446.9
+  },
+  {
+   "id": "S10",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "no_lexical_overlap"
+   ],
+   "question": "If the feed pump's vibration spectrum picks up a component at a bit under half running speed, what does that point to, and what should be done first?",
+   "search_query": "If the feed pump's vibration spectrum picks up a component at a bit under half running speed, what does that point to, and what should be done first?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 37,
+     "score": 0.323948
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.080057
+    },
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.040055
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.020225
+    },
+    {
+     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "chunk_index": 1,
+     "score": 0.020118
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.323948,
+   "chunks_in_context": 9,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 11,
+   "graph_only_items": 2,
+   "latency_ms": 8900.7
+  },
+  {
+   "id": "S11",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "compound",
+    "table_row"
+   ],
+   "question": "Fitting a new bearing to the feed pump - how hot can we take it during the shrink fit, and what does the locknut get tightened to?",
+   "search_query": "Fitting a new bearing to the feed pump - how hot can we take it during the shrink fit, and what does the locknut get tightened to?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-002_Vibration_Analysis_C-201.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 24,
+     "score": 0.556684
+    },
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.080606
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.080049
+    },
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 0.060481
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 1,
+     "score": 0.026111
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.556684,
+   "chunks_in_context": 9,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 11,
+   "graph_only_items": 1,
+   "latency_ms": 7886.6
+  },
+  {
+   "id": "S12",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "On the E-301 shell survey, what thickness did the north bottom position measure this time round, and what had it been eight years earlier?",
+   "search_query": "On the E-301 shell survey, what thickness did the north bottom position measure this time round, and what had it been eight years earlier?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 13,
+     "score": 0.267062
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.100571
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.100144
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.100075
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.100073
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.267062,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 2,
+   "graph_facts": 14,
+   "graph_only_items": 2,
+   "latency_ms": 8043.5
+  },
+  {
+   "id": "S13",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution"
+   ],
+   "question": "What turned out to be the source of the oil leak on the cooling water pump in April, and what was it torqued to?",
+   "search_query": "What turned out to be the source of the oil leak on the cooling water pump in April, and what was it torqued to?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx"
+   ],
+   "ranked_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "Equipment_Register.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.275266
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.100155
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 0,
+     "score": 0.100103
+    },
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 0.064168
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 36,
+     "score": 0.06177
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.275266,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 16,
+   "graph_only_items": 0,
+   "latency_ms": 7230.2
+  },
+  {
+   "id": "S14",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution"
+   ],
+   "question": "How bad were the vibration levels on the instrument air compressor in the May survey, and what did the analyst think was causing them?",
+   "search_query": "How bad were the vibration levels on the instrument air compressor in the May survey, and what did the analyst think was causing them?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INS-002_Vibration_Analysis_C-201.docx"
+   ],
+   "ranked_docs": [
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "Maintenance_Schedule.xlsx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "chunk_index": 0,
+     "score": 0.609771
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 30,
+     "score": 0.10031
+    },
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.100194
+    },
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 1,
+     "score": 0.100169
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.100112
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.609771,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 2,
+   "graph_facts": 16,
+   "graph_only_items": 2,
+   "latency_ms": 6129.5
+  },
+  {
+   "id": "S15",
+   "type": "single_hop",
+   "tags": [],
+   "question": "On the cooling water P&ID, what is the relief valve on the pump discharge set to?",
+   "search_query": "On the cooling water P&ID, what is the relief valve on the pump discharge set to?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "ranked_docs": [
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 0,
+     "score": 0.659711
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.098914
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.083929
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 2,
+     "score": 0.034135
+    },
+    {
+     "doc": "SOP-002_Pump_Shut-Down_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.028163
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.659711,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 12,
+   "graph_only_items": 2,
+   "latency_ms": 7289.4
+  },
+  {
+   "id": "S16",
+   "type": "single_hop",
+   "tags": [
+    "ocr_source",
+    "compound"
+   ],
+   "question": "For the hot work on the ethylene pipeline in September, how often did the atmosphere have to be retested, and at what LEL did everyone have to stop and evacuate?",
+   "search_query": "For the hot work on the ethylene pipeline in September, how often did the atmosphere have to be retested, and at what LEL did everyone have to stop and evacuate?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "ranked_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "PPT-002_Plant_Overview.pptx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+     "chunk_index": 4,
+     "score": 0.955062
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.040354
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.040226
+    },
+    {
+     "doc": "PPT-002_Plant_Overview.pptx",
+     "chunk_index": 0,
+     "score": 0.040048
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.040027
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.955062,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 5,
+   "graph_only_items": 0,
+   "latency_ms": 6714.1
+  },
+  {
+   "id": "S17",
+   "type": "single_hop",
+   "tags": [
+    "table_row"
+   ],
+   "question": "How many SKF 6319 C3 bearings for P-101 are in the stores, and what is the minimum we are supposed to keep?",
+   "search_query": "How many SKF 6319 C3 bearings for P-101 are in the stores, and what is the minimum we are supposed to keep?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "ranked_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "Maintenance_Schedule.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.952087
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 0,
+     "score": 0.947639
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.178269
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.129291
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 0.119008
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.5,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.952087,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 18,
+   "graph_only_items": 4,
+   "latency_ms": 6366.3
+  },
+  {
+   "id": "S18",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When starting up P-101, what discharge pressure should we see and how quickly, and what's the most the motor should draw?",
+   "search_query": "When starting up P-101, what discharge pressure should we see and how quickly, and what's the most the motor should draw?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "ranked_docs": [
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.370842
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 19,
+     "score": 0.34089
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 2,
+     "score": 0.120643
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.112936
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.102528
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.370842,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 21,
+   "graph_only_items": 5,
+   "latency_ms": 6835.5
+  },
+  {
+   "id": "S19",
+   "type": "single_hop",
+   "tags": [
+    "long_doc"
+   ],
+   "question": "What pressures were the two sides of E-301 hydro-tested at after the tubes were plugged, and for how long?",
+   "search_query": "What pressures were the two sides of E-301 hydro-tested at after the tubes were plugged, and for how long?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "Equipment_Register.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INC-002_Valve_Failure_V-220.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 15,
+     "score": 1.0
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.102627
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.102053
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.10151
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.100614
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 13,
+   "graph_only_items": 2,
+   "latency_ms": 6227.3
+  },
+  {
+   "id": "S20",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "At what bearing metal temperature does the boiler feed pump alarm, and at what temperature does it trip?",
+   "search_query": "At what bearing metal temperature does the boiler feed pump alarm, and at what temperature does it trip?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 20,
+     "score": 1.0
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.060284
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.053246
+    },
+    {
+     "doc": "INS-003_Boiler_Inspection_B-101.docx",
+     "chunk_index": 0,
+     "score": 0.040441
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.020357
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 8,
+   "graph_only_items": 1,
+   "latency_ms": 7081.8
+  },
+  {
+   "id": "M01",
+   "type": "multi_hop",
+   "tags": [],
+   "question": "The P-101 oil leak in April was blamed on an earlier maintenance job. Which job was that, and what was its work order number?",
+   "search_query": "The P-101 oil leak in April was blamed on an earlier maintenance job. Which job was that, and what was its work order number?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx"
+   ],
+   "ranked_docs": [
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "Equipment_Register.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 0.391438
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.34147
+    },
+    {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 0,
+     "score": 0.111601
+    },
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.087142
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.061689
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.5,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.391438,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 9,
+   "graph_only_items": 2,
+   "latency_ms": 6055.1
+  },
+  {
+   "id": "M02",
+   "type": "multi_hop",
+   "tags": [],
+   "question": "After the V-220 valve failure, what replacement interval was set for its actuator diaphragm, and when is the next replacement due?",
+   "search_query": "After the V-220 valve failure, what replacement interval was set for its actuator diaphragm, and when is the next replacement due?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "Maintenance_Schedule.xlsx"
+   ],
+   "ranked_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 1,
+     "score": 1.0
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.453427
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.245565
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.176667
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.113433
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 10,
+   "graph_only_items": 2,
+   "latency_ms": 6376.7
+  },
+  {
+   "id": "M03",
+   "type": "multi_hop",
+   "tags": [
+    "entity_resolution",
+    "table_row"
+   ],
+   "question": "What are the rated flow and motor power of the pump that circulates cooling water in the cracker unit?",
+   "search_query": "What are the rated flow and motor power of the pump that circulates cooling water in the cracker unit?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "Equipment_Register.xlsx",
+    "MAN-001_Centrifugal_Pump_Manual.docx"
+   ],
+   "ranked_docs": [
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.521572
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 5,
+     "score": 0.254926
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 0,
+     "score": 0.106725
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.062117
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.060702
+    }
+   ],
+   "doc_recall_at_5": 0.5,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.3333333333333333,
+   "evidence_in_context": 1.0,
+   "top_score": 0.521572,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 13,
+   "graph_only_items": 1,
+   "latency_ms": 7040.7
+  },
+  {
+   "id": "M04",
+   "type": "multi_hop",
+   "tags": [
+    "table_row"
+   ],
+   "question": "How many spares of the mechanical seal that was fitted to P-102 in February do we have in stock?",
+   "search_query": "How many spares of the mechanical seal that was fitted to P-102 in February do we have in stock?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "ranked_docs": [
+    "Spare_Parts_Inventory.xlsx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "Equipment_Register.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 0,
+     "score": 0.97506
+    },
+    {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 0,
+     "score": 0.278571
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 0.112349
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.110129
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.101329
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.97506,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 13,
+   "graph_only_items": 1,
+   "latency_ms": 7126.4
+  },
+  {
+   "id": "M05",
+   "type": "multi_hop",
+   "tags": [
+    "ocr_source",
+    "compound"
+   ],
+   "question": "Were the gas test acceptance limits on the September hot work permit the same values as the gas testing limits taught in the July safety training?",
+   "search_query": "Were the gas test acceptance limits on the September hot work permit the same values as the gas testing limits taught in the July safety training?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+   ],
+   "ranked_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+     "chunk_index": 3,
+     "score": 0.061251
+    },
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 0.042019
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.040055
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.020063
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 45,
+     "score": 0.000686
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 0.061251,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 9,
+   "graph_only_items": 4,
+   "latency_ms": 7174.4
+  },
+  {
+   "id": "M06",
+   "type": "multi_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "According to the maintenance schedule, when was the internal inspection of boiler B-101 due, and what did the May 2026 inspection report decide about it?",
+   "search_query": "According to the maintenance schedule, when was the internal inspection of boiler B-101 due, and what did the May 2026 inspection report decide about it?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "Maintenance_Schedule.xlsx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "ranked_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-003_Boiler_Inspection_B-101.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 1.0
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.285491
+    },
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 0,
+     "score": 0.145388
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.142248
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 18,
+   "graph_only_items": 1,
+   "latency_ms": 5755.9
+  },
+  {
+   "id": "M07",
+   "type": "multi_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "Which boiler do the HPX-4000 feed pumps supply, and how critical does the equipment register rate that boiler?",
+   "search_query": "Which boiler do the HPX-4000 feed pumps supply, and how critical does the equipment register rate that boiler?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Equipment_Register.xlsx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Equipment_Register.xlsx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.984903
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.180722
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.082569
+    },
+    {
+     "doc": "INS-003_Boiler_Inspection_B-101.docx",
+     "chunk_index": 0,
+     "score": 0.040384
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.020303
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.984903,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 8,
+   "graph_only_items": 0,
+   "latency_ms": 2529.1
+  },
+  {
+   "id": "M08",
+   "type": "multi_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "On the 15 July morning shift, was P-101's vibration inside the start-up alert limit, and how did its bearing temperature compare with where it settled after the March bearing job?",
+   "search_query": "On the 15 July morning shift, was P-101's vibration inside the start-up alert limit, and how did its bearing temperature compare with where it settled after the March bearing job?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx"
+   ],
+   "ranked_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.551484
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.374174
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.115347
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.108839
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.100615
+    }
+   ],
+   "doc_recall_at_5": 0.6666666666666666,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.3333333333333333,
+   "evidence_in_context": 0.3333333333333333,
+   "top_score": 0.551484,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 24,
+   "graph_only_items": 1,
+   "latency_ms": 1441.5
+  },
+  {
+   "id": "M09",
+   "type": "multi_hop",
+   "tags": [
+    "long_doc",
+    "compound"
+   ],
+   "question": "When was E-301's tube bundle cleaning last done and next due according to the maintenance schedule, and what did the August 2026 turnaround inspection find on the shell side of the bundle?",
+   "search_query": "When was E-301's tube bundle cleaning last done and next due according to the maintenance schedule, and what did the August 2026 turnaround inspection find on the shell side of the bundle?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "Maintenance_Schedule.xlsx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "PPT-002_Plant_Overview.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 1.0
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.172236
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.170552
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.101089
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.5,
+   "evidence_in_context": 0.5,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 25,
+   "graph_only_items": 3,
+   "latency_ms": 1138.2
+  },
+  {
+   "id": "M10",
+   "type": "multi_hop",
+   "tags": [
+    "ocr_source"
+   ],
+   "question": "The April cooling tower maintenance and the safety checklist on the same day both flagged one problem. What was it, and when was it supposed to be dealt with?",
+   "search_query": "The April cooling tower maintenance and the safety checklist on the same day both flagged one problem. What was it, and when was it supposed to be dealt with?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf"
+   ],
+   "ranked_docs": [
+    "Equipment_Register.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.101083
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 1,
+     "score": 0.100062
+    },
+    {
+     "doc": "SCN-001_Safety_Inspection_Checklist.pdf",
+     "chunk_index": 0,
+     "score": 0.059138
+    },
+    {
+     "doc": "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+     "chunk_index": 0,
+     "score": 0.052093
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.041672
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 0.3333333333333333,
+   "passage_recall_at_5": 0.6666666666666666,
+   "evidence_in_context": 0.6666666666666666,
+   "top_score": 0.101083,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 15,
+   "graph_only_items": 1,
+   "latency_ms": 1402.8
+  },
+  {
+   "id": "F01",
+   "type": "follow_up",
+   "tags": [],
+   "question": "What part was used to fix it?",
+   "search_query": "What part was used to fix INC-002? V-220",
+   "rewritten": true,
+   "follow_up_resolved": true,
+   "expected_docs": [
+    "INC-002_Valve_Failure_V-220.docx"
+   ],
+   "ranked_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.209852
+    },
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 0,
+     "score": 0.081367
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.070459
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.042597
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 9,
+   "graph_only_items": 2,
+   "latency_ms": 1120.8
+  },
+  {
+   "id": "F02",
+   "type": "follow_up",
+   "tags": [
+    "long_doc"
+   ],
+   "question": "What's the minimum continuous flow they can run at?",
+   "search_query": "What's the minimum continuous flow B-101 can run at? P-401",
+   "rewritten": true,
+   "follow_up_resolved": true,
+   "expected_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.225189
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.220889
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.126413
+    },
+    {
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.089013
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.003388
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.225189,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 3,
+   "graph_only_items": 1,
+   "latency_ms": 4329.3
+  },
+  {
+   "id": "F03",
+   "type": "follow_up",
+   "tags": [
+    "long_doc",
+    "compound"
+   ],
+   "question": "How many of its tubes are plugged now, and when will it hit the plugging limit?",
+   "search_query": "How many of E-301 tubes are plugged now, and when will E-301 hit the plugging limit? TA-2026",
+   "rewritten": true,
+   "follow_up_resolved": true,
+   "expected_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Equipment_Register.xlsx",
+    "PPT-002_Plant_Overview.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 1,
+     "score": 1.0
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.375411
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.340731
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.103145
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.101814
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 14,
+   "graph_only_items": 1,
+   "latency_ms": 1344.3
+  },
+  {
+   "id": "F04",
+   "type": "follow_up",
+   "tags": [],
+   "question": "Which bearings were fitted in that job?",
+   "search_query": "Which bearings were fitted in that job? P-101 WO-2026",
+   "rewritten": true,
+   "follow_up_resolved": true,
+   "expected_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx"
+   ],
+   "ranked_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Spare_Parts_Inventory.xlsx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 1.0
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 18,
+   "graph_only_items": 4,
+   "latency_ms": 1156.8
+  },
+  {
+   "id": "F05",
+   "type": "follow_up",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "And how often should that oil be changed?",
+   "search_query": "And how often should that oil be changed? C-201 ZR-160",
+   "rewritten": true,
+   "follow_up_resolved": true,
+   "expected_docs": [
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "ranked_docs": [
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-002_Plant_Overview.pptx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Equipment_Register.xlsx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.902107
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 15,
+     "score": 0.571939
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 0.293771
+    },
+    {
+     "doc": "PPT-002_Plant_Overview.pptx",
+     "chunk_index": 1,
+     "score": 0.134216
+    },
+    {
+     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "chunk_index": 0,
+     "score": 0.11088
+    }
+   ],
+   "doc_recall_at_5": 1.0,
+   "mrr": 1.0,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 0.0,
+   "top_score": 0.902107,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 15,
+   "graph_only_items": 2,
+   "latency_ms": 1124.2
+  },
+  {
+   "id": "N01",
+   "type": "negative",
+   "tags": [
+    "false_premise"
+   ],
+   "question": "What was the root cause of the K-402 seal gas failure in March, and which parts were replaced?",
+   "search_query": "What was the root cause of the K-402 seal gas failure in March, and which parts were replaced?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [],
+   "ranked_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 0.060252
+    },
+    {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 0,
+     "score": 0.041536
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.040033
+    },
+    {
+     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+     "chunk_index": 7,
+     "score": 0.040023
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 39,
+     "score": 0.020124
+    }
+   ],
+   "doc_recall_at_5": null,
+   "mrr": null,
+   "passage_recall_at_5": null,
+   "evidence_in_context": null,
+   "top_score": 0.060252,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 10,
+   "graph_only_items": 1,
+   "latency_ms": 1255.1
+  },
+  {
+   "id": "N02",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "What was the root cause of the P-401 boiler feed pump trip last year?",
+   "search_query": "What was the root cause of the P-401 boiler feed pump trip last year?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [],
+   "ranked_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Equipment_Register.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "INC-002_Valve_Failure_V-220.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.211189
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.060728
+    },
+    {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.04278
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.040273
+    },
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.040035
+    }
+   ],
+   "doc_recall_at_5": null,
+   "mrr": null,
+   "passage_recall_at_5": null,
+   "evidence_in_context": null,
+   "top_score": 0.211189,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 2,
+   "graph_facts": 8,
+   "graph_only_items": 0,
+   "latency_ms": 1199.4
+  },
+  {
+   "id": "N03",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "Which contractor supplied the replacement tubes for E-301 during turnaround TA-2026-02?",
+   "search_query": "Which contractor supplied the replacement tubes for E-301 during turnaround TA-2026-02?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "PPT-002_Plant_Overview.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.836283
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.480681
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.144276
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 2,
+     "score": 0.10633
+    }
+   ],
+   "doc_recall_at_5": null,
+   "mrr": null,
+   "passage_recall_at_5": null,
+   "evidence_in_context": null,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 1,
+   "graph_facts": 15,
+   "graph_only_items": 2,
+   "latency_ms": 1291.7
+  },
+  {
+   "id": "N04",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "What did the internal inspection of boiler B-101 find inside the steam drum?",
+   "search_query": "What did the internal inspection of boiler B-101 find inside the steam drum?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [],
+   "ranked_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "PPT-002_Plant_Overview.pptx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-003_Boiler_Inspection_B-101.docx",
+     "chunk_index": 0,
+     "score": 1.0
+    },
+    {
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.679061
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 1,
+     "score": 0.157614
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.089981
+    },
+    {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 4,
+     "score": 0.083926
+    }
+   ],
+   "doc_recall_at_5": null,
+   "mrr": null,
+   "passage_recall_at_5": null,
+   "evidence_in_context": null,
+   "top_score": 1.0,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 12,
+   "graph_only_items": 1,
+   "latency_ms": 1089.0
+  },
+  {
+   "id": "N05",
+   "type": "negative",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?",
+   "search_query": "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?",
+   "rewritten": false,
+   "follow_up_resolved": null,
+   "expected_docs": [],
+   "ranked_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Equipment_Register.xlsx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "top_chunks": [
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 1,
+     "score": 0.942051
+    },
+    {
+     "doc": "Spare_Parts_Inventory.xlsx",
+     "chunk_index": 1,
+     "score": 0.702751
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 1,
+     "score": 0.161144
+    },
+    {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.048641
+    },
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.02008
+    }
+   ],
+   "doc_recall_at_5": null,
+   "mrr": null,
+   "passage_recall_at_5": null,
+   "evidence_in_context": null,
+   "top_score": 0.942051,
+   "chunks_in_context": 10,
+   "excluded_fixture_chunks": 0,
+   "graph_facts": 5,
+   "graph_only_items": 1,
+   "latency_ms": 1242.0
+  }
+ ]
+}
