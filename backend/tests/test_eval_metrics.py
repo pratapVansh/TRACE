@@ -71,6 +71,25 @@ class TestAnswers:
                   "so no internal visual findings inside the steam drum were recorded.")
         assert is_refusal(answer)
 
+    @pytest.mark.parametrize("verb", ["were", "was", "are", "is", "have been", "has been", "had been"])
+    def test_premise_correction_is_tense_agnostic(self, verb):
+        """Tense must not decide the label: the content is identical either way."""
+        assert is_refusal(f"The inspection was deferred, so no findings {verb} recorded.")
+
+    def test_n04_regression_both_phrasings_agree(self):
+        """Eval N04: the same premise correction, written in two tenses.
+
+        The past-tense wording scored ``correct_refusal`` and the present-tense
+        wording ``missed_refusal``, which made the graph look responsible for a
+        negative it had nothing to do with. Both must classify the same way.
+        """
+        past = ("The internal inspection of boiler B‑101 was **deferred** to the next plant shutdown, "
+                "so no internal visual findings inside the steam drum were recorded.")
+        present = ("The internal inspection of boiler **B‑101** was **deferred** to the next shutdown, "
+                   "so no internal‑inspection findings are recorded.")
+        assert is_refusal(past) == is_refusal(present) is True
+        assert refusal_outcome(past, True, None) == refusal_outcome(present, True, None) == "correct_refusal"
+
     def test_plain_answer_is_not_a_refusal(self):
         assert not is_refusal("PSV-101 is set at 6.0 barg on the pump discharge (SCN-002).")
         assert not is_refusal("No leakage was observed; the pump ran for 1 hour at 4.5 barg.")

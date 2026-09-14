@@ -92,8 +92,12 @@ _REFUSAL_PATTERNS = [
     r"insufficient (context|information|evidence)",
     r"no (such|matching) (record|incident|event|document|information)",
     # Premise corrections: "no internal visual findings ... were recorded".
+    # Tense-agnostic on purpose. The same premise correction gets written both
+    # as "no findings were recorded" and as "no findings are recorded"; matching
+    # only the past tense scored two answers with identical content differently
+    # and cost graph_off a negative (eval item N04) on wording alone.
     r"\bno\b[^.]{0,60}\b(findings|results|readings|values|details|data|records?)\b[^.]{0,40}"
-    r"\b(were|was|have been|has been) (recorded|found|documented|reported|made|given)",
+    r"\b(were|was|are|is|have been|has been|had been) (recorded|found|documented|reported|made|given)",
 ]
 _REFUSAL = re.compile("|".join(f"(?:{p})" for p in _REFUSAL_PATTERNS))
 

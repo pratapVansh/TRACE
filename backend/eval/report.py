@@ -8,7 +8,7 @@ Generated purely from the JSON results; no numbers are typed by hand.
 import json
 from pathlib import Path
 
-ORDER = ["baseline", "rerank_off", "graph_off", "chunk512"]
+ORDER = ["baseline", "rerank_off", "graph_off", "chunk512", "graph_v2"]
 
 
 def _load(results_dir: Path, kind: str) -> dict[str, dict]:
@@ -116,24 +116,37 @@ def write_comparison(results_dir: Path) -> Path:
     if answers and partial:
         from eval.run import summarize_answers
 
-        common = set.intersection(*({i["id"] for i in run["items"]} for run in answers.values()))
+        # A config with no answers at all would empty the intersection and turn
+        # the whole table into dashes, hiding the comparison the configs that
+        # did run can still support. Such configs are named below but left out
+        # of the matched set.
+        scored = {name: run for name, run in answers.items() if run["items"]}
+        unstarted = [name for name, run in answers.items() if not run["items"]]
+        common = set.intersection(*({i["id"] for i in run["items"]} for run in scored.values())) if scored else set()
         matched = {
             name: {"summary": summarize_answers([i for i in run["items"] if i["id"] in common])}
-            for name, run in answers.items()
+            for name, run in scored.items()
         }
         a = lambda key: (lambda r: r["summary"]["answerable"][key])
-        lines += ["", f"### Answers on the matched subset ({len(common)} items: {', '.join(sorted(common))})", "",
-                  "Partial runs (Groq daily token cap): " + ", ".join(
-                      f"{n} skipped {len(r['skipped_uncached'])}" for n, r in partial.items()
-                  ) + ". Every config below is scored on the same items.", ""]
-        lines += _table(matched, [
-            ("Fact coverage", a("fact_coverage"), "pct"),
-            ("Fully correct (all facts)", a("fully_correct_rate"), "pct"),
-            ("False refusal", a("false_refusal_rate"), "pct"),
-            ("Citation precision", a("citation_precision"), "pct"),
-            ("Citation recall", a("citation_recall"), "pct"),
-            ("Grounded sentence share", a("grounded_share"), "pct"),
-        ])
+        note = "Partial runs (Groq daily token cap): " + ", ".join(
+            f"{n} answered {len(r['items'])}/40, {len(r['skipped_uncached'])} not generated" for n, r in partial.items()
+        ) + "."
+        if unstarted:
+            note += " No answers at all, so excluded from the matched set: " + ", ".join(unstarted) + "."
+        if not common:
+            lines += ["", "### Answers on the matched subset", "", note,
+                      " The configs with answers share no common items, so no matched comparison is possible.", ""]
+        else:
+            lines += ["", f"### Answers on the matched subset ({len(common)} items: {', '.join(sorted(common))})", "",
+                      note + " Every config below is scored on the same items.", ""]
+            lines += _table(matched, [
+                ("Fact coverage", a("fact_coverage"), "pct"),
+                ("Fully correct (all facts)", a("fully_correct_rate"), "pct"),
+                ("False refusal", a("false_refusal_rate"), "pct"),
+                ("Citation precision", a("citation_precision"), "pct"),
+                ("Citation recall", a("citation_recall"), "pct"),
+                ("Grounded sentence share", a("grounded_share"), "pct"),
+            ])
 
     out = results_dir / "comparison.md"
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")

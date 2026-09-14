@@ -676,3 +676,169 @@ class TestHybridRetriever:
         mock_vr.retrieve.assert_awaited_once_with("test", 10)
         mock_gr.retrieve.assert_awaited_once_with("test", 5)
         mock_cm.merge.assert_called_once()
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Graph arm reworked for relevance (Stage 5 follow-up)
+#
+# Stage 5 measured the graph contributing nothing to answers: documents took
+# 55% of the entity slots and 80% of the facts reaching the prompt were a bare
+# name or a "this file mentions this tag" edge. These cover the corrections,
+# which are gated on ``graph_prefer_domain_entities`` so the frozen baseline
+# stays reproducible.
+# ══════════════════════════════════════════════════════════════════════
+
+@pytest.fixture
+def prefer_domain_entities():
+    """Turn the reworked graph ranking on for one test."""
+    from app.core.config import settings
+
+    previous = settings.graph_prefer_domain_entities
+    settings.graph_prefer_domain_entities = True
+    yield
+    settings.graph_prefer_domain_entities = previous
+
+
+def _entity(entity_id: str, name: str, etype: str) -> EntityResponse:
+    return EntityResponse(id=entity_id, name=name, type=etype,
+                          confidence=0.9, source_document="proc.pdf")
+
+
+class TestGraphArmRanking:
+    def test_long_document_name_no_longer_outranks_the_tag(self) -> None:
+        """The ranking bug itself: raw term count rewards long filenames.
+
+        "MNT-001_Quarterly_PM_Cooling_Tower" contains both query terms, and so
+        does the cooling tower entity, but the filename needs six words to do
+        it. Ranking by density puts the domain entity first.
+        """
+        query = "cooling tower"
+        candidates = [
+            _entity("d1", "MNT-001_Quarterly_PM_Cooling_Tower", "Document"),
+            _entity("e1", "Cooling Tower", "Heat Exchanger"),
+        ]
+        ranked = GraphRetriever._rank_candidates(query, candidates, top_k=2)
+        assert [e.name for e in ranked] == ["Cooling Tower", "MNT-001_Quarterly_PM_Cooling_Tower"]
+
+    def test_documents_rank_below_domain_entities(self) -> None:
+        """The vector arm already supplied the document and its text."""
+        candidates = [
+            _entity("d1", "Pump_Manual", "Document"),
+            _entity("e1", "Pump Seal Leak", "Failure"),
+        ]
+        ranked = GraphRetriever._rank_candidates("pump", candidates, top_k=2)
+        assert ranked[0].type == "Failure"
+
+    def test_exact_name_match_still_wins(self) -> None:
+        """The pre-existing exact-match rule outranks both corrections."""
+        candidates = [
+            _entity("e1", "Seal Leak", "Failure"),
+            _entity("d1", "P-101", "Document"),
+        ]
+        ranked = GraphRetriever._rank_candidates("P-101", candidates, top_k=2)
+        assert ranked[0].name == "P-101"
+
+    async def test_over_fetches_then_reranks(
+        self, mock_graph_query_service: AsyncMock, prefer_domain_entities,
+    ) -> None:
+        """Re-ranking can only reorder what was fetched, so it fetches wider."""
+        from app.core.config import settings
+
+        mock_graph_query_service.search_entities.return_value = (
+            [_entity("e1", "P-101", "Pump")], 1,
+        )
+        mock_graph_query_service.get_neighbors_for_entities.return_value = {"e1": []}
+
+        retriever = GraphRetriever(graph_query_service=mock_graph_query_service)
+        await retriever.retrieve("pump", top_k=5)
+
+        expected = 5 * settings.graph_candidate_multiplier
+        mock_graph_query_service.search_entities.assert_called_once_with("pump", limit=expected)
+
+    async def test_bare_entity_fact_dropped_when_relationships_exist(
+        self, mock_graph_query_service: AsyncMock, prefer_domain_entities,
+    ) -> None:
+        """"P-101 exists" adds nothing next to "P-101 —FEEDS→ TK-305"."""
+        mock_graph_query_service.search_entities.return_value = (
+            [_entity("ent1", "P-101", "Pump")], 1,
+        )
+        mock_graph_query_service.get_neighbors_for_entities.return_value = {
+            "ent1": [_neighbor("ent2", "TK-305", "FEEDS")],
+        }
+
+        retriever = GraphRetriever(graph_query_service=mock_graph_query_service)
+        facts = await retriever.retrieve("pump", top_k=5)
+
+        assert len(facts) == 1
+        assert facts[0].relationship_type == "FEEDS"
+
+    async def test_isolated_entity_is_still_reported(
+        self, mock_graph_query_service: AsyncMock, prefer_domain_entities,
+    ) -> None:
+        """An entity with no edges is all the graph knows — keep it."""
+        mock_graph_query_service.search_entities.return_value = (
+            [_entity("ent1", "P-101", "Pump")], 1,
+        )
+        mock_graph_query_service.get_neighbors_for_entities.return_value = {"ent1": []}
+
+        retriever = GraphRetriever(graph_query_service=mock_graph_query_service)
+        facts = await retriever.retrieve("pump", top_k=5)
+
+        assert len(facts) == 1
+        assert facts[0].entity_name == "P-101"
+        assert facts[0].relationship_type is None
+
+
+class TestInformativeFactBoost:
+    """Only facts that say something should move a chunk's ranking."""
+
+    CHUNK = RetrievedChunk(
+        score=0.50, document_id="d1", document_name="proc.pdf",
+        content="P-101 discharge pressure is 6.0 barg.", chunk_index=0,
+    )
+
+    @staticmethod
+    def _merge(facts):
+        return ContextMerger().merge("q", [TestInformativeFactBoost.CHUNK], facts, top_k=5)
+
+    def test_membership_edges_do_not_boost(self, prefer_domain_entities) -> None:
+        """"This document mentions this tag" restates the chunk itself.
+
+        Counting these is what lifted entity-dense documents over the
+        reranker's best passage on S05, S06 and M10.
+        """
+        facts = [
+            GraphFact(entity_name="proc.pdf", entity_type="Document",
+                      relationship_type="REFERENCES", related_entity=f"P-10{i}",
+                      source_document="proc.pdf")
+            for i in range(5)
+        ]
+        assert self._merge(facts).items[0].score == pytest.approx(0.50)
+
+    def test_bare_entity_facts_do_not_boost(self, prefer_domain_entities) -> None:
+        facts = [
+            GraphFact(entity_name=f"P-10{i}", entity_type="Pump", source_document="proc.pdf")
+            for i in range(5)
+        ]
+        assert self._merge(facts).items[0].score == pytest.approx(0.50)
+
+    def test_domain_relationships_still_boost(self, prefer_domain_entities) -> None:
+        facts = [
+            GraphFact(entity_name="P-101", entity_type="Pump",
+                      relationship_type="HAS_FAILURE", related_entity=f"mode {i}",
+                      source_document="proc.pdf")
+            for i in range(3)
+        ]
+        score = self._merge(facts).items[0].score
+        assert score == pytest.approx(0.50 + 3 * ContextMerger.PER_FACT_BOOST)
+
+    def test_baseline_behaviour_is_unchanged_when_flag_is_off(self) -> None:
+        """The frozen Stage 5 baseline must keep scoring exactly as recorded."""
+        facts = [
+            GraphFact(entity_name="proc.pdf", entity_type="Document",
+                      relationship_type="REFERENCES", related_entity=f"P-10{i}",
+                      source_document="proc.pdf")
+            for i in range(5)
+        ]
+        score = self._merge(facts).items[0].score
+        assert score == pytest.approx(0.50 + ContextMerger.MAX_GRAPH_BOOST)

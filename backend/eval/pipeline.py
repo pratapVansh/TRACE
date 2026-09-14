@@ -24,6 +24,7 @@ class EvalConfig:
     graph: bool = True
     collection: str | None = None
     rerank_timeout_seconds: float | None = None
+    prefer_domain_entities: bool = False
     description: str = ""
 
 
@@ -41,6 +42,13 @@ CONFIGS: dict[str, EvalConfig] = {
         rerank_timeout_seconds=60.0,
         description="Same pipeline on a separate Qdrant collection chunked at 512/64 (reranker timeout 60 s)",
     ),
+    "graph_v2": EvalConfig(
+        "graph_v2",
+        prefer_domain_entities=True,
+        description="Baseline plus the reworked graph arm: entities ranked by term "
+                    "density rather than raw count, documents ranked below domain "
+                    "entities, and only relationship facts counted in the merge boost",
+    ),
 }
 
 
@@ -53,6 +61,7 @@ def apply_config(config: EvalConfig) -> None:
         settings.qdrant_collection_name = config.collection
     if config.rerank_timeout_seconds is not None:
         settings.rerank_timeout_seconds = config.rerank_timeout_seconds
+    settings.graph_prefer_domain_entities = config.prefer_domain_entities
     # QdrantVectorStore.search caches on the query vector without the
     # collection name, so a stale entry would leak across collections.
     cache_manager._local_cache.cache.clear()
@@ -69,6 +78,7 @@ def settings_snapshot(config: EvalConfig) -> dict:
         "vector_top_k": VECTOR_TOP_K,
         "graph_top_k": GRAPH_TOP_K,
         "dedup_documents": settings.retrieval_dedup_documents,
+        "graph_prefer_domain_entities": settings.graph_prefer_domain_entities,
         "llm_model": settings.groq_model,
     }
 

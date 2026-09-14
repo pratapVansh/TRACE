@@ -89,13 +89,52 @@ class GraphRetriever:
     def __init__(self, graph_query_service: GraphQueryService | None = None) -> None:
         self._graph = graph_query_service
 
+    @staticmethod
+    def _rank_candidates(query: str, entities: list, top_k: int) -> list:
+        """Pick the *top_k* entities most likely to add something to the prompt.
+
+        ``search_entities`` ranks by how many query terms an entity's name
+        contains, which is a raw count and therefore rewards long names. Every
+        document in this corpus is an entity whose name is its filename, so
+        documents won that comparison against the equipment tags and failure
+        modes the question was actually about: they took 55% of the slots while
+        being 18% of the graph. Two corrections, both on the retrieval side
+        only — nothing is deleted from the graph:
+
+        - coverage is divided by the name's own token count, so matching two of
+          two words beats matching two of nine;
+        - document-shaped entities are ranked below domain entities, because the
+          vector arm has already supplied the document and its text.
+        """
+        terms = [t.lower() for t in re.findall(r"[\w-]+", query) if len(t) > 2]
+        demoted = {t.lower() for t in settings.graph_deprioritized_entity_types}
+
+        def rank(entity) -> tuple:
+            name = (entity.name or "").lower()
+            name_tokens = [t for t in re.split(r"[\s_\-.]+", name) if t]
+            hits = sum(1 for t in terms if t in name)
+            # Exact name match always wins, as before.
+            exact = 0 if name == query.lower() else 1
+            is_demoted = 1 if (entity.type or "").lower() in demoted else 0
+            density = hits / len(name_tokens) if name_tokens else 0.0
+            return (exact, is_demoted, -density, -hits, entity.name or "")
+
+        return sorted(entities, key=rank)[:top_k]
+
     async def retrieve(self, query: str, top_k: int = 5) -> list[GraphFact]:
         if self._graph is None:
             return []
         facts: list[GraphFact] = []
         seen: set[str] = set()
 
-        entities, _ = await self._graph.search_entities(query, limit=top_k)
+        if settings.graph_prefer_domain_entities:
+            # Over-fetch, then apply the retrieval-side ranking above. The
+            # entity browser keeps the unmodified ordering.
+            fetch_k = max(top_k * settings.graph_candidate_multiplier, top_k)
+            candidates, _ = await self._graph.search_entities(query, limit=fetch_k)
+            entities = self._rank_candidates(query, candidates, top_k)
+        else:
+            entities, _ = await self._graph.search_entities(query, limit=top_k)
 
         if not entities:
             return facts
@@ -110,14 +149,19 @@ class GraphRetriever:
                 continue
             seen.add(key)
 
-            facts.append(GraphFact(
-                entity_name=entity.name,
-                entity_type=entity.type,
-                confidence=entity.confidence,
-                source_document=entity.source_document,
-            ))
-
             nbrs = neighbors_map.get(entity.id, [])
+            # The bare "this entity exists" fact repeats a name the relationship
+            # facts below already carry, and the chunk it is attached to names it
+            # too. Keep it only when the entity has no relationships at all, so
+            # an isolated node is still reported rather than lost.
+            if not (settings.graph_prefer_domain_entities and nbrs):
+                facts.append(GraphFact(
+                    entity_name=entity.name,
+                    entity_type=entity.type,
+                    confidence=entity.confidence,
+                    source_document=entity.source_document,
+                ))
+
             for nbr in nbrs:
                 nkey = f"r:{entity.name}:{nbr.relationship.type}:{nbr.entity.name}"
                 if nkey in seen:
@@ -277,8 +321,30 @@ class ContextMerger:
         """
         if not facts:
             return min(base_score, 1.0)
-        boost = min(len(facts) * self.PER_FACT_BOOST, self.MAX_GRAPH_BOOST)
+        counted = [f for f in facts if self._is_informative(f)]
+        if not counted:
+            return min(base_score, 1.0)
+        boost = min(len(counted) * self.PER_FACT_BOOST, self.MAX_GRAPH_BOOST)
         return min(base_score + boost, 1.0)
+
+    @staticmethod
+    def _is_informative(fact: GraphFact) -> bool:
+        """True when a fact says more than "this document mentions this entity".
+
+        Every fact used to earn the same boost, so a chunk was lifted by the
+        sheer number of entities its document happened to contain. That is what
+        pushed entity-dense files (MAN-003, the Equipment Register, the shift
+        logs) above the reranker's best passage on S05, S06 and M10. A bare
+        entity name and a document-membership edge both restate what the chunk
+        already shows, so neither should move the ranking; a relationship
+        between two entities is genuinely additional and still does.
+        """
+        if not settings.graph_prefer_domain_entities:
+            return True
+        if not (fact.relationship_type and fact.related_entity):
+            return False
+        membership = {r.upper() for r in settings.graph_membership_relationships}
+        return fact.relationship_type.upper() not in membership
 
     @staticmethod
     def _graph_only_item(doc: str, facts: list[GraphFact]) -> UnifiedContextItem:

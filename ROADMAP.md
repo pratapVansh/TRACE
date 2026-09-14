@@ -420,8 +420,9 @@ render both verified).
 ## Stage 5 — Evaluation harness 🟡 partially complete — retrieval evaluation done, answer-level ablations incomplete
 
 **Stage 5 is NOT fully complete.** The harness, the golden set, the retrieval
-evaluation and the baseline answer evaluation are done; the answer-level ablations
-are not. **Current blocker: the Groq free-tier daily token limit** — not code.
+evaluation, the baseline answer evaluation and the **graph_off answer ablation** are
+done; rerank_off (31/40) and chunk512 (0/40) are not. **Current blocker: the Groq
+free-tier daily token limit** — not code.
 
 **Effort: 3 days** (≈3.5 with the corpus freeze). Carried out 13 September 2026.
 **Nothing is committed** — all Stage 5 files are uncommitted in the working tree.
@@ -429,7 +430,7 @@ are not. **Current blocker: the Groq free-tier daily token limit** — not code.
 **Full results and interpretation: [`backend/eval/stage5_report.md`](backend/eval/stage5_report.md).**
 Generated tables: `backend/eval/results/comparison.md`.
 
-### Status summary (13 September 2026)
+### Status summary (14 September 2026)
 
 | Area | State |
 | --- | --- |
@@ -438,13 +439,15 @@ Generated tables: `backend/eval/results/comparison.md`.
 | **Retrieval evaluation** — baseline + all 3 ablations (rerank_off, graph_off, chunk512) | ✅ **complete** (baseline rerun reproduced identical numbers) |
 | Backend tests | ✅ **1043 passed, 0 failed, 0 skipped** |
 | **Answer evaluation — baseline** | ✅ **complete, 40 / 40** |
-| **Answer ablation — graph_off** | 🟡 **23 / 40** — stopped when the Groq daily quota refused further calls |
-| **Answer ablation — rerank_off** | ❌ **0 / 40** — not started, no quota |
-| **Answer ablation — chunk512** | ❌ **0 / 40** — not started, no quota |
+| **Answer ablation — graph_off** | ✅ **complete, 40 / 40** (14 Sep) |
+| **Answer ablation — rerank_off** | 🟡 **31 / 40** — F02–F05, N01–N05 remain; stopped at the Groq daily cap |
+| **Answer ablation — chunk512** | ❌ **0 / 40** — cap reached before its turn |
 | LLM-as-judge | ⏳ **not implemented** |
-| Blocker | Groq free-tier daily token limit (200,000 tokens, rolling window) |
-| Remaining work | **97 answer calls** (graph_off 17 + rerank_off 40 + chunk512 40) |
-| Cached answers | **63 preserved** in `backend/eval/cache/llm/` (gitignored) — must be reused after the quota resets, not regenerated |
+| **Graph rework (`graph_v2`)** | ✅ **retrieval measured** — recovers every graph-off gain *and* beats it on MRR (0.920 vs 0.906). Answer effect not yet measured. |
+| **N04 refusal-classifier bug** | ✅ **fixed + tests**; stored answers rescored with no Groq calls |
+| Blocker | Groq free-tier daily token limit (200,000 tokens; behaves as a daily reset, not a fast rolling window — usage fell only ~20 tokens/min while retrying) |
+| Remaining work | **49 answer calls** (rerank_off 9 + chunk512 40, ≈167,000 tokens) |
+| Cached answers | **111 preserved** in `backend/eval/cache/llm/` (gitignored) — must be reused after the quota resets, not regenerated |
 | Git | **Nothing committed** |
 
 ### Steps
@@ -458,7 +461,7 @@ Generated tables: `backend/eval/results/comparison.md`.
 | 4 | Retrieval runner | ✅ `python -m eval.run retrieval` — reruns to identical numbers |
 | 5 | Answer runner (refusal, facts, citations, grounding, LLM cache) | ✅ `python -m eval.run answers` — baseline 40/40 |
 | 6a | **Retrieval** ablations | ✅ rerank_off, graph_off, chunk512 — all complete |
-| 6b | **Answer** ablations | 🟡 graph_off 23/40 · rerank_off 0/40 · chunk512 0/40 — blocked by the Groq daily token limit (resume attempted 13 Sep 19:52, stopped at the cap after 5 new calls) |
+| 6b | **Answer** ablations | 🟡 graph_off ✅ 40/40 · rerank_off 31/40 · chunk512 0/40 — 48 answers generated 14 Sep, then the Groq daily cap again (197,427 / 200,000) |
 | 7 | LLM-as-judge (optional, never gates) | ⏳ not implemented |
 
 ### What exists
@@ -529,56 +532,162 @@ Generated tables: `backend/eval/results/comparison.md`.
 | Grounded sentence share | 48.8% |
 | LLM latency p50 / p95 (uncached) | 2.7 s / 5.5 s |
 
-**Graph-off answer ablation — 🟡 partial, 23 / 40** (S01–S20, M01–M03). Both configs
-scored on the same 23 questions:
+**Graph-off answer ablation — ✅ complete, 40 / 40.** Both configs on all 40 questions:
 
-| Metric (23 matched questions) | baseline | graph_off |
+| Metric (all 40 questions) | baseline | graph_off |
 | --- | ---: | ---: |
-| Fact coverage | 67.4% | 68.8% |
-| Fully correct | 56.5% | 60.9% |
-| False refusal | 13.0% | 13.0% |
-| Citation precision | 75.4% | 88.1% |
-| Citation recall | 84.8% | 89.1% |
-| Grounded sentence share | 49.2% | 58.1% |
+| Fact coverage | 72.6% | 73.6% |
+| Fully correct | 60.0% | 62.9% |
+| Fact coverage — multi_hop | 89.2% | **89.2% (identical)** |
+| Fact coverage — follow_up | 80.0% | **80.0% (identical)** |
+| False refusal | 11.4% | 11.4% |
+| Correct refusal (5 negatives) | 100.0% | 80.0% (metric artefact — see below) |
+| Citation precision | 77.8% | 84.3% |
+| Citation recall | 81.9% | 91.9% |
+| Grounded sentence share | 48.8% | 60.8% |
 
-Only S18 changed fact coverage. No measurable answer benefit from the graph on these
-23 questions; its effect on 7 of 10 multi-hop, all follow-up and all negative
-questions is still unmeasured.
+Only four of forty answers changed at all. The one real correctness change (S18,
+2/3 → 3/3 facts) favours graph-off; S12/S14 swapped refusal labels while covering zero
+facts either way; and N04's `missed_refusal` is a **refusal-classifier tense gap**, not a
+content regression — both answers say the inspection was deferred, but
+`eval/metrics.py` matches "findings **were** recorded" and not "findings **are**
+recorded". Left unfixed so the frozen baseline is not re-scored. **All ten multi-hop and
+all five follow-up answers are identical with and without the graph** — it changes
+nothing on the questions it was added for.
 
-**Reranker-off answer ablation — ❌ 0 / 40. Chunk-512 answer ablation — ❌ 0 / 40.**
-Their answer-level effect is not measured; only their retrieval effect (table above).
+**Reranker-off answer ablation — 🟡 31 / 40** (F02–F05, N01–N05 remain). On the 31
+matched questions the retrieval loss does reach the answer: fact coverage 68.8% vs
+baseline 72.3%, fully correct **51.6% vs 58.1% (−6.5 pts)**. Excludes all negatives, so
+its refusal columns are not yet informative.
+
+**Chunk-512 answer ablation — ❌ 0 / 40.** The only ablation with no answer-level
+evidence at all; only its retrieval effect is measured (table above).
 
 **What the numbers say** (detail in the report):
 1. **Answer quality is gated by passage retrieval.** Facts covered: 98% when all
    evidence reached the context, 26% when none did; all four false refusals had
    zero evidence in context.
 2. **Reranker:** +6.7 pts passage recall, +0.077 MRR, +16.7 pts on long-document and
-   compound questions — at ~40× latency on CPU, with the slowest query at 9.4 s
-   against the 10 s timeout that silently disables it.
-3. **Graph, as wired, hurts retrieval:** `ContextMerger`'s per-fact score boost lifts
-   entity-dense documents over the reranker's best passage (S05, S06, M10).
+   compound questions — and, newly measured on 31 items, **+6.5 pts fully-correct
+   answers**. Costs ~40× latency on CPU, with the slowest query at 9.4 s against the
+   10 s timeout that silently disables it.
+3. **Graph, as wired, hurts retrieval and does nothing for answers:** `ContextMerger`'s
+   per-fact score boost lifts entity-dense documents over the reranker's best passage
+   (S05, S06, M10); and on the now-complete 40-item answer ablation, multi-hop and
+   follow-up answers score identically with and without it.
 4. **Chunk 512:** biggest passage-level gain (+20.5 pts) but −10 pts multi-document
-   recall, embedding truncation, and answer effect not yet measured.
+   recall, embedding truncation, and answer effect **still** not measured.
 5. **Refusal cannot come from scores:** false-premise negatives score 0.94–1.00.
+
+### 14 September — graph rework and the N04 metric fix (no Groq calls)
+
+Answer generation was paused for the day at the Groq cap, so this was the
+deterministic half of the work: find out *why* the graph contributes nothing,
+fix it, and fix the metric bug it exposed.
+
+**Why the graph was not helping — measured, not guessed.** Running the graph arm
+over all 40 golden questions and counting what it actually emits:
+
+| | before | after (`graph_v2`) |
+| --- | ---: | ---: |
+| `Document` share of the facts emitted | **59.1%** | **21.2%** |
+| bare "this entity exists" facts | 35.3% | 30.0% |
+| document-membership edges (`REFERENCES`/`MAINTAINED_BY`/`DESCRIBES`/`INSPECTS`) | 44.8% | 37.9% |
+| **domain relationship facts** (`HAS_FAILURE`, `OPERATES`, `FOLLOWS`, …) | **20.0%** | **32.1%** |
+| facts emitted over 40 questions | 496 | 377 |
+
+`Document` entities are 18% of the graph but were taking 55% of the five entity
+slots, and ~80% of what reached the prompt was either a bare name or "this file
+mentions this tag" — both of which the retrieved chunk already shows. **Root
+cause:** `search_entities` ranks by how many query terms an entity's *name*
+contains. That is a raw count, so a filename like
+`MNT-001_Quarterly_PM_Cooling_Tower` beats the tag `P-101` by being longer. The
+graph was spending its whole budget restating the vector arm.
+
+**Three focused fixes**, all gated on `graph_prefer_domain_entities` (default
+**off**, so the frozen baseline stays reproducible; the `graph_v2` eval config
+turns it on). Nothing was deleted from Neo4j:
+
+1. `GraphRetriever` over-fetches, then ranks by term density (coverage ÷ name
+   length) instead of raw count, so matching 2 of 2 words beats 2 of 9.
+2. Document-shaped entities rank below domain entities — the vector arm has
+   already supplied the document and its text.
+3. `ContextMerger` counts only *relationship* facts toward the merge boost. Bare
+   names and membership edges no longer lift a chunk, which is what pushed
+   entity-dense files over the reranker's best passage.
+
+**Retrieval result** (deterministic, no Groq — `eval/results/graph_v2/`):
+
+| Metric | baseline | graph_off | **graph_v2** |
+| --- | ---: | ---: | ---: |
+| Doc recall@5 | 91.9% | 98.6% | **98.6%** |
+| Doc hit@5 | 88.6% | 97.1% | **97.1%** |
+| Passage recall@5 | 56.7% | 59.5% | **59.5%** |
+| MRR | 0.860 | 0.906 | **0.920** |
+| Latency p50 (ms) | 6485 | 5511 | 6055 |
+
+The graph had been *subtracting* from retrieval; it now adds to it. `graph_v2`
+recovers every gain that came from switching the graph off **and beats
+graph-off on MRR (0.920 vs 0.906)** — the first result in Stage 5 where keeping
+the graph is better than not having it. Per item: S06 and M10 recover from
+MRR 0.17 and 0.33 to **1.00**, S01 and S03 rise 0.50 → 1.00, S05 improves
+slightly. One item, F02, drops 1.00 → 0.50, matching graph_off exactly; its
+passage recall is 0.0 in *all three* configs, so the right passage was never
+retrieved and the document's rank never mattered — a cosmetic MRR change with
+no effect on the answer.
+
+> **Not yet measured: the answer-level effect of `graph_v2`.** That needs Groq
+> and is queued behind the two unfinished ablations. Retrieval improved; whether
+> the answers do is an open question, and conclusion 1 of the report (answers are
+> gated by passage retrieval) is the reason to expect something rather than proof
+> of it.
+
+**N04 refusal-classifier bug — fixed.** `eval/metrics.py` matched
+"no findings **were** recorded" but not "no findings **are** recorded", so two
+answers with identical content scored `correct_refusal` and `missed_refusal`,
+costing graph_off a negative on wording alone. The premise-correction pattern is
+now tense-agnostic (`were|was|are|is|have been|has been|had been`). Checked
+against every cached answer in all four configs: it changes **exactly one**
+label — graph_off N04 → `correct_refusal` — and leaves the baseline untouched.
+Stored answers were rescored with `python -m eval.run rescore` (no Groq calls);
+graph_off's correct-refusal rate is now **100%**, matching baseline. Covered by
+8 new tests including a regression test carrying both real N04 phrasings.
+
+**Tests:** 1061 passed, 0 failed (was 1043 — 18 added). `python -m eval.validate`
+still reports 0 errors, 7 warnings.
 
 ### Remaining to close stage 5
 
 - [ ] **Finish the answer-level ablations — blocked by the Groq free-tier daily token
-      limit, not by code.** 97 answer calls remain (graph_off 17, rerank_off 40,
-      chunk512 40; ≈330,000 tokens at ≈3,400 per call) against a rolling
-      200,000-token daily cap — at least two more days on the free tier.
-      - Reuse the 63 cached answers; do not regenerate them.
-      - Resume: `python -m eval.run answers --config graph_off rerank_off chunk512`,
-        then `python -m eval.run report`.
+      limit, not by code.** 49 answer calls remain (rerank_off 9, chunk512 40;
+      ≈167,000 tokens at ≈3,400 per call) against a 200,000-token daily cap —
+      at least one more day on the free tier.
+      - Reuse the 111 cached answers; do not regenerate them.
+      - **Resume tomorrow (15 September), in this order:**
+        ```
+        python -m eval.run answers --config rerank_off chunk512
+        python -m eval.run report
+        ```
+      - rerank_off needs 9 calls (≈31,000 tokens) and completes first; chunk512
+        needs the remaining 40 (≈136,000). Together that is ≈167,000 of the
+        200,000-token daily cap, so both should fit in one day if nothing else
+        spends the quota.
+      - The graph rework is **off by default**, so these two runs stay directly
+        comparable with the recorded baseline. Do not enable
+        `graph_prefer_domain_entities` for them.
       - Partial progress can be scored without API calls: `--cache-only`.
       - Then update `backend/eval/stage5_report.md` and this section.
+- [ ] **Measure `graph_v2` at the answer level** (40 calls, ≈136,000 tokens) once the
+      three baseline ablations are closed. Retrieval already improved; the answer
+      effect is unmeasured. Only then decide whether
+      `graph_prefer_domain_entities` should become the default.
 - [ ] Optional step 7, LLM-as-judge — **not implemented**; only worth building with a
       larger token budget.
 
 **Exit criterion.** `python -m eval.run` prints recall@5, MRR, coverage and
 refusal rate over all 40 questions ✅; reruns to the same numbers on unchanged
 code ✅ (retrieval, verified twice); the three ablations have recorded figures —
-**retrieval ✅, answers 🟡 (graph_off 23/40, rerank_off 0/40, chunk512 0/40)**.
+**retrieval ✅, answers 🟡 (graph_off ✅ 40/40, rerank_off 31/40, chunk512 0/40)**.
 Stage 5 closes only when the answer-level ablations are complete.
 
 > **Provenance of the golden set.** An LLM drafted it; ground truth came from

@@ -162,6 +162,32 @@ class Settings(BaseSettings):
     # order rather than making the user wait.
     rerank_timeout_seconds: float = 10.0
 
+    # Graph arm of hybrid retrieval.
+    # Stage 5 measured the graph contributing nothing to answers: across the 40
+    # golden questions, 55% of the entity slots went to ``Document`` entities
+    # (only 18% of the graph) and 80% of the facts reaching the prompt were
+    # either a bare entity name or a document-membership edge — "this file
+    # mentions this tag", which the retrieved chunk already shows. Both are
+    # artefacts of ranking entities by how many query terms their *name*
+    # contains: a filename like ``MNT-001_Quarterly_PM_Cooling_Tower`` matches
+    # more terms than a tag like ``P-101`` simply by being longer.
+    #
+    # With this on, the graph arm ranks candidates by term coverage relative to
+    # the name's own length and prefers domain entities over documents, and only
+    # facts that actually carry a relationship count toward the merge boost.
+    # Off by default so the frozen Stage 5 baseline stays reproducible; the
+    # ``graph_v2`` eval config turns it on.
+    graph_prefer_domain_entities: bool = False
+    # Entity types that restate what the vector arm already retrieved.
+    graph_deprioritized_entity_types: tuple[str, ...] = ("Document",)
+    # Relationship types that only say a document mentions an entity.
+    graph_membership_relationships: tuple[str, ...] = (
+        "REFERENCES", "MAINTAINED_BY", "DESCRIBES", "INSPECTS",
+    )
+    # Candidates pulled before the graph arm re-ranks them, as a multiple of
+    # the requested top_k. The re-ranking can only reorder what was fetched.
+    graph_candidate_multiplier: int = 6
+
     # Neo4j graph store (Milestone 9)
     neo4j_uri: str = ""
     neo4j_username: str = ""

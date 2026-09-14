@@ -1,6 +1,7 @@
 # TRACE — Stage 5 evaluation report
 
-**Date:** 13 September 2026 (answer ablation resumed 19:52–20:00, stopped at the Groq daily cap) · **Code:** `main` at `e647562` plus uncommitted working tree
+**Date:** 13 September 2026, resumed 14 September 2026 (48 further answers; stopped again at
+the Groq daily cap) · **Code:** `main` at `e647562` plus uncommitted working tree
 (including the Stage 4.5 graph fix) · **Corpus:** frozen 25 documents / 134 chunks
 (`corpus_manifest.yaml`) · **Question set:** 40 reviewed items (`golden_set.yaml`)
 
@@ -59,42 +60,121 @@ across the two baseline runs; slowest single retrieval 9.4 s. LLM p50 2.7 s, p95
 | Retrieval latency p50 (ms) | 6485 | **132** | 5511 | 7542 |
 | Retrieval latency p95 (ms) | 8402 | **170** | 6356 | 9443 |
 
-**Answer-level ablations are incomplete — blocked by the Groq daily token cap.** The free
-tier allows 200,000 tokens per day (≈3,400 per answer call, so ≈58 calls).
+**The graph_off answer ablation is now complete; rerank_off and chunk512 are not — still
+blocked by the Groq daily token cap.** The free tier allows 200,000 tokens per day
+(≈3,400 per answer call, so ≈58 calls). 48 answers were generated on 14 September
+(graph_off 17, rerank_off 31) before the cap was reached again at 197,427 of 200,000.
 
 | Config | Answers generated | Status |
 | --- | ---: | --- |
-| baseline | 40 / 40 | complete (session 1) |
-| graph_off | **23 / 40** | 18 in session 1 until the cap; 5 more at 19:52–20:00 before the cap was hit again (Groq: 197,382 of 200,000 used) |
-| rerank_off | 0 / 40 | not started — no quota |
-| chunk512 | 0 / 40 | not started — no quota |
+| baseline | 40 / 40 | ✅ complete (13 Sep) |
+| graph_off | **40 / 40** | ✅ **complete** — 23 cached + 17 new on 14 Sep |
+| rerank_off | **31 / 40** | 🟡 F02–F05 and N01–N05 never generated |
+| chunk512 | **0 / 40** | ❌ not started — cap reached before its turn |
 
-Groq's window is rolling: about two hours after the first cap only enough had freed for
-five calls (≈17,000–20,000 tokens), and the bulk of the quota — used by the answer runs
-between roughly 16:50 and 17:50 on 13 September — frees again only about 24 hours later. The resumed run therefore stopped as instructed; all generated
-answers are cached and will be reused.
+The cap is effectively a daily reset, not a fast rolling window: while the run retried,
+usage fell only from 199,370 to 198,859 tokens in 25 minutes (≈20 tokens/min). The
+49 answers still outstanding are ≈167,000 tokens — most of another full day's allowance.
+The run therefore stopped as instructed; every generated answer is cached in
+`eval/cache/llm/` (111 files) and was scored with `--cache-only` so nothing was wasted.
 
-On the 23 items answered in both configs (S01–S20, M01–M03), every config scored on the
-same items, cache hits 23/23 (identical prompts, so retrieval had not drifted):
+### Graph on vs off — all 40 items
 
-| Metric (23 matched items) | baseline | graph_off |
+This is the ablation the quota blocked yesterday, now complete:
+
+| Metric (all 40 items) | baseline | graph_off |
 | --- | ---: | ---: |
-| Fact coverage | 67.4% | 68.8% (+1.4) |
-| Fully correct | 56.5% | 60.9% (+4.3) |
-| False refusal | 13.0% | 13.0% |
-| Citation precision | 75.4% | 88.1% (+12.7) |
-| Citation recall | 84.8% | 89.1% (+4.3) |
-| Grounded sentence share | 49.2% | 58.1% (+8.9) |
-| Graph facts in the prompt (mean) | 12.0 | 0 |
+| Fact coverage (35 answerable) | 72.6% | 73.6% (+1.0) |
+| Fully correct | 60.0% | 62.9% (+2.9) |
+| Fact coverage — single_hop | 62.5% | 64.2% (+1.7) |
+| Fact coverage — **multi_hop** | 89.2% | **89.2% (no change)** |
+| Fact coverage — **follow_up** | 80.0% | **80.0% (no change)** |
+| False refusal | 11.4% | 11.4% |
+| Correct refusal (5 negatives) | 100.0% | 100.0% (after the N04 fix) |
+| Citation precision | 77.8% | 84.3% (+6.6) |
+| Citation recall | 81.9% | 91.9% (+10.0) |
+| Grounded sentence share | 48.8% | 60.8% (+12.0) |
+| Graph facts in the prompt (mean) | 12.4 | 0 |
 
-Only one item changed its fact coverage: S18 rose from 2/3 to 3/3 facts without the graph.
-S12 and S14 swapped refusal labels but covered 0 facts in both configs. Removing ~12 graph
-facts from every prompt therefore left answer correctness essentially unchanged, while the
-answers named fewer irrelevant documents (citation precision +12.7) and more of their
-sentences were grounded in the retrieved passages (+8.9). One sampled run per question —
-read this as "no evidence the graph helps answers", not as proof that removing it improves
-them. Multi-hop (7 of 10 unanswered), follow-up and negative items were not reached, so
-the graph's effect on exactly the questions it is meant to help is still unmeasured.
+Across all 40 items only **three** answers changed at all once the N04 metric bug was fixed (the fourth row below is that bug):
+
+| Item | With graph | Without graph | Reading |
+| --- | --- | --- | --- |
+| S18 | 2/3 facts | **3/3 facts** | the only genuine correctness change, and it favours graph-off |
+| S12 | false_refusal | answered | 0 facts covered either way — label change only |
+| S14 | answered | false_refusal | 0 facts covered either way — label change only |
+| N04 | correct_refusal | correct_refusal | was a metric artefact; **fixed 14 Sep**, both now agree |
+
+**N04 was a scoring artefact, and it has since been fixed (14 September).** Both answers say
+the same thing: the internal inspection of B-101 was deferred, so there are no findings. The
+refusal classifier matched the baseline's "no internal visual findings … **were** recorded"
+but not graph-off's "no internal-inspection findings **are** recorded" — `eval/metrics.py`
+listed `(were|was|have been|has been)` in its premise-correction pattern and not the present
+tense. The pattern is now tense-agnostic. Checked against every cached answer in all four
+configs, the fix changes **exactly one** label — graph_off N04 → `correct_refusal` — and
+leaves the baseline's numbers identical. Stored answers were rescored with
+`python -m eval.run rescore` (no Groq calls), so the table above already reflects it.
+
+**Conclusion: the graph changes nothing on the questions it exists for.** All ten multi-hop
+and all five follow-up answers are scored identically with and without it. One sampled run
+per question, so read this as "no measurable benefit", not proof of harm.
+
+### 3.1 Reworked graph arm (`graph_v2`) — retrieval only, 14 September
+
+The ablation above says the graph earns nothing. Tracing why: the graph arm ranks entities
+by how many query terms their *name* contains, which is a raw count, so long filenames beat
+short tags. `Document` entities are 18% of the graph but took **55%** of the five entity
+slots, and ~80% of the facts reaching the prompt were a bare name or a document-membership
+edge — both of which the retrieved chunk already shows.
+
+| Facts emitted over the 40 questions | before | `graph_v2` |
+| --- | ---: | ---: |
+| `Document` share | 59.1% | **21.2%** |
+| bare "entity exists" facts | 35.3% | 30.0% |
+| document-membership edges | 44.8% | 37.9% |
+| **domain relationship facts** | **20.0%** | **32.1%** |
+| total facts | 496 | 377 |
+
+Three fixes, all gated on `graph_prefer_domain_entities` (default off, so this baseline
+stays reproducible): rank by term *density* rather than raw count; rank documents below
+domain entities; and count only relationship facts toward the merge boost. Nothing was
+removed from Neo4j.
+
+| Metric | baseline | graph_off | **graph_v2** |
+| --- | ---: | ---: | ---: |
+| Doc recall@5 | 91.9% | 98.6% | **98.6%** |
+| Doc hit@5 | 88.6% | 97.1% | **97.1%** |
+| Passage recall@5 | 56.7% | 59.5% | **59.5%** |
+| MRR | 0.860 | 0.906 | **0.920** |
+| Latency p50 (ms) | 6485 | 5511 | 6055 |
+
+`graph_v2` recovers every gain that came from switching the graph off **and beats graph-off
+on MRR** — the first Stage 5 result where keeping the graph is better than not having it.
+S06 and M10 recover from MRR 0.17 and 0.33 to 1.00; S01 and S03 rise 0.50 → 1.00. F02 drops
+1.00 → 0.50, matching graph_off exactly, but its passage recall is 0.0 in all three configs,
+so the right passage was never retrieved and the rank never mattered.
+
+**The answer-level effect of `graph_v2` is not measured** — that needs Groq, which was
+paused. Retrieval improved; whether the answers follow is open.
+
+### Reranker on vs off — 31 matched items
+
+The first answer-level evidence for the reranker (previously inferred from retrieval only).
+Every config below is scored on the same 31 items:
+
+| Metric (31 matched items) | baseline | rerank_off | graph_off |
+| --- | ---: | ---: | ---: |
+| Fact coverage | 72.3% | **68.8% (-3.5)** | 73.4% (+1.1) |
+| Fully correct | 58.1% | **51.6% (-6.5)** | 61.3% (+3.2) |
+| False refusal | 9.7% | 9.7% | 9.7% |
+| Citation precision | 79.9% | 76.8% (-3.1) | 86.8% (+6.9) |
+| Citation recall | 82.8% | 82.3% (-0.5) | 90.9% (+8.1) |
+| Grounded sentence share | 48.9% | 48.6% (-0.3) | 58.6% (+9.7) |
+
+Turning the reranker off costs **6.5 pts of fully-correct answers** and 3.5 pts of fact
+coverage — the retrieval loss (−6.7 pts passage recall) does reach the answer. This is a
+partial result on 31 of 40 items and excludes every negative, so the refusal columns are
+not yet informative.
 
 ## 4. Conclusions — what actually improves TRACE
 
@@ -105,25 +185,34 @@ the graph's effect on exactly the questions it is meant to help is still unmeasu
    is the right failure. Improvements should target getting the right *passage* in, not
    the prompt or model.
 
-2. **The reranker earns its quality but its cost is dangerous.** Turning it off loses
-   6.7 pts passage recall, 0.077 MRR, and 16.7 pts on long-document and compound
-   questions — but it is **~40× the latency** (132 ms vs ~5.5 s p50) on this CPU. The
+2. **The reranker earns its quality — now confirmed on answers — but its cost is
+   dangerous.** Turning it off loses 6.7 pts passage recall, 0.077 MRR, and 16.7 pts on
+   long-document and compound questions. On the 31 items answered in both configs that
+   retrieval loss **reaches the answer**: fact coverage 68.8% vs 72.3% and fully-correct
+   51.6% vs 58.1% (−6.5 pts). That link was inferred from retrieval yesterday; it is now
+   measured. The cost is **~40× the latency** (132 ms vs ~5.5 s p50) on this CPU. The
    slowest baseline query took 9.4 s against the 10 s timeout that silently disables
    reranking for the whole process; the 512-token run crossed it and did disable
    (detected, discarded, rerun with a 60 s eval-only timeout). Keep the reranker; reduce
    its candidate count or move it off CPU before deployment.
 
-3. **The knowledge graph, as wired today, makes retrieval worse.** With the graph off,
-   doc hit@5 rises from 88.6% to **97.1%** and MRR from 0.860 to 0.906. Cause, confirmed
-   per item: `ContextMerger` adds up to +0.1 to a chunk's score per attached graph fact,
-   and entity-dense documents (MAN-003, Equipment Register, shift logs) collect many facts,
-   so they are lifted above the reranker's best passage regardless of relevance — S05
-   loses PPT-002 from the top 5, S06 drops MNT-001 from rank 1 to 6, M10 drops MNT-001 to
-   rank 3. On answers there is no measurable benefit: on the 23 matched items, fact
-   coverage is 68.8% without the graph vs 67.4% with it, and citation precision is higher
-   without it (88.1% vs 75.4%). The graph is not yet paying for Neo4j; the score boost
-   should be removed or reworked and re-measured — including on the multi-hop and
-   follow-up items the quota did not reach — before claiming otherwise.
+3. **The knowledge graph, as wired today, makes retrieval worse and does nothing for
+   answers.** With the graph off, doc hit@5 rises from 88.6% to **97.1%** and MRR from
+   0.860 to 0.906. Cause, confirmed per item: `ContextMerger` adds up to +0.1 to a chunk's
+   score per attached graph fact, and entity-dense documents (MAN-003, Equipment Register,
+   shift logs) collect many facts, so they are lifted above the reranker's best passage
+   regardless of relevance — S05 loses PPT-002 from the top 5, S06 drops MNT-001 from rank 1
+   to 6, M10 drops MNT-001 to rank 3. **The answer ablation is now complete across all 40
+   items and finds no benefit either:** fact coverage 73.6% without the graph vs 72.6% with
+   it, citation precision 84.3% vs 77.8%, grounded share 60.8% vs 48.8%. Decisively, **all
+   ten multi-hop and all five follow-up answers score identically** with and without it —
+   the graph changes nothing on exactly the questions it was added for. Only three answers
+   differ at all, and the one real correctness change (S18, 2/3 → 3/3 facts) favours
+   graph-off; the apparent negatives regression (N04) was a refusal-classifier tense gap,
+   since fixed. **This conclusion is about the graph as it was wired on 13 September.** The
+   score boost has since been reworked — see §3.1 — and at the retrieval level the
+   reworked graph now beats having no graph at all (MRR 0.920 vs 0.906). Whether that
+   reaches the answers is not yet measured.
 
 4. **Larger chunks are the biggest single retrieval lever — with a trade-off.** 512/64
    raises passage recall@5 by **20.5 pts** and evidence-in-context by 24.8, with the
@@ -133,8 +222,9 @@ the graph's effect on exactly the questions it is meant to help is still unmeasu
    and the embedding model (`all-MiniLM-L6-v2`, 256-wordpiece window) silently truncates
    every 512-token chunk. Its answer-level effect was **not measured** (no quota). Given
    conclusion 1 it is the most promising change to test next, not one to adopt on these
-   numbers alone. The same applies to the reranker: its answer-level value is inferred from
-   retrieval plus conclusion 1, not measured.
+   numbers alone. **chunk512 is now the only ablation with no answer-level evidence at
+   all** — the reranker's was measured on 31 items today (conclusion 2), the graph's on
+   all 40 (conclusion 3).
 
 5. **Refusal cannot come from retrieval scores.** Reranker top scores for three negatives
    (N03, N04, N05) were 0.94–1.00 because a closely related document exists; negatives
@@ -163,14 +253,22 @@ the graph's effect on exactly the questions it is meant to help is still unmeasu
   source files under the owner's delegation and recorded as `reviewed_by: pratapVansh`.
   Every decision is in `review.notes`. A cold, independent human review would be stronger.
 - **One LLM sample per question.** Answer metrics carry sampling noise (temperature 0.1).
-- **Answer ablations incomplete** (Groq daily cap of 200,000 tokens, rolling): graph_off
-  23/40, rerank_off 0/40, chunk512 0/40 — about 97 calls (≈330,000 tokens) still to go,
-  i.e. at least two more days of free-tier quota. Resume with
-  `python -m eval.run answers --config graph_off rerank_off chunk512`; cached answers are
+- **Two answer ablations still incomplete** (Groq daily cap of 200,000 tokens):
+  graph_off **40/40 ✅**, rerank_off **31/40**, chunk512 **0/40** — 49 calls
+  (≈167,000 tokens) still to go, i.e. at least one more day of free-tier quota. Resume with
+  `python -m eval.run answers --config rerank_off chunk512`; cached answers are
   reused, and `--cache-only` scores whatever has been generated without calling Groq.
+  The 31-item reranker comparison excludes all five negatives, so its refusal columns are
+  not yet informative.
 - **Lexical scoring.** Fact coverage and refusal detection are phrase/regex based; they were
   checked against every low-scoring answer and two artefacts were fixed (markdown emphasis,
   premise-correction refusals), but paraphrased correct answers can still be missed.
+  **A third artefact was found and fixed on 14 September:** the premise-correction
+  pattern accepted `(were|was|have been|has been) recorded` but not the present tense, so
+  graph_off's N04 ("no internal-inspection findings **are** recorded") scored
+  `missed_refusal` while the baseline's past-tense wording of the same content scored
+  `correct_refusal`. The pattern is now tense-agnostic; the fix moves exactly one label
+  across all four configs and leaves the baseline unchanged. 8 tests cover it.
 - **Latency** measured on a CPU laptop that ran out of memory once during the session;
   treat absolute values as indicative, ratios as reliable.
 - **Chunk-512 ablation** used a 60 s reranker timeout (eval only); at the production 10 s it
