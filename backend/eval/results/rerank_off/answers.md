@@ -1,8 +1,6 @@
 # Answers — rerank_off
 
-Run 2026-09-14T14:09:27+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 37, calls 0
-
-**PARTIAL (cache-only): 3 items skipped, never answered:** N03, N04, N05
+Run 2026-09-15T17:24:11+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 37, calls 3
 
 | Slice | n | Fact coverage | Fully correct | False refusal | Citation P | Citation R | Grounded share |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -11,9 +9,9 @@ Run 2026-09-14T14:09:27+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 3
 | multi_hop | 10 | 78.2% | 50.0% | 0.0% | 83.3% | 75.0% | 55.6% |
 | follow_up | 5 | 40.0% | 40.0% | 40.0% | 56.7% | 80.0% | 19.7% |
 
-- Correct refusal on negatives: 100.0%
-- Grounding sentences: 117 grounded, 9 hedged, 125 unsupported
-- LLM latency (uncached calls): p50 — ms, p95 — ms
+- Correct refusal on negatives: 80.0%
+- Grounding sentences: 127 grounded, 9 hedged, 138 unsupported
+- LLM latency (uncached calls): p50 2076 ms, p95 5391 ms
 
 ## Per item
 
@@ -56,3 +54,6 @@ Run 2026-09-14T14:09:27+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 3
 | F05 | follow_up | 0.0% | answered | Maintenance | 40.0% |
 | N01 | negative | — | correct_refusal | — | 40.0% |
 | N02 | negative | — | correct_refusal | — | 0.0% |
+| N03 | negative | — | correct_refusal | INS-004, LOG-002, Spare | 40.0% |
+| N04 | negative | — | missed_refusal | INS-003 | 50.0% |
+| N05 | negative | — | correct_refusal | INS-004 | 40.0% |

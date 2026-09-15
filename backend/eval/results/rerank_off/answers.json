@@ -1,9 +1,9 @@
 {
  "kind": "answers",
- "run_at": "2026-09-14T14:09:27+00:00",
+ "run_at": "2026-09-15T17:24:11+00:00",
  "git": {
-  "head": "6d57238",
-  "dirty": true
+  "head": "bbf5806",
+  "dirty": false
  },
  "settings": {
   "name": "rerank_off",
@@ -26,14 +26,10 @@
  },
  "llm_cache": {
   "hits": 37,
-  "misses": 0
+  "misses": 3
  },
- "cache_only": true,
- "skipped_uncached": [
-  "N03",
-  "N04",
-  "N05"
- ],
+ "cache_only": false,
+ "skipped_uncached": [],
  "summary": {
   "answerable": {
    "n": 35,
@@ -73,14 +69,14 @@
     "grounded_share": 0.19666666666666668
    }
   },
-  "correct_refusal_rate": 1.0,
+  "correct_refusal_rate": 0.8,
   "grounding_totals": {
-   "grounded": 117,
+   "grounded": 127,
    "hedged": 9,
-   "unsupported": 125
+   "unsupported": 138
   },
-  "llm_ms_p50_uncached": null,
-  "llm_ms_p95_uncached": null
+  "llm_ms_p50_uncached": 2076.3,
+  "llm_ms_p95_uncached": 5390.639999999999
  },
  "items": [
   {
@@ -125,7 +121,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 124.2
+   "total_ms": 166.3
   },
   {
    "id": "S02",
@@ -168,7 +164,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 105.9
+   "total_ms": 112.6
   },
   {
    "id": "S03",
@@ -208,7 +204,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 118.4
+   "total_ms": 123.8
   },
   {
    "id": "S04",
@@ -252,7 +248,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 112.1
+   "total_ms": 134.2
   },
   {
    "id": "S05",
@@ -294,7 +290,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 110.9
+   "total_ms": 120.4
   },
   {
    "id": "S06",
@@ -337,7 +333,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 124.2
+   "total_ms": 113.6
   },
   {
    "id": "S07",
@@ -382,7 +378,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 172.3
+   "total_ms": 145.3
   },
   {
    "id": "S08",
@@ -423,7 +419,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 153.7
+   "total_ms": 186.0
   },
   {
    "id": "S09",
@@ -468,7 +464,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 137.0
+   "total_ms": 166.2
   },
   {
    "id": "S10",
@@ -512,7 +508,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 148.3
+   "total_ms": 132.8
   },
   {
    "id": "S11",
@@ -556,7 +552,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 152.4
+   "total_ms": 144.8
   },
   {
    "id": "S12",
@@ -600,7 +596,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 154.2
+   "total_ms": 146.2
   },
   {
    "id": "S13",
@@ -644,7 +640,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 145.5
+   "total_ms": 137.6
   },
   {
    "id": "S14",
@@ -689,7 +685,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 148.1
+   "total_ms": 170.8
   },
   {
    "id": "S15",
@@ -729,7 +725,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 144.1
+   "total_ms": 134.6
   },
   {
    "id": "S16",
@@ -773,7 +769,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 124.7
+   "total_ms": 141.7
   },
   {
    "id": "S17",
@@ -813,7 +809,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 132.2
+   "total_ms": 141.5
   },
   {
    "id": "S18",
@@ -856,7 +852,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 168.2
+   "total_ms": 145.4
   },
   {
    "id": "S19",
@@ -900,7 +896,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 157.2
+   "total_ms": 131.2
   },
   {
    "id": "S20",
@@ -944,7 +940,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 116.6
+   "total_ms": 134.5
   },
   {
    "id": "M01",
@@ -986,7 +982,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 118.9
+   "total_ms": 144.7
   },
   {
    "id": "M02",
@@ -1028,7 +1024,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 132.1
+   "total_ms": 126.5
   },
   {
    "id": "M03",
@@ -1074,7 +1070,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 123.5
+   "total_ms": 150.3
   },
   {
    "id": "M04",
@@ -1118,7 +1114,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 116.3
+   "total_ms": 145.8
   },
   {
    "id": "M05",
@@ -1166,7 +1162,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 122.3
+   "total_ms": 142.6
   },
   {
    "id": "M06",
@@ -1211,7 +1207,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 140.1
+   "total_ms": 132.5
   },
   {
    "id": "M07",
@@ -1256,7 +1252,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 131.6
+   "total_ms": 122.8
   },
   {
    "id": "M08",
@@ -1299,7 +1295,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 156.5
+   "total_ms": 180.1
   },
   {
    "id": "M09",
@@ -1346,7 +1342,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 139.9
+   "total_ms": 175.6
   },
   {
    "id": "M10",
@@ -1391,7 +1387,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 135.4
+   "total_ms": 123.3
   },
   {
    "id": "F01",
@@ -1433,7 +1429,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 113.5
+   "total_ms": 111.5
   },
   {
    "id": "F02",
@@ -1475,7 +1471,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 129.7
+   "total_ms": 111.0
   },
   {
    "id": "F03",
@@ -1519,7 +1515,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 149.6
+   "total_ms": 154.1
   },
   {
    "id": "F04",
@@ -1560,7 +1556,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 116.2
+   "total_ms": 115.2
   },
   {
    "id": "F05",
@@ -1602,7 +1598,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 131.6
+   "total_ms": 126.4
   },
   {
    "id": "N01",
@@ -1640,7 +1636,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 126.5
+   "total_ms": 160.5
   },
   {
    "id": "N02",
@@ -1679,7 +1675,131 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 118.3
+   "total_ms": 105.3
+  },
+  {
+   "id": "N03",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "Which contractor supplied the replacement tubes for E-301 during turnaround TA-2026-02?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about which contractor supplied the replacement tubes for E‑301 during turnaround TA‑2026‑02.  \n\n**Recommended Actions**\n1. Review the procurement or purchase order records for TA‑2026‑02.  \n2. Consult the detailed turnaround execution report, if available.  \n3. Contact the turnaround project manager for clarification.  \n\n**Evidence**  \n> [!DOCUMENT] {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"chunk_content\":\"... certification and sign‑off ...\",\"highlighted_excerpt\":\"... inspection described ...\",\"page_number\":12,\"confidence\":0.92}  \n> [!DOCUMENT] {\"document_name\":\"LOG-002_Night_Shift_15-16-Jul-2026.txt\",\"chunk_content\":\"... V-220 actuator replacement complete ...\",\"highlighted_excerpt\":\"... V-220 actuator replacement ...\",\"page_number\":1,\"confidence\":0.88}  \n> [!DOCUMENT] {\"document_name\":\"Spare_Parts_Inventory.xlsx\",\"chunk_content\":\"TUBE-E301 | Heat Exchanger Tube (SS316L, 19mm OD) | E-301 | 50 | 20 | pcs | 30-Aug-2024\",\"highlighted_excerpt\":\"... Heat Exchanger Tube ...\",\"page_number\":1,\"confidence\":0.90}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 0,
+    "unsupported": 6,
+    "grounded_share": 0.4
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Equipment_Register.xlsx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+   ],
+   "graph_facts": 15,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1590.1,
+   "total_ms": 1718.4
+  },
+  {
+   "id": "N04",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "What did the internal inspection of boiler B-101 find inside the steam drum?",
+   "answer": "**Status:** Completed – internal inspection of B‑101 performed.  \n\n**Answer:** The ultrasonic thickness test of the steam drum bottom recorded three measurements: **32.5 mm, 31.8 mm, and 32.1 mm**. All values are above the minimum required thickness of **28.0 mm**. No additional internal defects were noted.  \n\n**Recommended Actions**  \n1. Record the thickness data in the boiler maintenance log and track trends.  \n2. Schedule the next internal drum inspection before the 2028 shutdown to verify continued compliance.  \n3. Maintain current operating parameters; no immediate corrective work is required.  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"INS-003_Boiler_Inspection_B-101.docx\",\"confidence\":0.9,\"score\":92,\"preview_link\":\"Click to preview document\"}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "missed_refusal",
+   "cited_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.5
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "FIX1-PDF-142247.pdf"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2076.3,
+   "total_ms": 2231.5
+  },
+  {
+   "id": "N05",
+   "type": "negative",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The set pressure for relief valve **PSV‑3011** on heat exchanger **E‑301** is not provided in the supplied documents.  \n\n**Recommended Actions**  \n1. Review the design specifications or datasheet for PSV‑3011.  \n2. Consult the valve’s certification and testing records.  \n3. Verify the set pressure in the plant’s instrumentation or maintenance database.  \n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"chunk_content\":\"...relief valve PSV-3011 which is on a separate certification cycle...\",\"highlighted_excerpt\":\"relief valve PSV-3011 which is on a separate certification cycle\",\"page_number\":1,\"confidence\":0.9}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.4
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "Equipment_Register.xlsx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 5758.9,
+   "total_ms": 29890.3
   }
  ]
 }

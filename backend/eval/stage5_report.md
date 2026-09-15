@@ -1,8 +1,9 @@
 # TRACE — Stage 5 evaluation report
 
-**Date:** 13 September 2026, resumed 14 September 2026 (48 further answers; stopped again at
-the Groq daily cap) · **Code:** `main` at `e647562` plus uncommitted working tree
-(including the Stage 4.5 graph fix) · **Corpus:** frozen 25 documents / 134 chunks
+**Date:** 13 September 2026, resumed 14 September (48 further answers) and 15 September 2026
+(43 further answers: rerank_off completed 40/40, chunk512 reached 39/40 before the Groq daily
+cap) · **Code:** baseline at `e647562`, graph_off at `6d57238`, the 15 September runs at
+`bbf5806`, each plus an uncommitted working tree · **Corpus:** frozen 25 documents / 134 chunks
 (`corpus_manifest.yaml`) · **Question set:** 40 reviewed items (`golden_set.yaml`)
 
 Every number below comes from `eval/results/*/*.json`; the tables are reproduced from
@@ -60,23 +61,27 @@ across the two baseline runs; slowest single retrieval 9.4 s. LLM p50 2.7 s, p95
 | Retrieval latency p50 (ms) | 6485 | **132** | 5511 | 7542 |
 | Retrieval latency p95 (ms) | 8402 | **170** | 6356 | 9443 |
 
-**The graph_off answer ablation is now complete; rerank_off and chunk512 are not — still
-blocked by the Groq daily token cap.** The free tier allows 200,000 tokens per day
-(≈3,400 per answer call, so ≈58 calls). 48 answers were generated on 14 September
-(graph_off 17, rerank_off 31) before the cap was reached again at 197,427 of 200,000.
+**Three of the four answer ablations are now complete; chunk512 is one item short.** The
+free tier allows 200,000 tokens per day. On 15 September the quota reset, `rerank_off`
+finished with 3 further calls, and `chunk512` generated 39 of its 40 answers before the
+daily cap returned at 197,749 / 200,000 — leaving only **N05**, a negative.
 
 | Config | Answers generated | Status |
 | --- | ---: | --- |
 | baseline | 40 / 40 | ✅ complete (13 Sep) |
-| graph_off | **40 / 40** | ✅ **complete** — 23 cached + 17 new on 14 Sep |
-| rerank_off | **31 / 40** | 🟡 F02–F05 and N01–N05 never generated |
-| chunk512 | **0 / 40** | ❌ not started — cap reached before its turn |
+| graph_off | 40 / 40 | ✅ complete (14 Sep) — 23 cached + 17 new |
+| rerank_off | **40 / 40** | ✅ **complete (15 Sep)** — 37 cached + 3 new |
+| chunk512 | **39 / 40** | 🟡 **N05 only** — all 35 answerable items done; 4 of 5 negatives |
 
-The cap is effectively a daily reset, not a fast rolling window: while the run retried,
-usage fell only from 199,370 to 198,859 tokens in 25 minutes (≈20 tokens/min). The
-49 answers still outstanding are ≈167,000 tokens — most of another full day's allowance.
-The run therefore stopped as instructed; every generated answer is cached in
-`eval/cache/llm/` (111 files) and was scored with `--cache-only` so nothing was wasted.
+Because every answerable item is present in all four configs, the answerable metrics
+(fact coverage, fully correct, citations, grounding) are directly comparable across all
+four; only chunk512's 5-item negatives slice is short one item. The run stopped cleanly at
+the cap as instructed; every generated answer is cached in `eval/cache/llm/` (159 files)
+and chunk512 was scored with `--cache-only`, so no work was wasted and nothing was rerun.
+
+Per-minute limits, not the daily cap, set the pace: at 512 tokens per chunk a prompt runs
+≈5,200 tokens against a TPM limit of 8,000, so generation settled at roughly 1.5 answers
+per minute with the runner's back-off absorbing the 429s.
 
 ### Graph on vs off — all 40 items
 
@@ -157,24 +162,79 @@ so the right passage was never retrieved and the rank never mattered.
 **The answer-level effect of `graph_v2` is not measured** — that needs Groq, which was
 paused. Retrieval improved; whether the answers follow is open.
 
-### Reranker on vs off — 31 matched items
+### 3.2 Reranker on vs off — ✅ complete, all 40 items (15 September)
 
-The first answer-level evidence for the reranker (previously inferred from retrieval only).
-Every config below is scored on the same 31 items:
+The 31-item partial reported on 14 September **understated the cost**. On the full set:
 
-| Metric (31 matched items) | baseline | rerank_off | graph_off |
-| --- | ---: | ---: | ---: |
-| Fact coverage | 72.3% | **68.8% (-3.5)** | 73.4% (+1.1) |
-| Fully correct | 58.1% | **51.6% (-6.5)** | 61.3% (+3.2) |
-| False refusal | 9.7% | 9.7% | 9.7% |
-| Citation precision | 79.9% | 76.8% (-3.1) | 86.8% (+6.9) |
-| Citation recall | 82.8% | 82.3% (-0.5) | 90.9% (+8.1) |
-| Grounded sentence share | 48.9% | 48.6% (-0.3) | 58.6% (+9.7) |
+| Metric (all 40 items) | baseline | rerank_off |
+| --- | ---: | ---: |
+| Fact coverage (35 answerable) | 72.6% | **63.8% (-8.9)** |
+| Fully correct | 60.0% | **48.6% (-11.4)** |
+| Fact coverage — single_hop | 62.5% | 62.5% (no change) |
+| Fact coverage — **multi_hop** | 89.2% | **78.2% (-11.0)** |
+| Fact coverage — **follow_up** | 80.0% | **40.0% (-40.0)** |
+| False refusal | 11.4% | 14.3% (+2.9) |
+| Correct refusal (5 negatives) | 100.0% | **80.0% (-20.0)** |
+| Citation precision | 77.8% | 75.0% (-2.8) |
+| Citation recall | 81.9% | 81.4% (-0.5) |
+| Grounded sentence share | 48.8% | 45.8% (-2.9) |
 
-Turning the reranker off costs **6.5 pts of fully-correct answers** and 3.5 pts of fact
-coverage — the retrieval loss (−6.7 pts passage recall) does reach the answer. This is a
-partial result on 31 of 40 items and excludes every negative, so the refusal columns are
-not yet informative.
+Turning the reranker off costs **11.4 pts of fully-correct answers** and 8.9 pts of fact
+coverage — nearly double the 6.5 pts the matched subset suggested, because the nine items
+added today (F02–F05, N01–N05) are exactly where it hurts most. The damage is concentrated,
+not diffuse: **single-hop coverage is unchanged at 62.5%**, while multi-hop drops 11.0 pts
+and **follow-up drops 40.0 pts** (F03 1.00 → 0.00, false refusal; F05 1.00 → 0.00). Questions
+that need the right passage out of several candidates are the ones the reranker was doing
+the work for.
+
+The negatives are now informative and they cost the reranker-off run one: **N04 is a genuine
+missed refusal.** Without the reranker the answer asserts "Status: Completed – internal
+inspection of B-101 performed" and reports the external UT thickness readings as the internal
+findings. The baseline, with the same documents available, says the inspection was deferred.
+This is the false-premise failure the negatives exist to catch, not a scoring artefact.
+
+### 3.3 Chunk 512 on answers — 🟡 39 / 40 (15 September)
+
+The ablation that had no answer-level evidence at all now has it for every answerable
+question. All 35 answerable items were generated; only the negative **N05** was not.
+
+| Metric | baseline | chunk512 |
+| --- | ---: | ---: |
+| Fact coverage (35 answerable) | 72.6% | **79.3% (+6.7)** |
+| Fully correct | 60.0% | **74.3% (+14.3)** |
+| Fact coverage — **single_hop** | 62.5% | **80.0% (+17.5)** |
+| Fact coverage — **multi_hop** | 89.2% | **77.5% (-11.7)** |
+| Fact coverage — follow_up | 80.0% | 80.0% (no change) |
+| False refusal | 11.4% | 8.6% (-2.9) |
+| Correct refusal (negatives) | 100.0% (5/5) | 75.0% (3/4 scored — see below) |
+| Citation precision | 77.8% | **89.8% (+12.1)** |
+| Citation recall | 81.9% | 87.1% (+5.2) |
+| Grounded sentence share | 48.8% | **60.6% (+11.8)** |
+
+**The retrieval gain reaches the answers, and it is the largest answer-level effect measured
+in Stage 5:** +14.3 pts fully-correct, the direct consequence of +20.5 pts passage recall and
++24.8 pts evidence-in-context. It confirms conclusion 1 from the other direction — feed the
+pipeline the right passage and the same model and prompt answer correctly.
+
+**The trade-off predicted from retrieval also shows up.** Multi-hop coverage falls 11.7 pts,
+matching the −10 pts multi-document recall: **M05 drops 1.00 → 0.00 and M10 1.00 → 0.00**,
+both questions needing two documents where the 512 run retrieved one. Single-hop, where one
+chunk more often holds the whole answer, gains 17.5 pts. Seven single-hop items that the
+baseline answered partially are now fully correct (S01, S02, S03, S10, S14, S18 among them),
+and F02 — a baseline false refusal — is answered correctly.
+
+**N04 needs review before it is read as a regression.** The classifier scored it
+`missed_refusal`, but the answer's content is right: "The internal inspection of boiler B-101
+has not been completed; therefore no findings inside the steam drum are available." The
+premise-correction pattern in `eval/metrics.py` accepts `no … findings … are recorded` but not
+`… are available`, so this is the same class of vocabulary gap as the tense bug fixed on
+14 September. **It has deliberately not been fixed here** — changing the classifier would
+rescore stored answers, which was out of scope for this run. It is logged as the next metric
+task; until then chunk512's negatives figure should be read as "3 of 4 scored, one contested".
+
+**No latency figures for chunk512 answers.** The generating run was interrupted by the daily
+cap before it could write its results, so the run was scored from cache; `llm_ms` is null for
+cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffected and stands.
 
 ## 4. Conclusions — what actually improves TRACE
 
@@ -185,12 +245,14 @@ not yet informative.
    is the right failure. Improvements should target getting the right *passage* in, not
    the prompt or model.
 
-2. **The reranker earns its quality — now confirmed on answers — but its cost is
+2. **The reranker earns its quality — now confirmed on all 40 answers — but its cost is
    dangerous.** Turning it off loses 6.7 pts passage recall, 0.077 MRR, and 16.7 pts on
-   long-document and compound questions. On the 31 items answered in both configs that
-   retrieval loss **reaches the answer**: fact coverage 68.8% vs 72.3% and fully-correct
-   51.6% vs 58.1% (−6.5 pts). That link was inferred from retrieval yesterday; it is now
-   measured. The cost is **~40× the latency** (132 ms vs ~5.5 s p50) on this CPU. The
+   long-document and compound questions. On the complete answer ablation that retrieval loss
+   **reaches the answer, harder than the partial suggested**: fact coverage 63.8% vs 72.6%
+   and fully-correct **48.6% vs 60.0% (−11.4 pts**, against the −6.5 pts estimated from 31
+   items). It is concentrated where ranking matters — single-hop coverage is unchanged,
+   multi-hop falls 11.0 pts, follow-up 40.0 pts — and it costs one negative to a genuine
+   missed refusal (N04). The cost is **~40× the latency** (132 ms vs ~5.5 s p50) on this CPU. The
    slowest baseline query took 9.4 s against the 10 s timeout that silently disables
    reranking for the whole process; the 512-token run crossed it and did disable
    (detected, discarded, rerun with a 60 s eval-only timeout). Keep the reranker; reduce
@@ -214,17 +276,18 @@ not yet informative.
    reworked graph now beats having no graph at all (MRR 0.920 vs 0.906). Whether that
    reaches the answers is not yet measured.
 
-4. **Larger chunks are the biggest single retrieval lever — with a trade-off.** 512/64
-   raises passage recall@5 by **20.5 pts** and evidence-in-context by 24.8, with the
-   largest gains on long-document (+22), compound (+15) and follow-up (+60) questions,
-   because one chunk more often holds the whole answer. It costs 2.9 pts doc recall and
-   **10 pts multi-document recall** (M02, M10 lose a document), 16% more reranker latency,
-   and the embedding model (`all-MiniLM-L6-v2`, 256-wordpiece window) silently truncates
-   every 512-token chunk. Its answer-level effect was **not measured** (no quota). Given
-   conclusion 1 it is the most promising change to test next, not one to adopt on these
-   numbers alone. **chunk512 is now the only ablation with no answer-level evidence at
-   all** — the reranker's was measured on 31 items today (conclusion 2), the graph's on
-   all 40 (conclusion 3).
+4. **Larger chunks are the biggest single lever in Stage 5 — now measured on answers, and
+   the trade-off is real.** 512/64 raises passage recall@5 by **20.5 pts** and
+   evidence-in-context by 24.8, because one chunk more often holds the whole answer. That
+   reaches the answers: fact coverage **79.3% vs 72.6%** and fully-correct **74.3% vs 60.0%
+   (+14.3 pts)** — the largest answer-level gain measured in Stage 5, and single-hop coverage
+   rises 17.5 pts. It costs 2.9 pts doc recall and **10 pts multi-document recall**, and that
+   cost is now visible in the answers too: **multi-hop coverage drops 11.7 pts**, with M05 and
+   M10 falling from fully correct to zero. Add 16% more reranker latency and an embedding
+   model (`all-MiniLM-L6-v2`, 256-wordpiece window) that silently truncates every 512-token
+   chunk. The right next move is therefore **not** a flat switch to 512: it is to keep the
+   recall gain while restoring multi-document coverage — a larger chunk with an embedding
+   model whose window fits it, or retrieval that returns more than one document's chunk.
 
 5. **Refusal cannot come from retrieval scores.** Reranker top scores for three negatives
    (N03, N04, N05) were 0.94–1.00 because a closely related document exists; negatives
@@ -253,13 +316,19 @@ not yet informative.
   source files under the owner's delegation and recorded as `reviewed_by: pratapVansh`.
   Every decision is in `review.notes`. A cold, independent human review would be stronger.
 - **One LLM sample per question.** Answer metrics carry sampling noise (temperature 0.1).
-- **Two answer ablations still incomplete** (Groq daily cap of 200,000 tokens):
-  graph_off **40/40 ✅**, rerank_off **31/40**, chunk512 **0/40** — 49 calls
-  (≈167,000 tokens) still to go, i.e. at least one more day of free-tier quota. Resume with
-  `python -m eval.run answers --config rerank_off chunk512`; cached answers are
-  reused, and `--cache-only` scores whatever has been generated without calling Groq.
-  The 31-item reranker comparison excludes all five negatives, so its refusal columns are
-  not yet informative.
+- **One answer call outstanding** (Groq daily cap of 200,000 tokens): graph_off **40/40 ✅**,
+  rerank_off **40/40 ✅**, chunk512 **39/40** — only the negative **N05** remains
+  (≈5,200 tokens). Every answerable item exists in all four configs, so the answerable
+  metrics are fully comparable; only chunk512's negatives slice is short one item. Resume
+  with `python -m eval.run answers --config chunk512`; cached answers are reused, and
+  `--cache-only` scores whatever has been generated without calling Groq.
+- **The answer-level effect of `graph_v2` is still unmeasured** — 40 calls (≈136,000 tokens),
+  deliberately not run on 15 September so the day's quota went to closing the three baseline
+  ablations. It is the next tracked step.
+- **A second refusal-classifier vocabulary gap is open and unfixed** (chunk512 N04, §3.3):
+  the premise-correction pattern accepts "no findings … are **recorded**" but not "… are
+  **available**". Fixing it would rescore stored answers, so it was left for a separate
+  change; chunk512's negatives figure is reported as 3 of 4 scored with one contested.
 - **Lexical scoring.** Fact coverage and refusal detection are phrase/regex based; they were
   checked against every low-scoring answer and two artefacts were fixed (markdown emphasis,
   premise-correction refusals), but paraphrased correct answers can still be missed.
