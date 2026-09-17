@@ -91,15 +91,28 @@ class ScannedPdfOcrProcessor:
                 "OCR completed but no readable text was detected in scanned PDF"
             )
 
+        # A partly-read document indexes exactly like a whole one, so record
+        # what was missed instead of letting it pass as complete.
+        metadata.pop("ocr_truncated", None)
+        metadata.pop("ocr_failed_pages", None)
+        if result.skipped_pages > 0:
+            metadata["ocr_truncated"] = result.skipped_pages
+        if result.failed_pages:
+            metadata["ocr_failed_pages"] = list(result.failed_pages)
+
         await self._document_repository.update_document(
             context.document.id,
             extra_metadata=metadata,
         )
 
         logger.info(
-            "Completed scanned PDF OCR document_id=%s version_id=%s page_count=%d has_text=%s",
+            "Completed scanned PDF OCR document_id=%s version_id=%s page_count=%d "
+            "has_text=%s partial=%s skipped_pages=%d failed_pages=%s",
             context.document.id,
             context.version.id,
             result.page_count,
             result.has_text,
+            result.is_partial,
+            result.skipped_pages,
+            list(result.failed_pages),
         )

@@ -67,6 +67,7 @@
     "grounded_share": 0.7337301587301587
    }
   },
+  "empty_answers": [],
   "correct_refusal_rate": 1.0,
   "grounding_totals": {
    "grounded": 173,
@@ -1810,5 +1811,5 @@
    "total_ms": 25904.0
   }
  ],
- "rescored_at": "2026-09-14T13:26:03+00:00"
+ "rescored_at": "2026-09-16T17:56:51+00:00"
 }

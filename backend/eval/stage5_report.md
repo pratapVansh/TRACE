@@ -1,8 +1,11 @@
 # TRACE — Stage 5 evaluation report
 
-**Date:** 13 September 2026, resumed 14 September (48 further answers) and 15 September 2026
+**Date:** 13 September 2026, resumed 14 September (48 further answers), 15 September
 (43 further answers: rerank_off completed 40/40, chunk512 reached 39/40 before the Groq daily
-cap) · **Code:** baseline at `e647562`, graph_off at `6d57238`, the 15 September runs at
+cap) and **16 September 2026 — Stage 5 closed**: chunk512's last answer (1 call) and the
+full `graph_v2` answer run (40 calls) were generated, a third refusal-classifier wording gap
+and one fact-phrasing gap were fixed, and every config was rescored. · **Code:** baseline at
+`e647562`, graph_off at `6d57238`, the 15 September runs at
 `bbf5806`, each plus an uncommitted working tree · **Corpus:** frozen 25 documents / 134 chunks
 (`corpus_manifest.yaml`) · **Question set:** 40 reviewed items (`golden_set.yaml`)
 
@@ -46,42 +49,46 @@ across the two baseline runs; slowest single retrieval 9.4 s. LLM p50 2.7 s, p95
 
 ## 3. Ablations
 
-| Metric | baseline | rerank_off | graph_off | chunk512 |
-| --- | ---: | ---: | ---: | ---: |
-| Doc recall@5 | 91.9% | 88.6% (-3.3) | **98.6% (+6.7)** | 89.0% (-2.9) |
-| Doc hit@5 | 88.6% | 82.9% (-5.7) | **97.1% (+8.6)** | 82.9% (-5.7) |
-| Passage recall@5 | 56.7% | 50.0% (-6.7) | 59.5% (+2.9) | **77.1% (+20.5)** |
-| Evidence in LLM context | 61.4% | 54.3% (-7.1) | 61.4% | **86.2% (+24.8)** |
-| MRR | 0.860 | 0.783 | **0.906** | 0.853 |
-| Doc recall@5 — multi_hop | 91.7% | 80.0% (-11.7) | 95.0% (+3.3) | 81.7% (-10.0) |
-| Passage recall@5 — long_doc | 55.6% | 38.9% (-16.7) | 55.6% | 77.8% (+22.2) |
-| Passage recall@5 — compound | 61.1% | 44.4% (-16.7) | 61.1% | 76.4% (+15.3) |
-| Passage recall@5 — no_lexical_overlap | 0.0% | 0.0% | 25.0% | 50.0% |
-| Passage recall@5 — table_row | 69.0% | 71.4% | 69.0% | 69.0% |
-| Retrieval latency p50 (ms) | 6485 | **132** | 5511 | 7542 |
-| Retrieval latency p95 (ms) | 8402 | **170** | 6356 | 9443 |
+| Metric | baseline | rerank_off | graph_off | chunk512 | graph_v2 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Doc recall@5 | 91.9% | 88.6% (-3.3) | **98.6% (+6.7)** | 89.0% (-2.9) | **98.6% (+6.7)** |
+| Doc hit@5 | 88.6% | 82.9% (-5.7) | **97.1% (+8.6)** | 82.9% (-5.7) | **97.1% (+8.6)** |
+| Passage recall@5 | 56.7% | 50.0% (-6.7) | 59.5% (+2.9) | **77.1% (+20.5)** | 59.5% (+2.9) |
+| Evidence in LLM context | 61.4% | 54.3% (-7.1) | 61.4% | **86.2% (+24.8)** | 61.4% |
+| MRR | 0.860 | 0.783 | 0.906 | 0.853 | **0.920** |
+| Doc recall@5 — multi_hop | 91.7% | 80.0% (-11.7) | 95.0% (+3.3) | 81.7% (-10.0) | 95.0% (+3.3) |
+| Passage recall@5 — long_doc | 55.6% | 38.9% (-16.7) | 55.6% | 77.8% (+22.2) | 55.6% |
+| Passage recall@5 — compound | 61.1% | 44.4% (-16.7) | 61.1% | 76.4% (+15.3) | 61.1% |
+| Passage recall@5 — no_lexical_overlap | 0.0% | 0.0% | 25.0% | 50.0% | 25.0% |
+| Passage recall@5 — table_row | 69.0% | 71.4% | 69.0% | 69.0% | 69.0% |
+| Retrieval latency p50 (ms) | 6485 | **132** | 5511 | 7542 | 6055 |
+| Retrieval latency p95 (ms) | 8402 | **170** | 6356 | 9443 | 6690 |
 
-**Three of the four answer ablations are now complete; chunk512 is one item short.** The
-free tier allows 200,000 tokens per day. On 15 September the quota reset, `rerank_off`
-finished with 3 further calls, and `chunk512` generated 39 of its 40 answers before the
-daily cap returned at 197,749 / 200,000 — leaving only **N05**, a negative.
+**All five configurations are now complete at 40 / 40.** The free tier allows 200,000 tokens
+per day. On 16 September the quota reset and the two outstanding runs were made in the order
+the roadmap fixed — the cheap one first, so a quota exhaustion could not strand it again:
 
 | Config | Answers generated | Status |
 | --- | ---: | --- |
 | baseline | 40 / 40 | ✅ complete (13 Sep) |
 | graph_off | 40 / 40 | ✅ complete (14 Sep) — 23 cached + 17 new |
-| rerank_off | **40 / 40** | ✅ **complete (15 Sep)** — 37 cached + 3 new |
-| chunk512 | **39 / 40** | 🟡 **N05 only** — all 35 answerable items done; 4 of 5 negatives |
+| rerank_off | 40 / 40 | ✅ complete (15 Sep) — 37 cached + 3 new |
+| chunk512 | **40 / 40** | ✅ **complete (16 Sep)** — 39 cached + **1 new** (N05) |
+| `graph_v2` | **40 / 40** | ✅ **complete (16 Sep)** — 0 cached + **40 new**, as predicted |
 
-Because every answerable item is present in all four configs, the answerable metrics
-(fact coverage, fully correct, citations, grounding) are directly comparable across all
-four; only chunk512's 5-item negatives slice is short one item. The run stopped cleanly at
-the cap as instructed; every generated answer is cached in `eval/cache/llm/` (159 files)
-and chunk512 was scored with `--cache-only`, so no work was wasted and nothing was rerun.
+**41 Groq calls closed Stage 5**, and 159 of the 200 answers came from the cache untouched.
+`graph_v2` reused nothing, which was expected and correct: the LLM cache keys on the complete
+request, and `graph_v2` exists precisely to change the graph facts in the prompt, so all 40
+keys were new. Every answer is cached in `eval/cache/llm/` (200 files).
 
-Per-minute limits, not the daily cap, set the pace: at 512 tokens per chunk a prompt runs
-≈5,200 tokens against a TPM limit of 8,000, so generation settled at roughly 1.5 answers
-per minute with the runner's back-off absorbing the 429s.
+Every item is now present in every config, so **all answer metrics are directly comparable
+across all five**, negatives included.
+
+Per-minute limits, not the daily cap, set the pace throughout: at 512 tokens per chunk a
+prompt runs ≈5,200 tokens against a TPM limit of 8,000, so the 15 September generation settled
+at roughly 1.5 answers per minute with the runner's back-off absorbing the 429s. The
+16 September `graph_v2` run held ≈2 answers per minute on 256-token chunks and finished its
+40 calls inside the day's quota.
 
 ### Graph on vs off — all 40 items
 
@@ -159,8 +166,10 @@ S06 and M10 recover from MRR 0.17 and 0.33 to 1.00; S01 and S03 rise 0.50 → 1.
 1.00 → 0.50, matching graph_off exactly, but its passage recall is 0.0 in all three configs,
 so the right passage was never retrieved and the rank never mattered.
 
-**The answer-level effect of `graph_v2` is not measured** — that needs Groq, which was
-paused. Retrieval improved; whether the answers follow is open.
+**The answer-level effect was measured on 16 September and it is nil — see §3.4.** Retrieval
+improved; the answers did not follow. `graph_v2` moves which *document* ranks first while
+leaving evidence-in-context at 61.4%, identical to the baseline, so the passages reaching the
+prompt never change.
 
 ### 3.2 Reranker on vs off — ✅ complete, all 40 items (15 September)
 
@@ -193,48 +202,221 @@ inspection of B-101 performed" and reports the external UT thickness readings as
 findings. The baseline, with the same documents available, says the inspection was deferred.
 This is the false-premise failure the negatives exist to catch, not a scoring artefact.
 
-### 3.3 Chunk 512 on answers — 🟡 39 / 40 (15 September)
+### 3.3 Chunk 512 on answers — ✅ complete, 40 / 40 (16 September)
 
-The ablation that had no answer-level evidence at all now has it for every answerable
-question. All 35 answerable items were generated; only the negative **N05** was not.
+The one outstanding negative, **N05**, was generated on 16 September for a single Groq call.
+It is a correct refusal — the answer states that the documents do not contain the set
+pressure of PSV-3011 — so chunk512's negatives are **5 / 5** and the config is complete.
 
 | Metric | baseline | chunk512 |
 | --- | ---: | ---: |
-| Fact coverage (35 answerable) | 72.6% | **79.3% (+6.7)** |
-| Fully correct | 60.0% | **74.3% (+14.3)** |
-| Fact coverage — **single_hop** | 62.5% | **80.0% (+17.5)** |
+| Fact coverage (35 answerable) | 72.6% | **80.7% (+8.1)** |
+| Fully correct | 60.0% | **77.1% (+17.1)** |
+| Fact coverage — **single_hop** | 62.5% | **82.5% (+20.0)** |
 | Fact coverage — **multi_hop** | 89.2% | **77.5% (-11.7)** |
 | Fact coverage — follow_up | 80.0% | 80.0% (no change) |
 | False refusal | 11.4% | 8.6% (-2.9) |
-| Correct refusal (negatives) | 100.0% (5/5) | 75.0% (3/4 scored — see below) |
+| Correct refusal (negatives) | 100.0% (5/5) | **100.0% (5/5)** |
 | Citation precision | 77.8% | **89.8% (+12.1)** |
 | Citation recall | 81.9% | 87.1% (+5.2) |
 | Grounded sentence share | 48.8% | **60.6% (+11.8)** |
+
+*(Coverage and fully-correct are 1.4 and 2.8 pts above the 15 September figures. That is the
+S17 fact-phrasing fix in §3.6, not new generation — no chunk512 answer was regenerated.)*
 
 **The retrieval gain reaches the answers, and it is the largest answer-level effect measured
 in Stage 5:** +14.3 pts fully-correct, the direct consequence of +20.5 pts passage recall and
 +24.8 pts evidence-in-context. It confirms conclusion 1 from the other direction — feed the
 pipeline the right passage and the same model and prompt answer correctly.
 
-**The trade-off predicted from retrieval also shows up.** Multi-hop coverage falls 11.7 pts,
-matching the −10 pts multi-document recall: **M05 drops 1.00 → 0.00 and M10 1.00 → 0.00**,
-both questions needing two documents where the 512 run retrieved one. Single-hop, where one
+**The multi-hop trade-off is NOT what it looked like on 15 September — correction.** The
+15 September reading was that multi-hop coverage falls 11.7 pts because "M05 drops
+1.00 → 0.00 and M10 1.00 → 0.00, both questions needing two documents where the 512 run
+retrieved one." **That causal claim was wrong, and the check that exposed it is in §3.5:
+chunk512's M05 and M10 answers are both empty strings — the model produced no text at all.**
+They score 0.00 because nothing was generated, not because the wrong passage was retrieved.
+The retrieval record contradicts the original reading directly for M05: doc recall 1.0 and
+passage recall 0.5, **identical to the baseline**. Only M10 shows the predicted retrieval
+degradation (doc recall 0.5, passage recall 0.0), and even there the answer was never
+generated, so the answer-level drop cannot be attributed to it.
+
+Excluding the items where any config produced an empty answer, **chunk512's multi-hop
+coverage is 96.9% against the baseline's 86.5%** — better, not worse (§3.5). The −11.7 pts in
+the table above is an artefact of two empty generations. The −10 pts multi-document *recall*
+cost is real and still stands as a retrieval result; what does not stand is the claim that it
+was measured reaching the answers. Single-hop, where one
 chunk more often holds the whole answer, gains 17.5 pts. Seven single-hop items that the
 baseline answered partially are now fully correct (S01, S02, S03, S10, S14, S18 among them),
 and F02 — a baseline false refusal — is answered correctly.
 
-**N04 needs review before it is read as a regression.** The classifier scored it
-`missed_refusal`, but the answer's content is right: "The internal inspection of boiler B-101
-has not been completed; therefore no findings inside the steam drum are available." The
-premise-correction pattern in `eval/metrics.py` accepts `no … findings … are recorded` but not
-`… are available`, so this is the same class of vocabulary gap as the tense bug fixed on
-14 September. **It has deliberately not been fixed here** — changing the classifier would
-rescore stored answers, which was out of scope for this run. It is logged as the next metric
-task; until then chunk512's negatives figure should be read as "3 of 4 scored, one contested".
+**N04 was a classifier artefact, and it has since been fixed (16 September).** The answer's
+content was always right: "The internal inspection of boiler B-101 has not been completed;
+therefore no findings inside the steam drum are available." The premise-correction pattern in
+`eval/metrics.py` accepted `no … findings … are recorded` but not `… are available` — the same
+class of vocabulary gap as the tense bug fixed on 14 September, and it was scoring identical
+content differently. The participle list now matches the vocabulary the sibling
+"not … in the documents" pattern already used (`available|provided|listed` added). Checked
+against **every** stored answer in all four configs, the fix moves **exactly one** label —
+chunk512 N04 → `correct_refusal` — and leaves the baseline, graph_off and rerank_off
+byte-identical, summaries included. Stored answers were rescored with
+`python -m eval.run rescore` (no Groq calls), so the table above already reflects it.
+chunk512's negatives are now **5 of 5 correct**, N05 included.
 
-**No latency figures for chunk512 answers.** The generating run was interrupted by the daily
-cap before it could write its results, so the run was scored from cache; `llm_ms` is null for
-cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffected and stands.
+**This did not paper over the reranker's genuine miss.** rerank_off's N04 — which asserts the
+inspection *was performed* and reports external UT readings as internal findings — remains
+`missed_refusal` after the fix. The two failures look alike in the summary table and are not:
+one is a wording gap, the other is a model accepting a false premise.
+
+**Latency for chunk512 answers rests on a single call.** 39 of the 40 answers were served
+from cache, where `llm_ms` is null by design, so the only timed call is N05 — which is why the
+p50 and p95 in `comparison.md` are both 2287 ms. Treat that as one sample, not a distribution.
+Retrieval latency (p50 7542 ms, p95 9443 ms) is measured on all 40 and stands.
+
+### 3.4 `graph_v2` on answers — ✅ complete, 40 / 40 (16 September)
+
+The open question Stage 5 was holding for this run: **the reworked graph arm clearly improves
+retrieval ranking — does that reach the answers?** It was run exactly as planned, 40 calls,
+nothing reusable from cache, ≈20 minutes of wall clock inside the day's quota.
+
+**The answer is no.**
+
+| Metric (all 40 items) | baseline | graph_off | **graph_v2** |
+| --- | ---: | ---: | ---: |
+| Fact coverage (35 answerable) | 72.6% | 73.6% (+1.0) | **70.7% (-1.9)** |
+| Fully correct | 60.0% | 62.9% (+2.9) | **57.1% (-2.9)** |
+| Fact coverage — single_hop | 62.5% | 64.2% (+1.7) | 62.5% (no change) |
+| Fact coverage — multi_hop | 89.2% | 89.2% (no change) | 82.5% (-6.7) |
+| Fact coverage — follow_up | 80.0% | 80.0% (no change) | 80.0% (no change) |
+| Correct refusal (5 negatives) | 100.0% | 100.0% | **100.0%** (after the N04 fix in §3.6) |
+| False refusal | 11.4% | 11.4% | 11.4% (no change) |
+| Citation precision | 77.8% | 84.3% (+6.6) | 79.8% (+2.0) |
+| Citation recall | 81.9% | 91.9% (+10.0) | 86.7% (+4.8) |
+| Grounded sentence share | 48.8% | 60.8% (+12.0) | 49.1% (+0.4) |
+| Graph facts in the prompt (mean) | 12.4 | 0 | 9.4 |
+
+**Read the -1.9 and -2.9 with care: they are not a measured regression.** Across all 40 items
+`graph_v2` and the baseline differ on exactly **three** answers, and only one of the three is
+about content:
+
+| Item | baseline | `graph_v2` | Reading |
+| --- | --- | --- | --- |
+| S12 | false_refusal | answered | 0 facts covered either way — label change only, favours `graph_v2` |
+| S14 | answered (**empty answer**) | false_refusal | the baseline produced no text at all here (§3.5); 0 facts either way |
+| M10 | 1.00 facts | 0.33 facts | **`graph_v2`'s answer is truncated mid-sentence** (§3.5) — a generation artefact, not retrieval: passage recall is 0.67 in both configs and `graph_v2`'s MRR is higher |
+
+Remove the items where any config failed to produce a complete answer and the two configs are
+**identical** — 73.2% coverage and 59.4% fully correct each, multi-hop 86.5% each (§3.5).
+
+**So the conclusion for `graph_v2` is the same one graph_off produced, and it is now the third
+independent measurement of it: the graph changes retrieval, and nothing the graph does reaches
+the answers.** What `graph_v2` *did* fix is real and stands at the retrieval level — it undoes
+the harm the original wiring was doing (doc hit@5 88.6% → 97.1%, MRR 0.860 → 0.920, and it is
+430 ms/query *faster* than the baseline). It simply does not convert.
+
+**Why it does not convert is visible in the retrieval numbers, and it is consistent with
+conclusion 1.** `graph_v2` improves *document* ranking (doc hit@5, MRR) but leaves
+**passage recall@5 at 59.5% and evidence-in-context at 61.4% — the latter identical to the
+baseline**. The answers are gated by whether the right *passage* reaches the prompt, and
+`graph_v2` moves which document ranks first without changing which passages arrive. chunk512,
+which raises evidence-in-context by 24.8 pts, is the config that moves the answers.
+
+**Decision, against the criterion set before the data was seen.** The roadmap fixed the test
+in advance: *"the question being whether the retrieval gain reaches the answers. Only then
+decide whether `graph_prefer_domain_entities` should become the default."* It does not reach
+the answers, so the criterion is not met and **the flag stays off by default**. The graph
+itself stays on — the chosen configuration is the baseline, graph included (§8).
+
+### 3.5 Empty and truncated generations — the artefact that was being read as a result
+
+Three of the 200 answers are **empty strings**: the model returned no text at all. They score
+0.00 fact coverage, which is indistinguishable in every summary table from an answer that was
+generated and was wrong — and on 15 September two of them were read as a retrieval result.
+
+| Config | Empty answers |
+| --- | --- |
+| baseline | S14 |
+| chunk512 | **M05, M10** |
+| rerank_off, graph_off, `graph_v2` | none |
+
+The cause is known and was already recorded for baseline S14: `max_tokens=1024`, with
+`gpt-oss-120b` spending the budget on reasoning before emitting anything. The same ceiling
+truncates answers mid-sentence without emptying them — `graph_v2`'s M10 stops at *"flagged
+moderate scaling on the hot side of"* after 206 characters, which is why it scores 0.33
+instead of 1.00. Between 2 and 6 answers per config end without terminal punctuation.
+
+`summarize_answers` now lists `empty_answers` in every result file and the runner prints the
+line, so this can no longer be mistaken for a content failure.
+
+**Sensitivity check.** Excluding the three items that any config left empty (S14, M05, M10),
+scored on the same 32 answerable items for every config:
+
+| Config | Coverage (35) | Coverage (32) | Fully correct (35) | Fully correct (32) | multi_hop (10) | multi_hop (8) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline | 72.6% | 73.2% | 60.0% | 59.4% | 89.2% | 86.5% |
+| rerank_off | 63.8% | 63.8% | 48.6% | 50.0% | 78.2% | 80.2% |
+| graph_off | 73.6% | 74.2% | 62.9% | 62.5% | 89.2% | 86.5% |
+| **chunk512** | 80.7% | **85.2%** | 77.1% | **81.2%** | 77.5% | **96.9%** |
+| `graph_v2` | 70.7% | 73.2% | 57.1% | 59.4% | 82.5% | 86.5% |
+
+Two readings change, and both matter:
+
+1. **chunk512's multi-hop "trade-off" disappears.** 77.5% → **96.9%**, against the baseline's
+   86.5%. The −11.7 pts reported on 15 September was two empty generations, not two failed
+   multi-document retrievals. The −10 pts multi-document *recall* cost is a real retrieval
+   result and still stands; the claim that it had been measured reaching the answers does not.
+2. **`graph_v2` is not below the baseline.** 70.7% → 73.2%, exactly the baseline's 73.2%.
+
+**This is a post-hoc exclusion on 32 of 35 items, so it is a sensitivity check, not the
+headline.** Dropping 2 of 10 multi-hop items is a large proportional change and the direction
+of the correction happens to favour chunk512. The measured-as-run numbers stay primary
+throughout this report. What the check establishes is narrower and safe: the two specific
+causal claims above cannot be supported, because the answers they rest on were never
+generated. Re-running the three items would settle it for ~15,000 tokens and is the first
+thing to do with the next day's quota.
+
+### 3.6 Two scoring fixes on 16 September (no Groq calls)
+
+Both are the same class of lexical artefact as the two fixed on 14 and 16 September, both
+were found by reading the answers behind the numbers, and both were verified against **every**
+stored answer in **all five** configs before being applied. Together they move **exactly
+three** records and leave baseline, rerank_off and graph_off **byte-identical**.
+
+**1. A third wording of the one premise correction** (`eval/metrics.py`). `graph_v2`'s N04
+answers the false premise correctly — *"the internal inspection of boiler B-101 was deferred
+to the next shutdown; therefore the documents contain no findings from inside the steam
+drum"* — but put the verb **in front of** the noun. The pattern was built around a trailing
+participle (`no findings … were recorded`, widened on 14 Sep to any tense and on 16 Sep to
+`available|provided|listed`), so it could not see this third form, and the reworked graph arm
+appeared to lose a negative it had nothing to do with. A sibling pattern now matches
+`<corpus> contains/lists/includes no <record-noun>`. The subject must be the corpus and the
+object a record-shaped noun, for the same reason the existing pattern restricts its nouns:
+*"the inspection report contains no defects"* is a substantive answer and must not match.
+**Moves one label:** `graph_v2` N04 → `correct_refusal`.
+
+**2. One missing accepted phrasing** (`eval/golden_set.yaml`, S17). chunk512 and `graph_v2`
+both answer *"the defined minimum stock level is 2 units"* — correct, and against a golden set
+that already accepted `minimum stock is 2` and `minimum level of 2` but not the two words
+together. Added `minimum stock level is/of/: 2`, following the precedent already recorded in
+that item's own review notes, where `minimum required stock: 2` was added for the same reason
+after the baseline run. Wording only — the value and the source row are unchanged.
+**Moves two records:** chunk512 S17 and `graph_v2` S17, 0.50 → 1.00 coverage.
+
+A full audit backs the claim that these were the only two: every fact scored *missed* in every
+config was re-checked against its answer text, and S17 was the only one where the answer
+states the fact. All the rest are genuine — S12 answers 12.4 mm where the golden value is
+12.9 mm, S18 gives 45 kW for a 45 A current limit, M08 cites a 2.8 mm/s limit that does not
+exist.
+
+**Neither fix papered over a genuine failure.** rerank_off's N04 — which asserts the
+inspection *was performed* and reports external UT readings as internal findings — is still
+`missed_refusal` after both fixes. That is the distinction the negatives exist to draw: a
+wording gap in the scorer versus a model accepting a false premise.
+
+**6 new tests** (43 in `tests/test_eval_metrics.py`, was 37), including the real `graph_v2`
+N04 phrasing and two further guards — *"the inspection report contains no defects"* and
+*"the turnaround report documents no cracking on the shell"* — that must **not** classify as
+refusals. Stored answers were rescored with `python -m eval.run rescore` across all five
+configs; no Groq calls.
 
 ## 4. Conclusions — what actually improves TRACE
 
@@ -258,36 +440,43 @@ cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffect
    (detected, discarded, rerun with a 60 s eval-only timeout). Keep the reranker; reduce
    its candidate count or move it off CPU before deployment.
 
-3. **The knowledge graph, as wired today, makes retrieval worse and does nothing for
-   answers.** With the graph off, doc hit@5 rises from 88.6% to **97.1%** and MRR from
-   0.860 to 0.906. Cause, confirmed per item: `ContextMerger` adds up to +0.1 to a chunk's
-   score per attached graph fact, and entity-dense documents (MAN-003, Equipment Register,
-   shift logs) collect many facts, so they are lifted above the reranker's best passage
-   regardless of relevance — S05 loses PPT-002 from the top 5, S06 drops MNT-001 from rank 1
-   to 6, M10 drops MNT-001 to rank 3. **The answer ablation is now complete across all 40
-   items and finds no benefit either:** fact coverage 73.6% without the graph vs 72.6% with
-   it, citation precision 84.3% vs 77.8%, grounded share 60.8% vs 48.8%. Decisively, **all
-   ten multi-hop and all five follow-up answers score identically** with and without it —
-   the graph changes nothing on exactly the questions it was added for. Only three answers
-   differ at all, and the one real correctness change (S18, 2/3 → 3/3 facts) favours
-   graph-off; the apparent negatives regression (N04) was a refusal-classifier tense gap,
-   since fixed. **This conclusion is about the graph as it was wired on 13 September.** The
-   score boost has since been reworked — see §3.1 — and at the retrieval level the
-   reworked graph now beats having no graph at all (MRR 0.920 vs 0.906). Whether that
-   reaches the answers is not yet measured.
+3. **The graph changes retrieval and does not reach the answers — measured three ways.**
+   *As originally wired* it made retrieval **worse**: `ContextMerger` added up to +0.1 per
+   attached graph fact, so entity-dense documents (MAN-003, the Equipment Register, the shift
+   logs) were lifted over the reranker's best passage regardless of relevance — S05 loses
+   PPT-002 from the top 5, S06 drops MNT-001 from rank 1 to 6, M10 drops MNT-001 to rank 3.
+   Turning it off raised doc hit@5 from 88.6% to 97.1% and MRR from 0.860 to 0.906.
+   *Reworked* (`graph_v2`, §3.1) it is now the **best retrieval configuration measured**:
+   doc hit@5 97.1%, **MRR 0.920** — above graph-off — and 430 ms/query faster than the
+   baseline. **But at the answer level all three configurations are the same.** graph_off:
+   all ten multi-hop and all five follow-up answers score identically to the baseline.
+   `graph_v2`: identical to the baseline once the three incomplete generations are excluded
+   (73.2% coverage, 59.4% fully correct, 86.5% multi-hop — each equal to the baseline), with
+   the only genuine difference being one truncated answer. **The reason is visible and
+   consistent with conclusion 1:** the graph moves *document* ranking, while
+   **evidence-in-context stays at 61.4% — identical to the baseline** — so the passages
+   reaching the prompt do not change, and neither do the answers. Keep the graph (it is a
+   product feature and, reworked, it costs nothing at retrieval); do not expect answer
+   quality from it, and do not promote `graph_prefer_domain_entities` to default on this
+   evidence.
 
-4. **Larger chunks are the biggest single lever in Stage 5 — now measured on answers, and
-   the trade-off is real.** 512/64 raises passage recall@5 by **20.5 pts** and
-   evidence-in-context by 24.8, because one chunk more often holds the whole answer. That
-   reaches the answers: fact coverage **79.3% vs 72.6%** and fully-correct **74.3% vs 60.0%
-   (+14.3 pts)** — the largest answer-level gain measured in Stage 5, and single-hop coverage
-   rises 17.5 pts. It costs 2.9 pts doc recall and **10 pts multi-document recall**, and that
-   cost is now visible in the answers too: **multi-hop coverage drops 11.7 pts**, with M05 and
-   M10 falling from fully correct to zero. Add 16% more reranker latency and an embedding
-   model (`all-MiniLM-L6-v2`, 256-wordpiece window) that silently truncates every 512-token
-   chunk. The right next move is therefore **not** a flat switch to 512: it is to keep the
-   recall gain while restoring multi-document coverage — a larger chunk with an embedding
-   model whose window fits it, or retrieval that returns more than one document's chunk.
+4. **Larger chunks are the biggest single lever in Stage 5, and the trade-off is smaller
+   than it looked.** 512/64 raises passage recall@5 by **20.5 pts** and evidence-in-context by
+   **24.8 pts**, because one chunk more often holds the whole answer. That reaches the
+   answers, and it is the largest answer-level effect measured in Stage 5: fact coverage
+   **80.7% vs 72.6%** and fully-correct **77.1% vs 60.0% (+17.1 pts)**, with single-hop
+   coverage up 20.0 pts. **The multi-hop regression reported on 15 September does not hold
+   up** (§3.3, §3.5): chunk512's M05 and M10 answers are empty strings, so the −11.7 pts was
+   two generations that never happened, not two failed retrievals — M05's retrieval is
+   *identical* to the baseline's. Excluding the incomplete items, chunk512's multi-hop
+   coverage is **96.9% against the baseline's 86.5%**. What remains real is the **retrieval**
+   cost: −2.9 pts doc recall and **−10 pts multi-document recall**, plus 16% more reranker
+   latency and an embedding model (`all-MiniLM-L6-v2`, 256-wordpiece window) that silently
+   truncates every 512-token chunk. So the next move is still not a flat switch to 512 — the
+   embedding window is the blocker, and it is now the clearest single lever in the codebase:
+   a larger chunk with an embedding model whose window fits it, or retrieval that returns more
+   than one chunk per document. Confirm the multi-hop reading by regenerating the three
+   incomplete answers first (~15,000 tokens).
 
 5. **Refusal cannot come from retrieval scores.** Reranker top scores for three negatives
    (N03, N04, N05) were 0.94–1.00 because a closely related document exists; negatives
@@ -302,7 +491,7 @@ cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffect
 | S12 (probe L3) | Plain-language question never retrieves the thickness table row; model refused rather than give the prose value 12.4 mm. | table row |
 | S11 (probe L2) | Torque table not retrieved for the compound question; model said the torque "is not provided". | compound |
 | S03 | MNT-003 ranked 2nd but one-chunk-per-document kept chunk 0; the Y-strainer is in chunk 1. Model answered from MAN-003 (flush the seal chamber) — wrong recommendation. | dedup / passage |
-| S14 | Groq returned an **empty answer** (likely reasoning consumed `max_tokens=1024`). The user would see nothing. | LLM / config |
+| S14 | Groq returned an **empty answer** (reasoning consumed `max_tokens=1024`). The user would see nothing. Two more in chunk512 (M05, M10) and a truncated M10 in `graph_v2` — §3.5. **The single most actionable defect in Stage 5:** it is a config value, it hits real users, and it corrupted two conclusions. | LLM / config |
 | S18 | Answer gave "45 kW" (P-101 motor power) for the motor current limit "45 A" — value confusion across documents. | distractor |
 | M08 | Model invented a "2.8 mm/s generic alert limit" and labelled it an assumption; the SOP limit is 4.5 mm/s. | hallucination (flagged) |
 | F02 | Resolver rewrote "they" as "B-101" (only appended P-401); minimum-flow passage not retrieved → false refusal. | follow-up resolution |
@@ -316,19 +505,27 @@ cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffect
   source files under the owner's delegation and recorded as `reviewed_by: pratapVansh`.
   Every decision is in `review.notes`. A cold, independent human review would be stronger.
 - **One LLM sample per question.** Answer metrics carry sampling noise (temperature 0.1).
-- **One answer call outstanding** (Groq daily cap of 200,000 tokens): graph_off **40/40 ✅**,
-  rerank_off **40/40 ✅**, chunk512 **39/40** — only the negative **N05** remains
-  (≈5,200 tokens). Every answerable item exists in all four configs, so the answerable
-  metrics are fully comparable; only chunk512's negatives slice is short one item. Resume
-  with `python -m eval.run answers --config chunk512`; cached answers are reused, and
-  `--cache-only` scores whatever has been generated without calling Groq.
-- **The answer-level effect of `graph_v2` is still unmeasured** — 40 calls (≈136,000 tokens),
-  deliberately not run on 15 September so the day's quota went to closing the three baseline
-  ablations. It is the next tracked step.
-- **A second refusal-classifier vocabulary gap is open and unfixed** (chunk512 N04, §3.3):
-  the premise-correction pattern accepts "no findings … are **recorded**" but not "… are
-  **available**". Fixing it would rescore stored answers, so it was left for a separate
-  change; chunk512's negatives figure is reported as 3 of 4 scored with one contested.
+- **All five configs are complete at 40/40**; nothing in Stage 5 is now blocked on quota.
+  41 Groq calls were spent on 16 September (1 for chunk512 N05, 40 for `graph_v2`); 159 of the
+  200 answers came from cache and none were regenerated.
+- **Three answers were never generated** (S14 baseline; M05 and M10 chunk512) and several more
+  are truncated by `max_tokens=1024` (§3.5). They score 0.00 like a wrong answer, and on
+  15 September two of them were misread as a retrieval result. Every slice containing S14,
+  M05 or M10 should be read with the sensitivity table in §3.5 beside it. Regenerating the
+  three costs ~15,000 tokens and is the first call on the next day's quota.
+- **`graph_v2`'s answer effect is measured and is neutral** (§3.4): identical to the baseline
+  on the 32 items every config answered completely. Its retrieval gain is real (MRR 0.920,
+  doc hit@5 97.1%, 430 ms/query faster); it does not convert, because evidence-in-context is
+  unchanged at 61.4%. `graph_prefer_domain_entities` therefore stays **off** by default.
+- **One sample per question, and the differences that decide the graph question are small.**
+  `graph_v2` vs baseline comes down to three items out of forty, two of which cover zero facts
+  either way. "No measurable difference" is the honest reading; it is not proof of equivalence,
+  and a multi-sample run would be needed for that.
+- **The third refusal-classifier gap and one fact-phrasing gap are closed** (§3.6, both
+  16 September). Verified against every stored answer in all five configs: together they move
+  exactly three records and leave baseline, rerank_off and graph_off byte-identical. 6 new
+  tests (43 in the metrics file). A full audit of every missed fact in every config found no
+  other scoring artefact — the remaining misses are genuine.
 - **Lexical scoring.** Fact coverage and refusal detection are phrase/regex based; they were
   checked against every low-scoring answer and two artefacts were fixed (markdown emphasis,
   premise-correction refusals), but paraphrased correct answers can still be missed.
@@ -345,12 +542,55 @@ cached items by design. Retrieval latency (p50 7542 ms, p95 9443 ms) is unaffect
 
 ## 7. Reproducing
 
+Qdrant and Neo4j run as containers and must be up first; the runner reaches them on
+`127.0.0.1` from the host, not from inside the compose network:
+
 ```
+docker start trace-qdrant-1 trace-neo4j-1
 cd backend
 python -m eval.validate                                   # 0 errors required
+python -m eval.validate --collection eval_chunks_512      # evidence against the 512 collection
 python -m eval.chunk512                                   # only for the 512 ablation
-python -m eval.run retrieval --config baseline rerank_off graph_off chunk512
+python -m eval.run retrieval --config baseline rerank_off graph_off chunk512 graph_v2
 python -m eval.run answers   --config baseline            # Groq; cached in eval/cache/llm
-python -m eval.run rescore   --config baseline graph_off  # re-apply answer metrics, no LLM
+python -m eval.run answers   --config graph_v2 --cache-only   # dry run, no Groq calls
+python -m eval.run rescore   --config baseline rerank_off graph_off chunk512 graph_v2  # no LLM
 python -m eval.run report                                 # eval/results/comparison.md
 ```
+
+**All 200 answers are cached**, so every table in this report rebuilds from
+`rescore` + `report` with **no Groq calls at all**. Only a prompt change (new config, changed
+retrieval, changed chunking) produces new cache keys and needs quota.
+
+## 8. Chosen configuration and what Stage 6 inherits
+
+**Chosen: the baseline pipeline, unchanged — hybrid search + cross-encoder reranker + graph,
+256/64 chunks, `graph_prefer_domain_entities` off.** Nothing in production changes as a result
+of Stage 5. Each part of that is a decision, not a default:
+
+| Component | Decision | Evidence |
+| --- | --- | --- |
+| Cross-encoder reranker | **Keep, and treat its latency as a deployment blocker** | Removing it costs 11.4 pts fully-correct, 8.9 pts coverage, 40 pts on follow-up and one negative to a genuine missed refusal (§3.2). It costs ~40× latency, and the slowest query (9.4 s) is inside the 10 s timeout that silently disables it |
+| Knowledge graph | **Keep enabled** | It is a product feature and, reworked, it is the best retrieval configuration measured (§3.1). Measured three ways, it does not change answers (§3.4) |
+| `graph_prefer_domain_entities` | **Stays off by default; `graph_v2` code kept, gated, unchanged** | The criterion fixed in advance — does the retrieval gain reach the answers — is not met (§3.4). The flag makes promoting it a one-line change if a later measurement supports it |
+| Chunk size | **Stays 256/64 for now** | 512/64 is the largest answer-level gain in Stage 5 (+17.1 pts fully correct) but costs 10 pts multi-document recall and is read through a 256-wordpiece embedding window that truncates it (§3.3, conclusion 4). Switching needs the embedding model changed first |
+| `max_tokens` | **Raise it — the one code change Stage 5 clearly earns** | 1024 produced 3 empty and several truncated answers across 200 generations (§3.5), a defect that reaches real users and that corrupted two Stage 5 conclusions. Deliberately not changed here: it would invalidate all 200 cached answers and needs a fresh quota day |
+
+**What Stage 6 (CI) can gate on.** The retrieval metrics only — they are deterministic and
+reran identically twice. Suggested floors from the measured baseline, set below it so normal
+variation does not trip them: doc recall@5 ≥ 0.85, MRR ≥ 0.80, passage recall@5 ≥ 0.50.
+**Answer metrics must stay reported and never gate:** they need Groq, they carry one-sample
+noise, and the `max_tokens` truncation above puts a floor under how reproducible they can be.
+
+**Ranked next steps, by measured leverage.**
+
+1. Raise `max_tokens` and regenerate the three empty answers (~15,000 tokens) — confirms or
+   overturns the corrected multi-hop reading in §3.5.
+2. Fit the embedding window to the chunk size, then re-run the 512 ablation. This is where
+   the +17.1 pts sits, and conclusion 1 says passage recall is what gates answers.
+3. Move the reranker off CPU or cut its candidate count before any deployment.
+4. LLM-as-judge (step 7) — still not implemented; only worth building with a larger budget.
+
+`--cache-only` is the no-quota mode throughout: it scores only what has already been
+generated and raises `CacheMiss` for the rest, so it doubles as a dry run that exercises
+retrieval, prompting and config resolution without spending a token.

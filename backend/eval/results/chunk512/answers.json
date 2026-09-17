@@ -1,8 +1,8 @@
 {
  "kind": "answers",
- "run_at": "2026-09-15T17:58:55+00:00",
+ "run_at": "2026-09-16T18:37:01+00:00",
  "git": {
-  "head": "bbf5806",
+  "head": "fbf3439",
   "dirty": true
  },
  "settings": {
@@ -25,28 +25,26 @@
   "llm_model": "openai/gpt-oss-120b"
  },
  "llm_cache": {
-  "hits": 39,
-  "misses": 0
+  "hits": 40,
+  "misses": 2
  },
- "cache_only": true,
- "skipped_uncached": [
-  "N05"
- ],
+ "cache_only": false,
+ "skipped_uncached": [],
  "summary": {
   "answerable": {
    "n": 35,
-   "fact_coverage": 0.7928571428571428,
-   "fully_correct_rate": 0.7428571428571429,
+   "fact_coverage": 0.8471428571428571,
+   "fully_correct_rate": 0.8,
    "false_refusal_rate": 0.08571428571428572,
-   "citation_precision": 0.8984375,
-   "citation_recall": 0.8714285714285714,
-   "grounded_share": 0.6058441558441559
+   "citation_precision": 0.9044117647058824,
+   "citation_recall": 0.9285714285714286,
+   "grounded_share": 0.5997959183673469
   },
   "by_type": {
    "single_hop": {
     "n": 20,
-    "fact_coverage": 0.8,
-    "fully_correct_rate": 0.75,
+    "fact_coverage": 0.825,
+    "fully_correct_rate": 0.8,
     "false_refusal_rate": 0.15,
     "citation_precision": 0.9,
     "citation_recall": 0.95,
@@ -54,12 +52,12 @@
    },
    "multi_hop": {
     "n": 10,
-    "fact_coverage": 0.775,
-    "fully_correct_rate": 0.7,
+    "fact_coverage": 0.915,
+    "fully_correct_rate": 0.8,
     "false_refusal_rate": 0.0,
     "citation_precision": 1.0,
-    "citation_recall": 0.65,
-    "grounded_share": 0.7152777777777778
+    "citation_recall": 0.85,
+    "grounded_share": 0.6722222222222223
    },
    "follow_up": {
     "n": 5,
@@ -71,14 +69,15 @@
     "grounded_share": 0.4595238095238095
    }
   },
-  "correct_refusal_rate": 0.75,
+  "empty_answers": [],
+  "correct_refusal_rate": 1.0,
   "grounding_totals": {
-   "grounded": 146,
+   "grounded": 157,
    "hedged": 9,
-   "unsupported": 94
+   "unsupported": 104
   },
-  "llm_ms_p50_uncached": null,
-  "llm_ms_p95_uncached": null
+  "llm_ms_p50_uncached": 3253.1499999999996,
+  "llm_ms_p95_uncached": 3472.7949999999996
  },
  "items": [
   {
@@ -122,7 +121,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7251.6
+   "total_ms": 8416.5
   },
   {
    "id": "S02",
@@ -165,7 +164,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7260.1
+   "total_ms": 8435.3
   },
   {
    "id": "S03",
@@ -207,7 +206,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7579.4
+   "total_ms": 8613.5
   },
   {
    "id": "S04",
@@ -251,7 +250,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7506.4
+   "total_ms": 8465.3
   },
   {
    "id": "S05",
@@ -297,7 +296,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7147.6
+   "total_ms": 8025.8
   },
   {
    "id": "S06",
@@ -340,7 +339,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7559.7
+   "total_ms": 8520.3
   },
   {
    "id": "S07",
@@ -383,7 +382,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7152.2
+   "total_ms": 8042.3
   },
   {
    "id": "S08",
@@ -424,7 +423,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7283.5
+   "total_ms": 8159.4
   },
   {
    "id": "S09",
@@ -469,7 +468,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7754.9
+   "total_ms": 8573.9
   },
   {
    "id": "S10",
@@ -514,7 +513,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7888.7
+   "total_ms": 6723.4
   },
   {
    "id": "S11",
@@ -559,7 +558,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7962.1
+   "total_ms": 1455.9
   },
   {
    "id": "S12",
@@ -603,7 +602,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7141.7
+   "total_ms": 7445.4
   },
   {
    "id": "S13",
@@ -647,7 +646,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7747.3
+   "total_ms": 8878.5
   },
   {
    "id": "S14",
@@ -690,7 +689,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7362.3
+   "total_ms": 8712.3
   },
   {
    "id": "S15",
@@ -730,7 +729,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7674.7
+   "total_ms": 8796.6
   },
   {
    "id": "S16",
@@ -774,7 +773,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 6972.3
+   "total_ms": 7984.5
   },
   {
    "id": "S17",
@@ -784,10 +783,10 @@
    ],
    "question": "How many SKF 6319 C3 bearings for P-101 are in the stores, and what is the minimum we are supposed to keep?",
    "answer": "**Status:** Completed  \n\n**Answer:** The inventory shows **3** SKF 6319 C3 bearings stocked for pump P‑101, and the defined minimum stock level is **2** units.  \n\n**Recommended Actions**\n1. Schedule a reorder when the on‑hand quantity falls to the minimum (2) to avoid stock‑out.\n2. Verify the part number and quantity during the next monthly bearing‑greasing task (P‑101).\n3. Update the inventory log after each withdrawal or receipt of the bearing.\n\n> [!EVIDENCE]  \n> Document: **Spare_Parts_Inventory.xlsx**, Confidence: 0.95, Score: 0.92, [Click to preview document]  \n\nMore details available.",
-   "fact_coverage": 0.5,
+   "fact_coverage": 1.0,
    "facts_hit": {
     "3 in stock": true,
-    "Minimum stock 2": false
+    "Minimum stock 2": true
    },
    "refusal": "answered",
    "cited_docs": [
@@ -817,7 +816,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7714.4
+   "total_ms": 9003.7
   },
   {
    "id": "S18",
@@ -860,7 +859,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7444.1
+   "total_ms": 8586.9
   },
   {
    "id": "S19",
@@ -904,7 +903,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7109.9
+   "total_ms": 7823.9
   },
   {
    "id": "S20",
@@ -948,7 +947,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7423.0
+   "total_ms": 8569.2
   },
   {
    "id": "M01",
@@ -990,7 +989,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7046.3
+   "total_ms": 8099.1
   },
   {
    "id": "M02",
@@ -1032,7 +1031,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7086.0
+   "total_ms": 8022.9
   },
   {
    "id": "M03",
@@ -1078,7 +1077,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7446.6
+   "total_ms": 8659.9
   },
   {
    "id": "M04",
@@ -1121,7 +1120,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7573.4
+   "total_ms": 8392.1
   },
   {
    "id": "M05",
@@ -1131,24 +1130,27 @@
     "compound"
    ],
    "question": "Were the gas test acceptance limits on the September hot work permit the same values as the gas testing limits taught in the July safety training?",
-   "answer": "",
-   "fact_coverage": 0.0,
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain the September hot‑work permit, so it cannot be confirmed whether its gas‑test acceptance limits match the limits taught in the July safety training (O₂ 19.5‑23.5 %).  \n\n**Recommended Actions**  \n1. Retrieve the September hot‑work permit record.  \n2. Compare its gas‑test acceptance limits (O₂, LEL, H₂S, CO) with the July training values.  \n3. Document any differences and update training or permit procedures as needed.  \n\n> [!EVIDENCE]  \n> - Document: **PPT-001_Monthly_Safety_Training_Jul2026.pptx**, Confidence: 0.9, Score: N/A, [Click to preview](#)  \n> - Document: **SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf**, Confidence: 0.9, Score: N/A, [Click to preview](#)  \n\nMore details available.",
+   "fact_coverage": 0.4,
    "facts_hit": {
-    "Yes, the values are the same": false,
-    "Oxygen 19.5 to 23.5 per cent": false,
+    "Yes, the values are the same": true,
+    "Oxygen 19.5 to 23.5 per cent": true,
     "LEL below 10 per cent": false,
     "H2S below 10 ppm": false,
     "CO below 25 ppm": false
    },
    "refusal": "answered",
-   "cited_docs": [],
-   "citation_precision": null,
-   "citation_recall": 0.0,
+   "cited_docs": [
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
    "grounding": {
-    "grounded": 0,
+    "grounded": 2,
     "hedged": 0,
-    "unsupported": 0,
-    "grounded_share": null
+    "unsupported": 4,
+    "grounded_share": 0.3333333333333333
    },
    "context_docs": [
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
@@ -1164,9 +1166,9 @@
    ],
    "graph_facts": 9,
    "retrieval_source": "hybrid",
-   "llm_cached": true,
-   "llm_ms": null,
-   "total_ms": 6978.3
+   "llm_cached": false,
+   "llm_ms": 3009.1,
+   "total_ms": 11719.3
   },
   {
    "id": "M06",
@@ -1211,7 +1213,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7151.1
+   "total_ms": 8314.2
   },
   {
    "id": "M07",
@@ -1256,7 +1258,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7453.7
+   "total_ms": 8527.8
   },
   {
    "id": "M08",
@@ -1299,7 +1301,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7239.4
+   "total_ms": 8556.4
   },
   {
    "id": "M09",
@@ -1346,7 +1348,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7056.3
+   "total_ms": 7062.4
   },
   {
    "id": "M10",
@@ -1355,22 +1357,25 @@
     "ocr_source"
    ],
    "question": "The April cooling tower maintenance and the safety checklist on the same day both flagged one problem. What was it, and when was it supposed to be dealt with?",
-   "answer": "",
-   "fact_coverage": 0.0,
+   "answer": "**Status:** Identified Issue  \n\n**Answer:** Both the April 2026 quarterly preventive maintenance for cooling tower CT‑01 and the safety inspection checklist performed on 05‑Apr‑2026 noted **moderate scaling on the fill media in cell 3**. The corrective action was slated for **chemical cleaning during the next scheduled turnaround (Q3 2026)**.  \n\n**Recommended Actions**  \n1. Schedule fill‑media chemical cleaning for cell 3 in Q3 2026.  \n2. Increase biocide dosing frequency during monsoon months to limit scaling.  \n3. Verify scaling condition in the next quarterly inspection and update the maintenance checklist.  \n\n**Evidence**  \n> [!EVIDENCE]  \n- Document: **MNT-001_Quarterly_PM_Cooling_Tower.docx**, Confidence 0.92, Score 0.94 – “Cell #3 fill media shows moderate scaling… Recommended chemical cleaning during next scheduled turnaround.”  \n- Document: **SCN-001_Safety_Inspection_Checklist.pdf**, Confidence 0.88, Score 0.90 – Checklist performed on 05‑Apr‑2026 (no specific item excerpted).  \n- No supporting evidence found for a detailed problem entry in the safety checklist excerpt.  \n\nMore details available.",
+   "fact_coverage": 1.0,
    "facts_hit": {
-    "Moderate scaling of the fill media in cell 3": false,
-    "Cell #3": false,
-    "Chemical cleaning scheduled for Q3 2026": false
+    "Moderate scaling of the fill media in cell 3": true,
+    "Cell #3": true,
+    "Chemical cleaning scheduled for Q3 2026": true
    },
    "refusal": "answered",
-   "cited_docs": [],
-   "citation_precision": null,
-   "citation_recall": 0.0,
+   "cited_docs": [
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
    "grounding": {
-    "grounded": 0,
+    "grounded": 6,
     "hedged": 0,
-    "unsupported": 0,
-    "grounded_share": null
+    "unsupported": 3,
+    "grounded_share": 0.6666666666666666
    },
    "context_docs": [
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
@@ -1386,9 +1391,9 @@
    ],
    "graph_facts": 15,
    "retrieval_source": "hybrid",
-   "llm_cached": true,
-   "llm_ms": null,
-   "total_ms": 7500.0
+   "llm_cached": false,
+   "llm_ms": 3497.2,
+   "total_ms": 5608.6
   },
   {
    "id": "F01",
@@ -1431,7 +1436,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 6860.1
+   "total_ms": 2750.4
   },
   {
    "id": "F02",
@@ -1473,7 +1478,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7523.1
+   "total_ms": 5987.6
   },
   {
    "id": "F03",
@@ -1517,7 +1522,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 6830.6
+   "total_ms": 8087.2
   },
   {
    "id": "F04",
@@ -1558,7 +1563,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7047.1
+   "total_ms": 9523.0
   },
   {
    "id": "F05",
@@ -1601,7 +1606,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7234.9
+   "total_ms": 7828.8
   },
   {
    "id": "N01",
@@ -1639,7 +1644,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7518.1
+   "total_ms": 1592.0
   },
   {
    "id": "N02",
@@ -1678,7 +1683,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7466.0
+   "total_ms": 1445.5
   },
   {
    "id": "N03",
@@ -1721,7 +1726,7 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 7142.1
+   "total_ms": 1387.5
   },
   {
    "id": "N04",
@@ -1734,7 +1739,7 @@
    "answer": "**Status:** UNKNOWN – internal inspection not yet performed.  \n\n**Answer:** The internal inspection of boiler B‑101 has not been completed; therefore no findings inside the steam drum are available. The external inspection recorded UT thickness measurements, but internal visual or NDT results are pending for the next shutdown.  \n\n**Recommended Actions**  \n1. Schedule the internal boiler inspection within the next planned shutdown.  \n2. Document all internal observations, especially drum condition and tube wear.  \n3. Review the upcoming internal report against the external UT data for consistency.  \n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"INS-003_Boiler_Inspection_B-101.docx\",\"chunk_content\":\"Internal inspection deferred to next shutdown.\",\"highlighted_excerpt\":\"Internal inspection deferred to next shutdown.\",\"page_number\":1,\"confidence\":0.96}  \n\nMore details available.",
    "fact_coverage": null,
    "facts_hit": {},
-   "refusal": "missed_refusal",
+   "refusal": "correct_refusal",
    "cited_docs": [
     "INS-003_Boiler_Inspection_B-101.docx"
    ],
@@ -1762,7 +1767,48 @@
    "retrieval_source": "hybrid",
    "llm_cached": true,
    "llm_ms": null,
-   "total_ms": 6842.1
+   "total_ms": 5830.6
+  },
+  {
+   "id": "N05",
+   "type": "negative",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about the set pressure of relief valve **PSV‑3011** on heat exchanger **E‑301**.  \n\n**Recommended Actions**  \n1. Review the PSV‑3011 design and certification documentation for its set pressure.  \n2. Consult the plant’s pressure‑relief‑valve database or engineering drawings.  \n3. Verify the set pressure during the next scheduled inspection of E‑301.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"confidence\":0.9,\"score\":0.95,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"SCN-002_P&ID_Cooling_Water.pdf\",\"confidence\":0.85,\"score\":0.90,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 3,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.5
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Spare_Parts_Inventory.xlsx",
+    "Equipment_Register.xlsx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 3773.4
   }
  ]
 }

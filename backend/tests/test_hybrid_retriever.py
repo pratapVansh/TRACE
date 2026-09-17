@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.config import settings
 from app.graph.base import GraphStoreOperationError
 from app.graph.graph_query import GraphQueryService
 from app.schemas.graph import EntityResponse, NeighborResponse, RelationshipResponse
@@ -189,6 +190,77 @@ def _neighbor(entity_id: str, entity_name: str, rel_type: str) -> NeighborRespon
         relationship=RelationshipResponse(id="r1", type=rel_type,
                                           source=entity_id, target="ent1"),
     )
+
+
+class TestRelationshipFactProvenance:
+    """A relationship fact must be attributed to the document it came from.
+
+    Entity nodes are shared across documents and their ``source_document`` is
+    kept from whichever document created them first, so reading provenance off
+    the neighbour node names an arbitrary document. Measured against the live
+    graph: the two disagree on 63 of 87 relationships. The label decides which
+    chunk the fact attaches to in ``ContextMerger`` and can become a citation
+    via ``_graph_only_item``, so it is a correctness concern, not a display one.
+    """
+
+    @staticmethod
+    def _service(mock_graph_query_service: AsyncMock) -> AsyncMock:
+        entity = EntityResponse(id="ent1", name="P-101", type="Pump",
+                                source_document="first_writer.pdf")
+        neighbour = NeighborResponse(
+            entity=EntityResponse(id="ent2", name="TK-305", type="Tank",
+                                  source_document="unrelated_node.pdf"),
+            relationship=RelationshipResponse(
+                id="r1", type="CONNECTED_TO", source="ent1", target="ent2",
+                source_document="the_real_source.pdf",
+            ),
+        )
+        mock_graph_query_service.search_entities.return_value = ([entity], 1)
+        mock_graph_query_service.get_neighbors_for_entities.return_value = {
+            "ent1": [neighbour],
+        }
+        return mock_graph_query_service
+
+    async def test_uses_relationship_source_when_enabled(
+        self, mock_graph_query_service: AsyncMock, monkeypatch,
+    ) -> None:
+        monkeypatch.setattr(settings, "graph_fact_relationship_provenance", True)
+        retriever = GraphRetriever(graph_query_service=self._service(mock_graph_query_service))
+
+        facts = await retriever.retrieve("pump", top_k=5)
+
+        rel_facts = [f for f in facts if f.relationship_type]
+        assert len(rel_facts) == 1
+        assert rel_facts[0].source_document == "the_real_source.pdf"
+
+    async def test_defaults_to_neighbour_node_so_the_baseline_is_unchanged(
+        self, mock_graph_query_service: AsyncMock, monkeypatch,
+    ) -> None:
+        """Default off: the frozen Stage 5 baseline must stay reproducible."""
+        monkeypatch.setattr(settings, "graph_fact_relationship_provenance", False)
+        retriever = GraphRetriever(graph_query_service=self._service(mock_graph_query_service))
+
+        facts = await retriever.retrieve("pump", top_k=5)
+
+        rel_facts = [f for f in facts if f.relationship_type]
+        assert rel_facts[0].source_document == "unrelated_node.pdf"
+
+    async def test_falls_back_when_the_relationship_carries_no_source(
+        self, mock_graph_query_service: AsyncMock, monkeypatch,
+    ) -> None:
+        """Legacy edges written before provenance was stored must not go blank."""
+        monkeypatch.setattr(settings, "graph_fact_relationship_provenance", True)
+        service = self._service(mock_graph_query_service)
+        service.get_neighbors_for_entities.return_value["ent1"][0].relationship.source_document = ""
+
+        facts = await retriever_facts(service)
+
+        rel_facts = [f for f in facts if f.relationship_type]
+        assert rel_facts[0].source_document == "unrelated_node.pdf"
+
+
+async def retriever_facts(service: AsyncMock):
+    return await GraphRetriever(graph_query_service=service).retrieve("pump", top_k=5)
 
 
 class TestGraphRetriever:

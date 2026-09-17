@@ -1,66 +1,64 @@
 {
  "kind": "retrieval",
- "run_at": "2026-09-17T17:30:47+00:00",
+ "run_at": "2026-09-16T18:51:51+00:00",
  "git": {
   "head": "fbf3439",
   "dirty": true
  },
  "settings": {
-  "name": "baseline",
+  "name": "passage2_ctx25",
   "rerank": true,
   "graph": true,
   "collection": null,
   "rerank_timeout_seconds": null,
   "prefer_domain_entities": false,
-  "relationship_provenance": false,
-  "chunks_per_document": 1,
-  "top_k": null,
-  "description": "Current pipeline: hybrid search + reranker + graph, chunk 256",
+  "chunks_per_document": 2,
+  "top_k": 25,
+  "description": "Two passages per document, with the unified context sized to hold them (10 documents x 2 passages + 5 graph slots)",
   "qdrant_collection": "document_chunks",
   "rerank_enabled": true,
   "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
   "embedding_model": "all-MiniLM-L6-v2",
-  "retrieval_top_k": 15,
+  "retrieval_top_k": 25,
   "vector_top_k": 10,
   "graph_top_k": 5,
   "dedup_documents": true,
   "graph_prefer_domain_entities": false,
-  "graph_fact_relationship_provenance": false,
   "llm_model": "openai/gpt-oss-120b"
  },
  "graph_connected": true,
  "summary": {
   "answerable": {
    "n": 35,
-   "doc_recall_at_5": 0.919047619047619,
-   "doc_hit_rate_at_5": 0.8857142857142857,
-   "passage_recall_at_5": 0.5666666666666667,
-   "evidence_in_context": 0.6142857142857143,
-   "mrr": 0.8603174603174603
+   "doc_recall_at_5": 0.8904761904761905,
+   "doc_hit_rate_at_5": 0.8571428571428571,
+   "passage_recall_at_5": 0.7333333333333334,
+   "evidence_in_context": 0.8714285714285714,
+   "mrr": 0.8507936507936508
   },
   "by_type": {
    "single_hop": {
     "n": 20,
     "doc_recall_at_5": 0.9,
     "doc_hit_rate_at_5": 0.9,
-    "passage_recall_at_5": 0.55,
-    "evidence_in_context": 0.6,
-    "mrr": 0.8138888888888889
+    "passage_recall_at_5": 0.775,
+    "evidence_in_context": 0.875,
+    "mrr": 0.8055555555555556
    },
    "multi_hop": {
     "n": 10,
-    "doc_recall_at_5": 0.9166666666666666,
-    "doc_hit_rate_at_5": 0.8,
-    "passage_recall_at_5": 0.6833333333333333,
-    "evidence_in_context": 0.75,
-    "mrr": 0.8833333333333334
+    "doc_recall_at_5": 0.8166666666666667,
+    "doc_hit_rate_at_5": 0.7,
+    "passage_recall_at_5": 0.6166666666666667,
+    "evidence_in_context": 0.9,
+    "mrr": 0.8666666666666666
    },
    "follow_up": {
     "n": 5,
     "doc_recall_at_5": 1.0,
     "doc_hit_rate_at_5": 1.0,
-    "passage_recall_at_5": 0.4,
-    "evidence_in_context": 0.4,
+    "passage_recall_at_5": 0.8,
+    "evidence_in_context": 0.8,
     "mrr": 1.0
    }
   },
@@ -69,49 +67,49 @@
     "n": 12,
     "doc_recall_at_5": 0.8888888888888888,
     "doc_hit_rate_at_5": 0.8333333333333334,
-    "passage_recall_at_5": 0.611111111111111,
-    "evidence_in_context": 0.611111111111111,
+    "passage_recall_at_5": 0.6527777777777778,
+    "evidence_in_context": 0.7916666666666666,
     "mrr": 0.8842592592592592
    },
    "distractor_doc": {
     "n": 3,
     "doc_recall_at_5": 1.0,
     "doc_hit_rate_at_5": 1.0,
-    "passage_recall_at_5": 0.6666666666666666,
-    "evidence_in_context": 0.6666666666666666,
+    "passage_recall_at_5": 1.0,
+    "evidence_in_context": 1.0,
     "mrr": 0.8333333333333334
    },
    "entity_resolution": {
     "n": 4,
     "doc_recall_at_5": 0.875,
     "doc_hit_rate_at_5": 0.75,
-    "passage_recall_at_5": 0.5833333333333334,
-    "evidence_in_context": 0.75,
+    "passage_recall_at_5": 0.8333333333333334,
+    "evidence_in_context": 1.0,
     "mrr": 1.0
    },
    "long_doc": {
     "n": 9,
     "doc_recall_at_5": 1.0,
     "doc_hit_rate_at_5": 1.0,
-    "passage_recall_at_5": 0.5555555555555556,
-    "evidence_in_context": 0.5555555555555556,
+    "passage_recall_at_5": 0.6666666666666666,
+    "evidence_in_context": 0.6666666666666666,
     "mrr": 1.0
    },
    "no_lexical_overlap": {
     "n": 4,
     "doc_recall_at_5": 0.5,
     "doc_hit_rate_at_5": 0.5,
-    "passage_recall_at_5": 0.0,
-    "evidence_in_context": 0.25,
-    "mrr": 0.4444444444444444
+    "passage_recall_at_5": 0.5,
+    "evidence_in_context": 0.75,
+    "mrr": 0.4027777777777778
    },
    "ocr_source": {
     "n": 3,
-    "doc_recall_at_5": 1.0,
-    "doc_hit_rate_at_5": 1.0,
-    "passage_recall_at_5": 0.7222222222222222,
-    "evidence_in_context": 0.7222222222222222,
-    "mrr": 0.7777777777777778
+    "doc_recall_at_5": 0.6666666666666666,
+    "doc_hit_rate_at_5": 0.6666666666666666,
+    "passage_recall_at_5": 0.5,
+    "evidence_in_context": 0.8333333333333334,
+    "mrr": 0.7222222222222222
    },
    "table_row": {
     "n": 7,
@@ -125,9 +123,9 @@
   "follow_up_resolution_rate": 1.0,
   "negative_top_score_mean": 0.6426984,
   "negative_top_score_max": 1.0,
-  "answerable_top_score_mean": 0.6089212,
-  "latency_ms_p50": 6326.299999999999,
-  "latency_ms_p95": 7301.96
+  "answerable_top_score_mean": 0.6106242857142856,
+  "latency_ms_p50": 5839.4,
+  "latency_ms_p95": 6330.15
  },
  "items": [
   {
@@ -158,6 +156,11 @@
    "top_chunks": [
     {
      "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 33,
+     "score": 0.080158
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
      "chunk_index": 13,
      "score": 0.060549
     },
@@ -175,23 +178,18 @@
      "doc": "Equipment_Register.xlsx",
      "chunk_index": 0,
      "score": 0.040128
-    },
-    {
-     "doc": "Spare_Parts_Inventory.xlsx",
-     "chunk_index": 1,
-     "score": 0.040085
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 0.5,
    "passage_recall_at_5": 0.5,
-   "evidence_in_context": 0.5,
-   "top_score": 0.060549,
-   "chunks_in_context": 10,
+   "evidence_in_context": 1.0,
+   "top_score": 0.080158,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 7,
    "graph_only_items": 1,
-   "latency_ms": 828.5
+   "latency_ms": 6137.7
   },
   {
    "id": "S02",
@@ -228,31 +226,31 @@
      "score": 0.060031
     },
     {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.060013
+    },
+    {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 1,
+     "score": 0.040031
+    },
+    {
      "doc": "INC-002_Valve_Failure_V-220.docx",
      "chunk_index": 0,
      "score": 0.020079
-    },
-    {
-     "doc": "INS-002_Vibration_Analysis_C-201.docx",
-     "chunk_index": 0,
-     "score": 0.020035
-    },
-    {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 45,
-     "score": 0.001794
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.5,
-   "evidence_in_context": 0.5,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.0668,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 2,
    "graph_facts": 8,
    "graph_only_items": 2,
-   "latency_ms": 4126.0
+   "latency_ms": 5303.6
   },
   {
    "id": "S03",
@@ -269,17 +267,27 @@
    ],
    "ranked_docs": [
     "SOP-001_Pump_Start-Up_Procedure.docx",
-    "MNT-003_Seal_Leakage_Repair_P-102.docx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "MAN-001_Centrifugal_Pump_Manual.docx",
     "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "SCN-001_Safety_Inspection_Checklist.pdf",
-    "INC-001_Pump_Oil_Leakage_P-101.docx",
     "MNT-001_Quarterly_PM_Cooling_Tower.docx",
     "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
    ],
    "top_chunks": [
+    {
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
+     "chunk_index": 0,
+     "score": 0.100014
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.100013
+    },
     {
      "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
      "chunk_index": 1,
@@ -291,31 +299,21 @@
      "score": 0.048424
     },
     {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 2,
-     "score": 0.040101
-    },
-    {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 25,
-     "score": 0.003835
-    },
-    {
-     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
      "chunk_index": 1,
-     "score": 2.5e-05
+     "score": 0.044088
     }
    ],
    "doc_recall_at_5": 1.0,
-   "mrr": 0.5,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
-   "top_score": 0.060015,
-   "chunks_in_context": 10,
+   "mrr": 0.3333333333333333,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
+   "top_score": 0.100014,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 16,
    "graph_only_items": 3,
-   "latency_ms": 6206.0
+   "latency_ms": 5856.7
   },
   {
    "id": "S04",
@@ -335,9 +333,9 @@
     "SOP-002_Pump_Shut-Down_Procedure.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
     "SCN-002_P&ID_Cooling_Water.pdf",
     "MNT-003_Seal_Leakage_Repair_P-102.docx",
-    "SOP-001_Pump_Start-Up_Procedure.docx",
     "MAN-001_Centrifugal_Pump_Manual.docx",
     "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
     "SOP-003_Boiler_Start-Up_Procedure.docx",
@@ -355,19 +353,19 @@
      "score": 0.375257
     },
     {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 2,
+     "score": 0.236945
+    },
+    {
      "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
      "chunk_index": 0,
      "score": 0.040384
     },
     {
-     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
-     "chunk_index": 2,
-     "score": 0.020704
-    },
-    {
-     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
      "chunk_index": 0,
-     "score": 0.015366
+     "score": 0.040121
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -375,11 +373,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.758802,
-   "chunks_in_context": 10,
+   "chunks_in_context": 14,
    "excluded_fixture_chunks": 0,
    "graph_facts": 6,
    "graph_only_items": 2,
-   "latency_ms": 5706.7
+   "latency_ms": 6329.7
   },
   {
    "id": "S05",
@@ -439,11 +437,11 @@
    "passage_recall_at_5": 0.0,
    "evidence_in_context": 0.0,
    "top_score": 0.080021,
-   "chunks_in_context": 10,
+   "chunks_in_context": 12,
    "excluded_fixture_chunks": 0,
    "graph_facts": 7,
    "graph_only_items": 0,
-   "latency_ms": 5249.8
+   "latency_ms": 5919.5
   },
   {
    "id": "S06",
@@ -487,12 +485,12 @@
      "score": 0.020015
     },
     {
-     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.020012
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 15,
+     "score": 0.020014
     },
     {
-     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
      "chunk_index": 0,
      "score": 0.020012
     }
@@ -502,11 +500,11 @@
    "passage_recall_at_5": 0.0,
    "evidence_in_context": 1.0,
    "top_score": 0.040014,
-   "chunks_in_context": 10,
+   "chunks_in_context": 14,
    "excluded_fixture_chunks": 0,
    "graph_facts": 10,
    "graph_only_items": 2,
-   "latency_ms": 7301.6
+   "latency_ms": 5889.6
   },
   {
    "id": "S07",
@@ -528,10 +526,10 @@
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "Equipment_Register.xlsx",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-    "INS-003_Boiler_Inspection_B-101.docx",
-    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "SOP-002_Pump_Shut-Down_Procedure.docx",
-    "SOP-001_Pump_Start-Up_Procedure.docx"
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
    ],
    "top_chunks": [
     {
@@ -550,14 +548,14 @@
      "score": 0.157676
     },
     {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 1,
+     "score": 0.138693
+    },
+    {
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 3,
      "score": 0.112725
-    },
-    {
-     "doc": "Equipment_Register.xlsx",
-     "chunk_index": 1,
-     "score": 0.110019
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -565,11 +563,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.790429,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 15,
    "graph_only_items": 1,
-   "latency_ms": 6608.3
+   "latency_ms": 4942.6
   },
   {
    "id": "S08",
@@ -600,6 +598,11 @@
      "score": 0.771092
     },
     {
+     "doc": "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+     "chunk_index": 1,
+     "score": 0.109118
+    },
+    {
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 3,
      "score": 0.100604
@@ -610,14 +613,9 @@
      "score": 0.100195
     },
     {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 2,
-     "score": 0.100057
-    },
-    {
-     "doc": "PPT-002_Plant_Overview.pptx",
-     "chunk_index": 0,
-     "score": 0.10002
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.100118
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -625,11 +623,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.771092,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 1,
    "graph_facts": 10,
    "graph_only_items": 2,
-   "latency_ms": 6640.9
+   "latency_ms": 5322.7
   },
   {
    "id": "S09",
@@ -673,14 +671,14 @@
      "score": 0.102155
     },
     {
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.102039
+    },
+    {
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 3,
      "score": 0.100536
-    },
-    {
-     "doc": "Spare_Parts_Inventory.xlsx",
-     "chunk_index": 1,
-     "score": 0.100192
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -688,11 +686,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 19,
    "graph_only_items": 3,
-   "latency_ms": 6205.2
+   "latency_ms": 5308.8
   },
   {
    "id": "S10",
@@ -710,12 +708,12 @@
    ],
    "ranked_docs": [
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-    "MNT-002_Bearing_Replacement_P-101.docx",
-    "LOG-001_Morning_Shift_15-Jul-2026.txt",
-    "INS-002_Vibration_Analysis_C-201.docx",
     "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
     "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
     "MAN-002_Air_Compressor_Manual.docx"
    ],
    "top_chunks": [
@@ -725,36 +723,36 @@
      "score": 0.323948
     },
     {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.080057
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
+     "chunk_index": 0,
+     "score": 0.100036
     },
     {
-     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
-     "chunk_index": 0,
-     "score": 0.040055
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 38,
+     "score": 0.085687
     },
     {
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 2,
-     "score": 0.020225
+     "chunk_index": 1,
+     "score": 0.080167
     },
     {
-     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 1,
-     "score": 0.020118
+     "score": 0.080057
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.323948,
-   "chunks_in_context": 9,
+   "chunks_in_context": 14,
    "excluded_fixture_chunks": 1,
    "graph_facts": 11,
    "graph_only_items": 2,
-   "latency_ms": 7595.2
+   "latency_ms": 6178.3
   },
   {
    "id": "S11",
@@ -774,9 +772,9 @@
    "ranked_docs": [
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
     "SOP-001_Pump_Start-Up_Procedure.docx",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-    "INC-001_Pump_Oil_Leakage_P-101.docx",
     "MAN-001_Centrifugal_Pump_Manual.docx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "INS-002_Vibration_Analysis_C-201.docx"
@@ -793,19 +791,19 @@
      "score": 0.080606
     },
     {
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
+     "chunk_index": 0,
+     "score": 0.080054
+    },
+    {
      "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
      "chunk_index": 0,
      "score": 0.080049
     },
     {
-     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-     "chunk_index": 1,
-     "score": 0.060481
-    },
-    {
-     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
-     "chunk_index": 1,
-     "score": 0.026111
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 14,
+     "score": 0.071241
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -813,11 +811,11 @@
    "passage_recall_at_5": 0.5,
    "evidence_in_context": 0.5,
    "top_score": 0.556684,
-   "chunks_in_context": 9,
+   "chunks_in_context": 12,
    "excluded_fixture_chunks": 1,
    "graph_facts": 11,
    "graph_only_items": 1,
-   "latency_ms": 7049.8
+   "latency_ms": 6017.8
   },
   {
    "id": "S12",
@@ -850,6 +848,11 @@
      "score": 0.267062
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 2,
+     "score": 0.147744
+    },
+    {
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 4,
      "score": 0.100571
@@ -863,11 +866,6 @@
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 2,
      "score": 0.100075
-    },
-    {
-     "doc": "Spare_Parts_Inventory.xlsx",
-     "chunk_index": 1,
-     "score": 0.100073
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -875,11 +873,11 @@
    "passage_recall_at_5": 0.0,
    "evidence_in_context": 0.0,
    "top_score": 0.267062,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 2,
    "graph_facts": 14,
    "graph_only_items": 2,
-   "latency_ms": 6537.5
+   "latency_ms": 5884.0
   },
   {
    "id": "S13",
@@ -923,14 +921,14 @@
      "score": 0.100103
     },
     {
-     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
      "chunk_index": 1,
-     "score": 0.064168
+     "score": 0.100044
     },
     {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 36,
-     "score": 0.06177
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 0,
+     "score": 0.080094
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -938,11 +936,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.275266,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 16,
    "graph_only_items": 0,
-   "latency_ms": 6569.3
+   "latency_ms": 5918.0
   },
   {
    "id": "S14",
@@ -974,36 +972,36 @@
      "score": 0.609771
     },
     {
+     "doc": "INS-002_Vibration_Analysis_C-201.docx",
+     "chunk_index": 1,
+     "score": 0.151496
+    },
+    {
      "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
      "chunk_index": 30,
      "score": 0.10031
     },
     {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 19,
+     "score": 0.100253
+    },
+    {
      "doc": "MAN-002_Air_Compressor_Manual.docx",
      "chunk_index": 0,
      "score": 0.100194
-    },
-    {
-     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
-     "chunk_index": 1,
-     "score": 0.100169
-    },
-    {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.100112
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.609771,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 2,
    "graph_facts": 16,
    "graph_only_items": 2,
-   "latency_ms": 5622.6
+   "latency_ms": 4839.4
   },
   {
    "id": "S15",
@@ -1020,19 +1018,24 @@
     "SCN-002_P&ID_Cooling_Water.pdf",
     "SOP-001_Pump_Start-Up_Procedure.docx",
     "Equipment_Register.xlsx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "SOP-002_Pump_Shut-Down_Procedure.docx",
     "INC-001_Pump_Oil_Leakage_P-101.docx",
     "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
-    "MNT-003_Seal_Leakage_Repair_P-102.docx",
-    "MAN-001_Centrifugal_Pump_Manual.docx"
+    "MNT-003_Seal_Leakage_Repair_P-102.docx"
    ],
    "top_chunks": [
     {
      "doc": "SCN-002_P&ID_Cooling_Water.pdf",
      "chunk_index": 0,
      "score": 0.659711
+    },
+    {
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 2,
+     "score": 0.10329
     },
     {
      "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
@@ -1045,26 +1048,21 @@
      "score": 0.083929
     },
     {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 2,
-     "score": 0.034135
-    },
-    {
-     "doc": "SOP-002_Pump_Shut-Down_Procedure.docx",
+     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
      "chunk_index": 0,
-     "score": 0.028163
+     "score": 0.040026
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.659711,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 12,
    "graph_only_items": 2,
-   "latency_ms": 6830.0
+   "latency_ms": 5822.1
   },
   {
    "id": "S16",
@@ -1099,6 +1097,11 @@
      "score": 0.955062
     },
     {
+     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+     "chunk_index": 0,
+     "score": 0.116709
+    },
+    {
      "doc": "Equipment_Register.xlsx",
      "chunk_index": 1,
      "score": 0.040354
@@ -1112,11 +1115,6 @@
      "doc": "PPT-002_Plant_Overview.pptx",
      "chunk_index": 0,
      "score": 0.040048
-    },
-    {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.040027
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1124,11 +1122,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.955062,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 5,
    "graph_only_items": 0,
-   "latency_ms": 7308.8
+   "latency_ms": 6233.5
   },
   {
    "id": "S17",
@@ -1167,6 +1165,11 @@
      "score": 0.947639
     },
     {
+     "doc": "MNT-002_Bearing_Replacement_P-101.docx",
+     "chunk_index": 1,
+     "score": 0.770885
+    },
+    {
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 1,
      "score": 0.178269
@@ -1175,11 +1178,6 @@
      "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
      "chunk_index": 0,
      "score": 0.129291
-    },
-    {
-     "doc": "Maintenance_Schedule.xlsx",
-     "chunk_index": 0,
-     "score": 0.119008
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1187,11 +1185,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.952087,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 18,
    "graph_only_items": 4,
-   "latency_ms": 5906.1
+   "latency_ms": 5333.2
   },
   {
    "id": "S18",
@@ -1248,13 +1246,13 @@
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
    "passage_recall_at_5": 0.5,
-   "evidence_in_context": 0.5,
+   "evidence_in_context": 1.0,
    "top_score": 0.370842,
-   "chunks_in_context": 10,
+   "chunks_in_context": 14,
    "excluded_fixture_chunks": 0,
    "graph_facts": 21,
    "graph_only_items": 5,
-   "latency_ms": 5896.3
+   "latency_ms": 5389.7
   },
   {
    "id": "S19",
@@ -1276,8 +1274,8 @@
     "Spare_Parts_Inventory.xlsx",
     "Equipment_Register.xlsx",
     "SCN-002_P&ID_Cooling_Water.pdf",
-    "INC-002_Valve_Failure_V-220.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INC-002_Valve_Failure_V-220.docx",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
     "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
    ],
@@ -1286,6 +1284,11 @@
      "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
      "chunk_index": 15,
      "score": 1.0
+    },
+    {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 2,
+     "score": 0.253774
     },
     {
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
@@ -1301,11 +1304,6 @@
      "doc": "Spare_Parts_Inventory.xlsx",
      "chunk_index": 1,
      "score": 0.10151
-    },
-    {
-     "doc": "Equipment_Register.xlsx",
-     "chunk_index": 0,
-     "score": 0.100614
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1313,11 +1311,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 13,
    "graph_only_items": 2,
-   "latency_ms": 6620.2
+   "latency_ms": 6056.7
   },
   {
    "id": "S20",
@@ -1338,17 +1336,22 @@
     "Equipment_Register.xlsx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "INS-003_Boiler_Inspection_B-101.docx",
-    "SOP-003_Boiler_Start-Up_Procedure.docx",
-    "MAN-002_Air_Compressor_Manual.docx",
     "MNT-002_Bearing_Replacement_P-101.docx",
-    "MAN-001_Centrifugal_Pump_Manual.docx",
-    "SCN-002_P&ID_Cooling_Water.pdf"
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx"
    ],
    "top_chunks": [
     {
      "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
      "chunk_index": 20,
      "score": 1.0
+    },
+    {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 21,
+     "score": 0.939636
     },
     {
      "doc": "Equipment_Register.xlsx",
@@ -1364,11 +1367,6 @@
      "doc": "INS-003_Boiler_Inspection_B-101.docx",
      "chunk_index": 0,
      "score": 0.040441
-    },
-    {
-     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.020357
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1376,11 +1374,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 1,
    "graph_facts": 8,
    "graph_only_items": 1,
-   "latency_ms": 6311.2
+   "latency_ms": 5803.4
   },
   {
    "id": "M01",
@@ -1400,9 +1398,9 @@
     "MNT-003_Seal_Leakage_Repair_P-102.docx",
     "MNT-002_Bearing_Replacement_P-101.docx",
     "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "Maintenance_Schedule.xlsx",
     "SOP-001_Pump_Start-Up_Procedure.docx",
-    "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "MAN-001_Centrifugal_Pump_Manual.docx",
     "SOP-002_Pump_Shut-Down_Procedure.docx"
    ],
@@ -1423,26 +1421,26 @@
      "score": 0.111601
     },
     {
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 0,
+     "score": 0.098278
+    },
+    {
      "doc": "MNT-002_Bearing_Replacement_P-101.docx",
      "chunk_index": 0,
      "score": 0.087142
-    },
-    {
-     "doc": "Equipment_Register.xlsx",
-     "chunk_index": 0,
-     "score": 0.061689
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 0.5,
    "passage_recall_at_5": 0.5,
-   "evidence_in_context": 0.5,
+   "evidence_in_context": 1.0,
    "top_score": 0.391438,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 9,
    "graph_only_items": 2,
-   "latency_ms": 5709.7
+   "latency_ms": 5207.2
   },
   {
    "id": "M02",
@@ -1480,6 +1478,11 @@
      "score": 0.453427
     },
     {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 0,
+     "score": 0.292633
+    },
+    {
      "doc": "Spare_Parts_Inventory.xlsx",
      "chunk_index": 1,
      "score": 0.245565
@@ -1488,11 +1491,6 @@
      "doc": "Maintenance_Schedule.xlsx",
      "chunk_index": 1,
      "score": 0.176667
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 3,
-     "score": 0.113433
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1500,11 +1498,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 10,
    "graph_only_items": 2,
-   "latency_ms": 5677.6
+   "latency_ms": 5274.1
   },
   {
    "id": "M03",
@@ -1549,14 +1547,14 @@
      "score": 0.106725
     },
     {
-     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.062117
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.100172
     },
     {
-     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
-     "chunk_index": 0,
-     "score": 0.060702
+     "doc": "SCN-002_P&ID_Cooling_Water.pdf",
+     "chunk_index": 1,
+     "score": 0.100123
     }
    ],
    "doc_recall_at_5": 0.5,
@@ -1564,11 +1562,11 @@
    "passage_recall_at_5": 0.3333333333333333,
    "evidence_in_context": 1.0,
    "top_score": 0.521572,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 1,
    "graph_facts": 13,
    "graph_only_items": 1,
-   "latency_ms": 6414.5
+   "latency_ms": 5767.4
   },
   {
    "id": "M04",
@@ -1608,6 +1606,11 @@
      "score": 0.278571
     },
     {
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
+     "chunk_index": 1,
+     "score": 0.138157
+    },
+    {
      "doc": "Maintenance_Schedule.xlsx",
      "chunk_index": 0,
      "score": 0.112349
@@ -1616,11 +1619,6 @@
      "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
      "chunk_index": 1,
      "score": 0.110129
-    },
-    {
-     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
-     "chunk_index": 0,
-     "score": 0.101329
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1628,11 +1626,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.97506,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 13,
    "graph_only_items": 1,
-   "latency_ms": 6673.7
+   "latency_ms": 6131.0
   },
   {
    "id": "M05",
@@ -1652,11 +1650,11 @@
    "ranked_docs": [
     "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-    "Maintenance_Schedule.xlsx",
     "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "INS-001_Pressure_Vessel_Inspection_T-501.docx",
-    "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "SOP-003_Boiler_Start-Up_Procedure.docx",
     "INS-003_Boiler_Inspection_B-101.docx"
@@ -1669,23 +1667,23 @@
     },
     {
      "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-     "chunk_index": 1,
-     "score": 0.042019
-    },
-    {
-     "doc": "Maintenance_Schedule.xlsx",
-     "chunk_index": 1,
-     "score": 0.040055
+     "chunk_index": 0,
+     "score": 0.06079
     },
     {
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 3,
-     "score": 0.020063
+     "chunk_index": 1,
+     "score": 0.060036
     },
     {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 45,
-     "score": 0.000686
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.060024
+    },
+    {
+     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+     "chunk_index": 2,
+     "score": 0.044776
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1693,11 +1691,11 @@
    "passage_recall_at_5": 0.5,
    "evidence_in_context": 0.5,
    "top_score": 0.061251,
-   "chunks_in_context": 10,
+   "chunks_in_context": 18,
    "excluded_fixture_chunks": 0,
    "graph_facts": 9,
    "graph_only_items": 4,
-   "latency_ms": 6370.9
+   "latency_ms": 5568.2
   },
   {
    "id": "M06",
@@ -1741,14 +1739,14 @@
      "score": 0.285491
     },
     {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 0.213111
+    },
+    {
      "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
      "chunk_index": 0,
      "score": 0.145388
-    },
-    {
-     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.142248
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1756,11 +1754,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 1,
    "graph_facts": 18,
    "graph_only_items": 1,
-   "latency_ms": 5864.7
+   "latency_ms": 5487.5
   },
   {
    "id": "M07",
@@ -1805,14 +1803,14 @@
      "score": 0.082569
     },
     {
-     "doc": "INS-003_Boiler_Inspection_B-101.docx",
-     "chunk_index": 0,
-     "score": 0.040384
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 34,
+     "score": 0.080291
     },
     {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
      "chunk_index": 1,
-     "score": 0.020303
+     "score": 0.060302
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1820,11 +1818,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 0.984903,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 1,
    "graph_facts": 8,
    "graph_only_items": 0,
-   "latency_ms": 6809.3
+   "latency_ms": 5916.1
   },
   {
    "id": "M08",
@@ -1846,8 +1844,8 @@
     "INC-001_Pump_Oil_Leakage_P-101.docx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-    "MAN-001_Centrifugal_Pump_Manual.docx",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
     "SOP-001_Pump_Start-Up_Procedure.docx",
     "INS-002_Vibration_Analysis_C-201.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
@@ -1874,21 +1872,21 @@
      "score": 0.108839
     },
     {
-     "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
-     "chunk_index": 0,
-     "score": 0.100615
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 3,
+     "score": 0.106439
     }
    ],
    "doc_recall_at_5": 0.6666666666666666,
    "mrr": 1.0,
    "passage_recall_at_5": 0.3333333333333333,
-   "evidence_in_context": 0.3333333333333333,
+   "evidence_in_context": 1.0,
    "top_score": 0.551484,
-   "chunks_in_context": 10,
+   "chunks_in_context": 18,
    "excluded_fixture_chunks": 1,
    "graph_facts": 24,
    "graph_only_items": 1,
-   "latency_ms": 6880.8
+   "latency_ms": 6328.9
   },
   {
    "id": "M09",
@@ -1911,10 +1909,10 @@
     "Spare_Parts_Inventory.xlsx",
     "LOG-002_Night_Shift_15-16-Jul-2026.txt",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
-    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
     "PPT-002_Plant_Overview.pptx",
-    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
-    "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
    ],
    "top_chunks": [
     {
@@ -1928,19 +1926,19 @@
      "score": 1.0
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 20,
+     "score": 0.805914
+    },
+    {
+     "doc": "Maintenance_Schedule.xlsx",
+     "chunk_index": 0,
+     "score": 0.224795
+    },
+    {
      "doc": "Spare_Parts_Inventory.xlsx",
      "chunk_index": 1,
      "score": 0.172236
-    },
-    {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 4,
-     "score": 0.170552
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.101089
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -1948,11 +1946,11 @@
    "passage_recall_at_5": 0.5,
    "evidence_in_context": 0.5,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 1,
    "graph_facts": 25,
    "graph_only_items": 3,
-   "latency_ms": 5639.4
+   "latency_ms": 5100.1
   },
   {
    "id": "M10",
@@ -1971,12 +1969,12 @@
    "ranked_docs": [
     "Equipment_Register.xlsx",
     "SCN-002_P&ID_Cooling_Water.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
     "SCN-001_Safety_Inspection_Checklist.pdf",
     "MNT-001_Quarterly_PM_Cooling_Tower.docx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
-    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
-    "INC-001_Pump_Oil_Leakage_P-101.docx",
     "INS-001_Pressure_Vessel_Inspection_T-501.docx",
     "INS-003_Boiler_Inspection_B-101.docx"
    ],
@@ -1987,36 +1985,36 @@
      "score": 0.101083
     },
     {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 0,
+     "score": 0.100102
+    },
+    {
      "doc": "SCN-002_P&ID_Cooling_Water.pdf",
      "chunk_index": 1,
      "score": 0.100062
     },
     {
-     "doc": "SCN-001_Safety_Inspection_Checklist.pdf",
-     "chunk_index": 0,
-     "score": 0.059138
+     "doc": "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+     "chunk_index": 1,
+     "score": 0.06011
     },
     {
-     "doc": "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+     "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
      "chunk_index": 0,
-     "score": 0.052093
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 2,
-     "score": 0.041672
+     "score": 0.060046
     }
    ],
-   "doc_recall_at_5": 1.0,
-   "mrr": 0.3333333333333333,
-   "passage_recall_at_5": 0.6666666666666666,
-   "evidence_in_context": 0.6666666666666666,
+   "doc_recall_at_5": 0.0,
+   "mrr": 0.16666666666666666,
+   "passage_recall_at_5": 0.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.101083,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 0,
    "graph_facts": 15,
    "graph_only_items": 1,
-   "latency_ms": 6737.6
+   "latency_ms": 6020.3
   },
   {
    "id": "F01",
@@ -2047,6 +2045,11 @@
      "score": 1.0
     },
     {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 1,
+     "score": 0.357232
+    },
+    {
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 2,
      "score": 0.209852
@@ -2060,23 +2063,18 @@
      "doc": "Spare_Parts_Inventory.xlsx",
      "chunk_index": 1,
      "score": 0.070459
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 3,
-     "score": 0.042597
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 1,
    "graph_facts": 9,
    "graph_only_items": 2,
-   "latency_ms": 5244.5
+   "latency_ms": 5004.0
   },
   {
    "id": "F02",
@@ -2115,6 +2113,11 @@
      "score": 0.220889
     },
     {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 40,
+     "score": 0.173283
+    },
+    {
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 1,
      "score": 0.126413
@@ -2123,11 +2126,6 @@
      "doc": "MAN-001_Centrifugal_Pump_Manual.docx",
      "chunk_index": 0,
      "score": 0.089013
-    },
-    {
-     "doc": "SOP-003_Boiler_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.003388
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -2135,11 +2133,11 @@
    "passage_recall_at_5": 0.0,
    "evidence_in_context": 0.0,
    "top_score": 0.225189,
-   "chunks_in_context": 10,
+   "chunks_in_context": 12,
    "excluded_fixture_chunks": 0,
    "graph_facts": 3,
    "graph_only_items": 1,
-   "latency_ms": 5530.7
+   "latency_ms": 5146.1
   },
   {
    "id": "F03",
@@ -2174,6 +2172,11 @@
      "score": 1.0
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 20,
+     "score": 1.0
+    },
+    {
      "doc": "Spare_Parts_Inventory.xlsx",
      "chunk_index": 1,
      "score": 0.375411
@@ -2187,11 +2190,6 @@
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 4,
      "score": 0.103145
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.101814
     }
    ],
    "doc_recall_at_5": 1.0,
@@ -2199,11 +2197,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 18,
    "excluded_fixture_chunks": 0,
    "graph_facts": 14,
    "graph_only_items": 1,
-   "latency_ms": 6459.0
+   "latency_ms": 5886.5
   },
   {
    "id": "F04",
@@ -2259,11 +2257,11 @@
    "passage_recall_at_5": 1.0,
    "evidence_in_context": 1.0,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 1,
    "graph_facts": 18,
    "graph_only_items": 4,
-   "latency_ms": 5405.5
+   "latency_ms": 5023.9
   },
   {
    "id": "F05",
@@ -2301,6 +2299,11 @@
      "score": 0.571939
     },
     {
+     "doc": "MAN-002_Air_Compressor_Manual.docx",
+     "chunk_index": 1,
+     "score": 0.420501
+    },
+    {
      "doc": "Maintenance_Schedule.xlsx",
      "chunk_index": 0,
      "score": 0.293771
@@ -2309,23 +2312,18 @@
      "doc": "PPT-002_Plant_Overview.pptx",
      "chunk_index": 1,
      "score": 0.134216
-    },
-    {
-     "doc": "INS-002_Vibration_Analysis_C-201.docx",
-     "chunk_index": 0,
-     "score": 0.11088
     }
    ],
    "doc_recall_at_5": 1.0,
    "mrr": 1.0,
-   "passage_recall_at_5": 0.0,
-   "evidence_in_context": 0.0,
+   "passage_recall_at_5": 1.0,
+   "evidence_in_context": 1.0,
    "top_score": 0.902107,
-   "chunks_in_context": 10,
+   "chunks_in_context": 14,
    "excluded_fixture_chunks": 1,
    "graph_facts": 15,
    "graph_only_items": 2,
-   "latency_ms": 5647.3
+   "latency_ms": 5288.9
   },
   {
    "id": "N01",
@@ -2340,11 +2338,11 @@
    "expected_docs": [],
    "ranked_docs": [
     "INC-002_Valve_Failure_V-220.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "MNT-003_Seal_Leakage_Repair_P-102.docx",
     "Spare_Parts_Inventory.xlsx",
     "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-    "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
     "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "MAN-001_Centrifugal_Pump_Manual.docx"
@@ -2356,24 +2354,24 @@
      "score": 0.060252
     },
     {
+     "doc": "INC-002_Valve_Failure_V-220.docx",
+     "chunk_index": 1,
+     "score": 0.060034
+    },
+    {
+     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
+     "chunk_index": 1,
+     "score": 0.060028
+    },
+    {
      "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
      "chunk_index": 0,
      "score": 0.041536
     },
     {
-     "doc": "Spare_Parts_Inventory.xlsx",
+     "doc": "MNT-003_Seal_Leakage_Repair_P-102.docx",
      "chunk_index": 1,
-     "score": 0.040033
-    },
-    {
-     "doc": "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
-     "chunk_index": 7,
-     "score": 0.040023
-    },
-    {
-     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
-     "chunk_index": 39,
-     "score": 0.020124
+     "score": 0.040109
     }
    ],
    "doc_recall_at_5": null,
@@ -2381,11 +2379,11 @@
    "passage_recall_at_5": null,
    "evidence_in_context": null,
    "top_score": 0.060252,
-   "chunks_in_context": 10,
+   "chunks_in_context": 18,
    "excluded_fixture_chunks": 1,
    "graph_facts": 10,
    "graph_only_items": 1,
-   "latency_ms": 6278.1
+   "latency_ms": 6002.8
   },
   {
    "id": "N02",
@@ -2416,24 +2414,24 @@
      "score": 0.211189
     },
     {
+     "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+     "chunk_index": 3,
+     "score": 0.100011
+    },
+    {
      "doc": "Equipment_Register.xlsx",
      "chunk_index": 0,
      "score": 0.060728
     },
     {
+     "doc": "Equipment_Register.xlsx",
+     "chunk_index": 1,
+     "score": 0.060055
+    },
+    {
      "doc": "INC-001_Pump_Oil_Leakage_P-101.docx",
      "chunk_index": 0,
      "score": 0.04278
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 1,
-     "score": 0.040273
-    },
-    {
-     "doc": "SOP-001_Pump_Start-Up_Procedure.docx",
-     "chunk_index": 0,
-     "score": 0.040035
     }
    ],
    "doc_recall_at_5": null,
@@ -2441,11 +2439,11 @@
    "passage_recall_at_5": null,
    "evidence_in_context": null,
    "top_score": 0.211189,
-   "chunks_in_context": 10,
+   "chunks_in_context": 15,
    "excluded_fixture_chunks": 2,
    "graph_facts": 8,
    "graph_only_items": 0,
-   "latency_ms": 6341.4
+   "latency_ms": 6122.1
   },
   {
    "id": "N03",
@@ -2477,6 +2475,11 @@
      "score": 1.0
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 20,
+     "score": 1.0
+    },
+    {
      "doc": "Maintenance_Schedule.xlsx",
      "chunk_index": 1,
      "score": 0.836283
@@ -2490,11 +2493,6 @@
      "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
      "chunk_index": 4,
      "score": 0.144276
-    },
-    {
-     "doc": "LOG-001_Morning_Shift_15-Jul-2026.txt",
-     "chunk_index": 2,
-     "score": 0.10633
     }
    ],
    "doc_recall_at_5": null,
@@ -2502,11 +2500,11 @@
    "passage_recall_at_5": null,
    "evidence_in_context": null,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 16,
    "excluded_fixture_chunks": 1,
    "graph_facts": 15,
    "graph_only_items": 2,
-   "latency_ms": 6523.7
+   "latency_ms": 6344.6
   },
   {
    "id": "N04",
@@ -2524,9 +2522,9 @@
     "INS-003_Boiler_Inspection_B-101.docx",
     "SOP-003_Boiler_Start-Up_Procedure.docx",
     "Maintenance_Schedule.xlsx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
     "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-    "INS-004_Turnaround_Inspection_Report_E-301.docx",
     "Equipment_Register.xlsx",
     "LOG-001_Morning_Shift_15-Jul-2026.txt",
     "Spare_Parts_Inventory.xlsx",
@@ -2549,14 +2547,14 @@
      "score": 0.157614
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 18,
+     "score": 0.102853
+    },
+    {
      "doc": "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
      "chunk_index": 0,
      "score": 0.089981
-    },
-    {
-     "doc": "LOG-002_Night_Shift_15-16-Jul-2026.txt",
-     "chunk_index": 4,
-     "score": 0.083926
     }
    ],
    "doc_recall_at_5": null,
@@ -2564,11 +2562,11 @@
    "passage_recall_at_5": null,
    "evidence_in_context": null,
    "top_score": 1.0,
-   "chunks_in_context": 10,
+   "chunks_in_context": 17,
    "excluded_fixture_chunks": 0,
    "graph_facts": 12,
    "graph_only_items": 1,
-   "latency_ms": 5548.2
+   "latency_ms": 5190.1
   },
   {
    "id": "N05",
@@ -2605,6 +2603,11 @@
      "score": 0.702751
     },
     {
+     "doc": "INS-004_Turnaround_Inspection_Report_E-301.docx",
+     "chunk_index": 0,
+     "score": 0.484532
+    },
+    {
      "doc": "SCN-002_P&ID_Cooling_Water.pdf",
      "chunk_index": 1,
      "score": 0.161144
@@ -2613,11 +2616,6 @@
      "doc": "Equipment_Register.xlsx",
      "chunk_index": 0,
      "score": 0.048641
-    },
-    {
-     "doc": "MAN-002_Air_Compressor_Manual.docx",
-     "chunk_index": 0,
-     "score": 0.02008
     }
    ],
    "doc_recall_at_5": null,
@@ -2625,11 +2623,11 @@
    "passage_recall_at_5": null,
    "evidence_in_context": null,
    "top_score": 0.942051,
-   "chunks_in_context": 10,
+   "chunks_in_context": 18,
    "excluded_fixture_chunks": 0,
    "graph_facts": 5,
    "graph_only_items": 1,
-   "latency_ms": 6424.4
+   "latency_ms": 6338.7
   }
  ]
 }

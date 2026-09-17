@@ -25,6 +25,15 @@ class EvalConfig:
     collection: str | None = None
     rerank_timeout_seconds: float | None = None
     prefer_domain_entities: bool = False
+    # Relationship facts labelled with the relationship's own source_document
+    # rather than the neighbour node's. Frozen configs pin this to False.
+    relationship_provenance: bool = False
+    # Passages kept per document. Every frozen Stage 5 config pins this to 1,
+    # the value they were measured at, so promoting a different production
+    # default cannot silently rewrite the baseline they are compared against.
+    chunks_per_document: int = 1
+    # Size of the unified context. None keeps the production default.
+    top_k: int | None = None
     description: str = ""
 
 
@@ -49,6 +58,36 @@ CONFIGS: dict[str, EvalConfig] = {
                     "density rather than raw count, documents ranked below domain "
                     "entities, and only relationship facts counted in the merge boost",
     ),
+    # Diagnostic only, never a default: isolates whether the single doc-recall
+    # regression passage2 shows (M10) comes from the dedup change or from the
+    # pre-existing graph merge boost that graph_v2 fixes.
+    "passage2_graphv2": EvalConfig(
+        "passage2_graphv2",
+        chunks_per_document=2,
+        prefer_domain_entities=True,
+        description="Diagnostic: two passages per document with the reworked graph arm",
+    ),
+    "passage2_ctx25": EvalConfig(
+        "passage2_ctx25",
+        chunks_per_document=2,
+        top_k=25,
+        description="Two passages per document, with the unified context sized to hold "
+                    "them (10 documents x 2 passages + 5 graph slots)",
+    ),
+    # Provenance correctness, measured on its own so the effect is separable
+    # from every other graph change. See ``graph_fact_relationship_provenance``.
+    "graph_provenance": EvalConfig(
+        "graph_provenance",
+        relationship_provenance=True,
+        description="Baseline with relationship facts attributed to the relationship's "
+                    "own source document instead of the neighbour node's",
+    ),
+    "passage2": EvalConfig(
+        "passage2",
+        chunks_per_document=2,
+        description="Baseline with two passages kept per document instead of one "
+                    "(top_k still counts documents, so no source loses its slot)",
+    ),
 }
 
 
@@ -62,6 +101,10 @@ def apply_config(config: EvalConfig) -> None:
     if config.rerank_timeout_seconds is not None:
         settings.rerank_timeout_seconds = config.rerank_timeout_seconds
     settings.graph_prefer_domain_entities = config.prefer_domain_entities
+    settings.graph_fact_relationship_provenance = config.relationship_provenance
+    settings.retrieval_chunks_per_document = config.chunks_per_document
+    if config.top_k is not None:
+        settings.retrieval_top_k = config.top_k
     # QdrantVectorStore.search caches on the query vector without the
     # collection name, so a stale entry would leak across collections.
     cache_manager._local_cache.cache.clear()
@@ -78,7 +121,9 @@ def settings_snapshot(config: EvalConfig) -> dict:
         "vector_top_k": VECTOR_TOP_K,
         "graph_top_k": GRAPH_TOP_K,
         "dedup_documents": settings.retrieval_dedup_documents,
+        "chunks_per_document": settings.retrieval_chunks_per_document,
         "graph_prefer_domain_entities": settings.graph_prefer_domain_entities,
+        "graph_fact_relationship_provenance": settings.graph_fact_relationship_provenance,
         "llm_model": settings.groq_model,
     }
 

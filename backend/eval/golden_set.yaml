@@ -477,7 +477,7 @@ items:
       any_of: ["3 in stock", "in stock: 3", "3 pcs", "3 pieces", "3 units", "3 bearings", "three in stock", "stock of 3", "quantity of 3", "3 available"]
       in_source: false
     - fact: "Minimum stock 2"
-      any_of: ["minimum stock of 2", "minimum stock is 2", "minimum stock: 2", "min stock: 2", "min stock 2", "minimum of 2", "minimum is 2", "minimum level of 2", "minimum of two", "minimum stock of two", "minimum required stock: 2", "minimum required: 2"]
+      any_of: ["minimum stock of 2", "minimum stock is 2", "minimum stock: 2", "min stock: 2", "min stock 2", "minimum of 2", "minimum is 2", "minimum level of 2", "minimum of two", "minimum stock of two", "minimum required stock: 2", "minimum required: 2", "minimum stock level is 2", "minimum stock level of 2", "minimum stock level: 2"]
       in_source: false
   must_refuse: false
   tags: [table_row]
@@ -485,7 +485,7 @@ items:
     status: revised
     reviewed_by: pratapVansh
     reviewed_on: "2026-09-13"
-    notes: "Verified in demo_dataset/Excel/Spare_Parts_Inventory.xlsx row 'BRG-6319 | Bearing SKF 6319 C3 | P-101 | Qty 3 | Min 2 | pcs'. Revised accepted phrasings: removed bare 'three' / 'two' (they matched almost any answer) and added quantity-qualified forms. Known limitation: BRG-6320 has identical quantities, so a row mix-up cannot be detected by fact matching. Validator note: quantities are bare table cells ('| 3 | 2 | pcs'), so quantity-qualified phrasings do not occur verbatim; both quantity facts are marked in_source: false (verified against the spreadsheet row). Added accepted phrasings minimum required stock: 2 / minimum required: 2 after the baseline answer run showed a correct answer phrased that way."
+    notes: "Verified in demo_dataset/Excel/Spare_Parts_Inventory.xlsx row 'BRG-6319 | Bearing SKF 6319 C3 | P-101 | Qty 3 | Min 2 | pcs'. Revised accepted phrasings: removed bare 'three' / 'two' (they matched almost any answer) and added quantity-qualified forms. Known limitation: BRG-6320 has identical quantities, so a row mix-up cannot be detected by fact matching. Validator note: quantities are bare table cells ('| 3 | 2 | pcs'), so quantity-qualified phrasings do not occur verbatim; both quantity facts are marked in_source: false (verified against the spreadsheet row). Added accepted phrasings minimum required stock: 2 / minimum required: 2 after the baseline answer run showed a correct answer phrased that way. Added minimum stock level is/of/: 2 on 16-Sep-2026 for the same reason: the chunk512 and graph_v2 answers state the fact as 'the defined minimum stock level is 2 units', which the list already accepted as 'minimum stock is 2' and 'minimum level of 2' but not with both words together. Wording only - the value 2 and the row are unchanged."
 
 - id: S18
   type: single_hop

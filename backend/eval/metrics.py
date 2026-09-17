@@ -96,8 +96,36 @@ _REFUSAL_PATTERNS = [
     # as "no findings were recorded" and as "no findings are recorded"; matching
     # only the past tense scored two answers with identical content differently
     # and cost graph_off a negative (eval item N04) on wording alone.
+    #
+    # The participle list is the same vocabulary the "not ... in the
+    # documents" pattern above already accepts, and for the same reason: a
+    # model writes this one premise correction as "are recorded", "are
+    # available", "are provided" or "are listed" interchangeably. Matching
+    # only a subset scored answers with identical content differently -
+    # chunk512's N04 ("no findings inside the steam drum are available")
+    # was a missed refusal while the baseline's "were recorded" wording of
+    # the same content was a correct one.
+    #
+    # The noun list is what keeps this narrow: it matches an absence of
+    # *recorded information*, not an inspection that looked and found
+    # nothing. "No defects were noted" is a substantive answer, which is
+    # why "defects" is absent from the nouns and "noted" from the verbs.
     r"\bno\b[^.]{0,60}\b(findings|results|readings|values|details|data|records?)\b[^.]{0,40}"
-    r"\b(were|was|are|is|have been|has been|had been) (recorded|found|documented|reported|made|given)",
+    r"\b(were|was|are|is|have been|has been|had been) "
+    r"(recorded|found|documented|reported|made|given|available|provided|listed)",
+    # The same premise correction with the verb in front of the noun: "the
+    # documents contain no findings from inside the steam drum" (eval item N04
+    # under graph_v2) states exactly what "no findings were recorded" states,
+    # so a third wording of one premise correction was scoring a third way.
+    #
+    # The subject has to be the corpus and the object a record-shaped noun, for
+    # the same reason the sibling pattern restricts its nouns: this must match
+    # an absence of *recorded information*, not an inspection that looked and
+    # found nothing. "The inspection report contains no defects" is a
+    # substantive answer and must not match.
+    r"\b(documents?|context|records?|sources?|excerpts?|materials?|files?)\b[^.]{0,40}"
+    r"\b(contains?|includes?|provides?|mentions?|records?|reports?|lists?|shows?)\s+no\b[^.]{0,40}"
+    r"\b(findings|results|readings|values|details|data|records?|information|documentation|entry|entries)\b",
 ]
 _REFUSAL = re.compile("|".join(f"(?:{p})" for p in _REFUSAL_PATTERNS))
 

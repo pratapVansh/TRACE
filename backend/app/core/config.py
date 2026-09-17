@@ -64,6 +64,24 @@ class Settings(BaseSettings):
     # Mean word confidence (0-1) below which an extraction is flagged as
     # low-quality in document metadata rather than silently trusted.
     ocr_min_confidence: float = 0.5
+    # Ceiling on how many pages of one scanned PDF are OCR'd.
+    #
+    # OCR is by far the most expensive step in ingestion and the queue drains
+    # serially on a single worker, so without a bound one document stalls every
+    # other one behind it. Measured 17 September 2026 on
+    # `SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf` at the configured
+    # 300 DPI: **9.4 s per page end to end** — ~1.2 s preprocessing (92% of it
+    # `fastNlMeansDenoising`) and the rest Tesseract. At that rate 100 pages is
+    # roughly 16 minutes and 500 pages roughly 78.
+    #
+    # Uploads are capped at 100 MB, which comfortably admits a 500-page scan,
+    # so the ceiling is what keeps the worst case survivable. Pages past it are
+    # not read: the document still indexes, and the result is flagged
+    # `ocr_truncated` rather than passed off as complete.
+    #
+    # Nothing in the current corpus is affected — its only OCR'd document is
+    # 3 pages, and the 177-page document is a .docx, which never reaches OCR.
+    ocr_max_pages: int = 100
 
     # Security
     security_headers_hsts_enabled: bool = False  # Enable only in production
@@ -129,6 +147,18 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
     groq_timeout_seconds: int = 60
     groq_max_retries: int = 3
+    # Output ceiling for one answer. On a reasoning model this covers the
+    # reasoning *and* the visible answer, and `gpt-oss-120b` spends it on
+    # reasoning first — so a hard question can exhaust the budget before
+    # emitting a single visible token and the user gets a blank answer.
+    # Measured in Stage 5: 3 of 200 generations came back empty.
+    #
+    # The ceiling stays at 1024 and the retry below is what handles the rare
+    # case. Raising the base would spend more on all 200 generations to fix 3,
+    # and it would change every prompt's cache key in the evaluation harness,
+    # forcing a full re-run for no measured gain. See `_generate_answer`.
+    llm_answer_max_tokens: int = 1024
+    llm_answer_retry_max_tokens: int = 3072
 
     # Retrieval (Milestone 8.1)
     retrieval_top_k: int = 15
@@ -144,6 +174,17 @@ class Settings(BaseSettings):
     # Callers who want a floor can still pass ``similarity_threshold``.
     retrieval_similarity_threshold: float = 0.0
     retrieval_dedup_documents: bool = True
+    # Passages kept per document when deduplicating. ``retrieval_top_k`` counts
+    # documents, so this widens how much of each source the model sees without
+    # costing a source its slot.
+    #
+    # Measured on the 35 answerable Stage 5 questions: the expected evidence
+    # reached the reranked candidate pool for 95.7% of them but only 61.4% of it
+    # survived into the LLM context, because one chunk is roughly one fifth of a
+    # document at 256 tokens. Two chunks per document recovers evidence-in-context
+    # to 86.2% — the same figure the 512-token ablation reached, by the same
+    # mechanism — with doc recall@5 and MRR unchanged.
+    retrieval_chunks_per_document: int = 2
 
     # Reranking.
     # Bi-encoder retrieval scores a query and a chunk independently, so it
@@ -188,6 +229,29 @@ class Settings(BaseSettings):
     # the requested top_k. The re-ranking can only reorder what was fetched.
     graph_candidate_multiplier: int = 6
 
+    # Provenance of a relationship fact: the relationship's own
+    # ``source_document`` rather than the neighbour node's.
+    #
+    # Entity nodes are shared across documents (MERGE on a type+name hash) and
+    # their ``source_document`` is COALESCEd to whichever document wrote them
+    # first, so it names an arbitrary document rather than the one the fact
+    # came from. Relationships carry their own ``source_document`` and the
+    # batch neighbour query already returns it. Measured against the live
+    # graph on 17 September 2026: the neighbour node's value disagrees with
+    # the relationship's own on **63 of 87 relationships (72.4%)**.
+    #
+    # This is not cosmetic. ``ContextMerger`` keys ``doc_facts_map`` on the
+    # fact's ``source_document``, so it decides which chunk a fact attaches to
+    # (and therefore the graph boost), and ``_graph_only_item`` turns an
+    # uncovered document name into a context item that can be cited — a
+    # citation naming a document the fact did not come from.
+    #
+    # Off by default: it changes which facts attach to which chunk, so
+    # enabling it would move the frozen Stage 5 baseline. It is gated exactly
+    # like ``graph_prefer_domain_entities`` and promoted on the same terms —
+    # measured at retrieval level, and at answer level before it ships.
+    graph_fact_relationship_provenance: bool = False
+
     # Neo4j graph store (Milestone 9)
     neo4j_uri: str = ""
     neo4j_username: str = ""
@@ -210,7 +274,20 @@ class Settings(BaseSettings):
         root.mkdir(parents=True, exist_ok=True)
         return root
 
-    # Background document processing queue
+    # Background document processing queue.
+    #
+    # ⚠ Single-process only. ``main.py`` starts one worker task per process and
+    # ``list_pending_ingestion_jobs`` is a plain SELECT — no ``FOR UPDATE
+    # SKIP LOCKED``, no atomic status claim — so two processes polling the same
+    # queue both select the same pending jobs and ingest each document twice:
+    # duplicate chunks, duplicate embeddings, duplicate graph writes.
+    #
+    # Nothing enforces the single process. It holds today only because the
+    # container runs ``uvicorn app.main:app`` with no ``--workers`` flag, which
+    # defaults to 1. Adding ``--workers N`` for request throughput would
+    # silently enable the double-ingestion path. Before scaling out, either set
+    # this to False on every replica but one, or give the queue a real claim
+    # protocol.
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0
     processing_queue_batch_size: int = 5

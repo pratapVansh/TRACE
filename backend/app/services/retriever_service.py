@@ -128,7 +128,9 @@ class RetrieverService:
         )
 
         chunks = (
-            dedup_by_document(chunks, top_k=top_k)
+            dedup_by_document(
+                chunks, top_k=top_k, per_document=settings.retrieval_chunks_per_document
+            )
             if dedup_documents
             else chunks[:top_k]
         )

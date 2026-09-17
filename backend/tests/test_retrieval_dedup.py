@@ -45,6 +45,41 @@ def test_keeps_the_best_even_when_the_weaker_chunk_came_first():
     assert result[0].score == 0.8
 
 
+def test_picks_the_best_passages_when_input_is_unsorted():
+    """Selection must be by score, not by arrival order.
+
+    Raising ``per_document`` replaced the original score comparison with
+    "keep the first N seen", which is only correct while the caller is
+    guaranteed to pass a sorted list. ``rerank`` sorts — but returns fusion
+    order untouched when reranking is off, including after a runtime timeout
+    disables it. In that case the weaker passages were kept.
+    """
+    result = dedup_by_document(
+        [
+            _chunk("A", 0.10, "a-worst"),
+            _chunk("A", 0.90, "a-best"),
+            _chunk("A", 0.50, "a-middle"),
+        ],
+        per_document=2,
+    )
+
+    assert [c.chunk_id for c in result] == ["a-best", "a-middle"]
+
+
+def test_document_ranking_uses_the_best_chunk_from_unsorted_input():
+    """Which documents survive ``top_k`` must not depend on arrival order."""
+    result = dedup_by_document(
+        [
+            _chunk("A", 0.10, "a-low"),
+            _chunk("B", 0.20, "b-only"),
+            _chunk("A", 0.95, "a-high"),
+        ],
+        top_k=1,
+    )
+
+    assert [c.chunk_id for c in result] == ["a-high"]
+
+
 def test_top_k_counts_documents_not_chunks():
     """The bug this exists to prevent.
 
@@ -131,9 +166,67 @@ async def test_vector_retriever_dedups_and_fills_top_k(monkeypatch):
     monkeypatch.setattr(hr, "_encode_batch_async", _fake_encode)
     monkeypatch.setattr(hr, "rerank", _no_rerank)
     monkeypatch.setattr(hr.settings, "retrieval_dedup_documents", True)
+    # Pin the passage budget rather than inheriting it: this test is about
+    # top_k counting documents, and it must not silently change meaning the
+    # next time the production default moves.
+    monkeypatch.setattr(hr.settings, "retrieval_chunks_per_document", 1)
 
     result = await hr.VectorRetriever(vector_store=_Store()).retrieve("q", top_k=5)
 
     assert [c.document_id for c in result] == ["A", "B", "C", "D", "E"]
     assert len(result) == 5, "a repeat passage must not shrink the result set"
     assert len({c.document_id for c in result}) == 5
+
+
+@pytest.mark.asyncio
+async def test_vector_retriever_keeps_two_passages_per_document(monkeypatch):
+    """The shipped default: ``top_k`` still counts documents, not passages.
+
+    ``retrieval_chunks_per_document`` was raised to 2 after Stage 5 measured
+    that one passage per document lost 34.3 points of evidence between the
+    reranked candidate pool and the LLM context. Five documents must still be
+    represented; they simply bring up to two passages each.
+    """
+    from app.services import hybrid_retriever as hr
+
+    payloads = [
+        ("A", 0.9), ("A", 0.8), ("A", 0.75), ("B", 0.7), ("C", 0.6),
+        ("C", 0.55), ("D", 0.5), ("E", 0.4), ("F", 0.3),
+    ]
+
+    class _Store:
+        async def hybrid_search(self, **kwargs):
+            return [
+                {
+                    "id": f"{doc}-{score}",
+                    "score": score,
+                    "payload": {
+                        "document_id": doc,
+                        "filename": f"{doc}.docx",
+                        "content": f"passage from {doc}",
+                        "chunk_id": f"{doc}-{score}",
+                    },
+                }
+                for doc, score in payloads
+            ]
+
+    async def _fake_encode(texts):
+        return [[0.0, 0.0, 0.0]]
+
+    async def _no_rerank(query, items, top_k=None):
+        return list(items)[:top_k] if top_k else list(items)
+
+    monkeypatch.setattr(hr, "_encode_batch_async", _fake_encode)
+    monkeypatch.setattr(hr, "rerank", _no_rerank)
+    monkeypatch.setattr(hr.settings, "retrieval_dedup_documents", True)
+    monkeypatch.setattr(hr.settings, "retrieval_chunks_per_document", 2)
+
+    result = await hr.VectorRetriever(vector_store=_Store()).retrieve("q", top_k=5)
+
+    assert len({c.document_id for c in result}) == 5, "top_k counts documents"
+    assert [c.document_id for c in result] == ["A", "A", "B", "C", "C", "D", "E"]
+    # A contributed three candidates; only its best two are kept.
+    assert [c.chunk_id for c in result if c.document_id == "A"] == ["A-0.9", "A-0.8"]
+    assert [c.score for c in result] == sorted(
+        (c.score for c in result), reverse=True,
+    ), "callers slicing a top-N expect the best passages first"

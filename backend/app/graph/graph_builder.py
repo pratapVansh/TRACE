@@ -123,8 +123,23 @@ class GraphBuilderService:
             for label, rels in rels_by_type.items():
                 query, params = _merge_rels_batch(label, rels, document_id, source_document, now)
                 result = await tx.run(query, params)
-                await result.consume()
-                rels_batched += len(rels)
+                # Count what the query actually wrote, not what was handed to
+                # it. ``_merge_rels_batch`` opens with MATCH on both endpoints,
+                # so any relationship naming an entity that was never created
+                # as a node is silently skipped — Cypher drops the row rather
+                # than failing. Adding ``len(rels)`` here therefore reported
+                # relationships that do not exist: one build logged
+                # "Equipment_Register.xlsx: 16 nodes, 16 rels" while Neo4j
+                # held 0 relationships for that document, because its
+                # LOCATED_IN / PART_OF targets are never extracted as entities.
+                written = await _written_count(result)
+                rels_batched += written
+                if written != len(rels):
+                    logger.warning(
+                        "Graph build dropped %d of %d %s relationship(s) — doc=%s: "
+                        "an endpoint entity does not exist as a node",
+                        len(rels) - written, len(rels), label, document_id,
+                    )
 
         except Exception as exc:
             await tx.rollback()
@@ -249,6 +264,19 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+async def _written_count(result) -> int:
+    """Relationships a merge batch actually wrote.
+
+    ``_merge_rels_batch`` ends with ``RETURN count(rel) AS written``, so the
+    result carries exactly one aggregate row. Reading it is the only way to
+    know how many rows survived the two opening MATCH clauses.
+    """
+    record = await result.single()
+    if record is None:
+        return 0
+    return int(record["written"] or 0)
+
+
 def _merge_nodes_batch(
     entities: list[Entity],
     document_id: str,
@@ -316,6 +344,7 @@ def _merge_rels_batch(
         rel.source_document = COALESCE(rel.source_document, r.source_document),
         rel.updated_at = r.updated_at,
         rel.created_at = COALESCE(rel.created_at, r.created_at)
+    RETURN count(rel) AS written
     """
     params = {
         "rels": [

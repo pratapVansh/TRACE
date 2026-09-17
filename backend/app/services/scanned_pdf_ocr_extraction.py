@@ -3,8 +3,8 @@ from dataclasses import dataclass
 import fitz
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.services.document_processing_exceptions import (
-    ImageOcrExtractionError,
     PdfTextExtractionError,
     ScannedPdfOcrExtractionError,
 )
@@ -25,6 +25,11 @@ class ScannedPdfOcrResult:
     page_count: int
     has_text: bool
     confidence: float | None = None
+    # Pages that raised during OCR and were skipped, 1-based. The rest of the
+    # document is still returned; see ``extract_scanned_pdf_text``.
+    failed_pages: tuple[int, ...] = ()
+    # Pages past ``ocr_max_pages`` that were never attempted.
+    skipped_pages: int = 0
 
     @property
     def is_low_confidence(self) -> bool:
@@ -33,6 +38,16 @@ class ScannedPdfOcrResult:
             self.confidence is not None
             and self.confidence < settings.ocr_min_confidence
         )
+
+    @property
+    def is_partial(self) -> bool:
+        """True when some of the document was not read.
+
+        Callers flag this rather than treating the text as complete: a
+        truncated or partly-failed extraction indexes cleanly and is otherwise
+        indistinguishable from a whole one.
+        """
+        return bool(self.failed_pages) or self.skipped_pages > 0
 
 
 def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
@@ -57,17 +72,43 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
     try:
         pages: list[ExtractedPage] = []
         confidences: list[float] = []
-        for page_index in range(document.page_count):
+        failed: list[int] = []
+
+        # Bound the work one document may cost. OCR is the most expensive path
+        # in ingestion and the queue drains serially, so an unbounded page
+        # count lets one document stall every other. Measured on this hardware
+        # at the configured 300 DPI: ~9.4 s per page end to end (~1.2 s of it
+        # preprocessing, the rest Tesseract). See ``ocr_max_pages``.
+        limit = max(settings.ocr_max_pages, 1)
+        pages_to_read = min(document.page_count, limit)
+        skipped = document.page_count - pages_to_read
+        if skipped > 0:
+            logger.warning(
+                "Scanned PDF has %d pages; OCR limited to the first %d "
+                "(ocr_max_pages). %d page(s) will not be indexed.",
+                document.page_count, pages_to_read, skipped,
+            )
+
+        for page_index in range(pages_to_read):
             page = document[page_index]
             try:
                 image_bytes = _render_page_to_png(page)
                 # The page was rendered here, so the render DPI is known
                 # exactly — PyMuPDF's PNG metadata reports 96 regardless.
                 ocr_result = extract_image_text(image_bytes, source_dpi=RENDER_DPI)
-            except ImageOcrExtractionError as exc:
-                raise ScannedPdfOcrExtractionError(
-                    f"Failed to OCR scanned PDF page {page_index + 1}",
-                ) from exc
+            except Exception as exc:
+                # One unreadable page used to abort the whole document, so a
+                # 100-page scan with a single bad page yielded no text at all —
+                # and the job then retried, repeating every expensive page
+                # before failing permanently. Skip the page instead and keep
+                # what the rest of the document says.
+                logger.warning(
+                    "OCR failed on scanned PDF page %d, skipping it: %s",
+                    page_index + 1, exc,
+                )
+                failed.append(page_index + 1)
+                pages.append(ExtractedPage(page_number=page_index + 1, text=""))
+                continue
 
             if ocr_result.confidence is not None:
                 confidences.append(ocr_result.confidence)
@@ -79,6 +120,13 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
                 ),
             )
 
+        # Every attempted page failing is an outage, not a partial read: there
+        # is nothing to index and the retry is worth taking.
+        if failed and len(failed) == pages_to_read:
+            raise ScannedPdfOcrExtractionError(
+                f"OCR failed on all {pages_to_read} page(s) of the scanned PDF",
+            )
+
         full_text = _join_page_text(pages)
         return ScannedPdfOcrResult(
             pages=tuple(pages),
@@ -86,6 +134,8 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
             page_count=document.page_count,
             has_text=bool(full_text.strip()),
             confidence=(sum(confidences) / len(confidences)) if confidences else None,
+            failed_pages=tuple(failed),
+            skipped_pages=skipped,
         )
     finally:
         document.close()

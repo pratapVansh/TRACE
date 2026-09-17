@@ -77,7 +77,9 @@ class VectorRetriever:
         reranked = await rerank(query, chunks)
         if not settings.retrieval_dedup_documents:
             return reranked[:top_k]
-        return dedup_by_document(reranked, top_k=top_k)
+        return dedup_by_document(
+            reranked, top_k=top_k, per_document=settings.retrieval_chunks_per_document
+        )
 
 
 class GraphRetriever:
@@ -167,13 +169,26 @@ class GraphRetriever:
                 if nkey in seen:
                     continue
                 seen.add(nkey)
+                # The neighbour node's source_document names whichever document
+                # happened to create that node first, not the document this
+                # relationship was extracted from; the relationship carries its
+                # own. See ``graph_fact_relationship_provenance``.
+                if settings.graph_fact_relationship_provenance:
+                    provenance = (
+                        nbr.relationship.source_document
+                        or nbr.entity.source_document
+                        or entity.source_document
+                    )
+                else:
+                    provenance = nbr.entity.source_document or entity.source_document
+
                 facts.append(GraphFact(
                     entity_name=entity.name,
                     entity_type=entity.type,
                     relationship_type=nbr.relationship.type,
                     related_entity=nbr.entity.name,
                     confidence=nbr.entity.confidence,
-                    source_document=nbr.entity.source_document or entity.source_document,
+                    source_document=provenance,
                 ))
 
         return facts

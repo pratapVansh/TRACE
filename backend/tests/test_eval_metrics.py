@@ -90,6 +90,79 @@ class TestAnswers:
         assert is_refusal(past) == is_refusal(present) is True
         assert refusal_outcome(past, True, None) == refusal_outcome(present, True, None) == "correct_refusal"
 
+    @pytest.mark.parametrize("participle", [
+        "recorded", "found", "documented", "reported", "made", "given",
+        "available", "provided", "listed",
+    ])
+    def test_premise_correction_accepts_every_synonym(self, participle):
+        """Vocabulary must not decide the label either, for the same reason.
+
+        A model writes this one premise correction as "are recorded", "are
+        available", "are provided" or "are listed" interchangeably; all of them
+        say the documents hold no such record.
+        """
+        assert is_refusal(f"The inspection was deferred, so no findings are {participle}.")
+
+    def test_n04_regression_chunk512_available_phrasing(self):
+        """Eval N04, chunk512: "are available" where the baseline said "were recorded".
+
+        The 512-token run answered the false premise correctly - the internal
+        inspection had not happened, so there is nothing to report - but the
+        classifier accepted only the "recorded" wording and scored it
+        ``missed_refusal``, which read as a chunk-size regression on negatives
+        that had not occurred. Both phrasings must classify the same way.
+        """
+        baseline = ("The internal inspection of boiler B‑101 was **deferred** to the next plant shutdown, "
+                    "so no internal visual findings inside the steam drum were recorded.")
+        chunk512 = ("The internal inspection of boiler B‑101 has not been completed; therefore no "
+                    "findings inside the steam drum are available.")
+        assert is_refusal(baseline) == is_refusal(chunk512) is True
+        assert refusal_outcome(baseline, True, None) == refusal_outcome(chunk512, True, None) == "correct_refusal"
+
+    def test_n04_regression_graph_v2_contains_no_phrasing(self):
+        """Eval N04, graph_v2: the verb in front of the noun.
+
+        A third wording of the one premise correction, and it was scoring a
+        third way. "The documents contain no findings from inside the steam
+        drum" says exactly what the baseline's "no findings were recorded"
+        says - the verb simply precedes the noun, so the pattern built around
+        a trailing participle could not see it, and the reworked graph arm
+        appeared to lose a negative it had nothing to do with.
+        """
+        baseline = ("The internal inspection of boiler B‑101 was **deferred** to the next plant shutdown, "
+                    "so no internal visual findings inside the steam drum were recorded.")
+        graph_v2 = ("The internal inspection of boiler B‑101 was deferred to the next shutdown; therefore "
+                    "the documents contain no findings from inside the steam drum. Only external "
+                    "ultrasonic thickness measurements of the drum shell are reported.")
+        assert is_refusal(baseline) == is_refusal(graph_v2) is True
+        assert refusal_outcome(baseline, True, None) == refusal_outcome(graph_v2, True, None) == "correct_refusal"
+
+    @pytest.mark.parametrize("answer", [
+        "The retrieved context contains no data on that valve.",
+        "The provided sources list no readings for the 2018 survey.",
+        "The supplied documents include no details of the repair.",
+    ])
+    def test_corpus_contains_no_record_is_a_refusal(self, answer):
+        """Same absence, stated subject-verb-object rather than passively."""
+        assert is_refusal(answer)
+
+    @pytest.mark.parametrize("answer", [
+        "No defects were noted during the internal inspection of the drum.",
+        "No anomalies were found during the walkdown; the unit ran normally.",
+        "No corrosion was found on the drum internals during the 2024 inspection.",
+        "The inspection report contains no defects.",
+        "The turnaround report documents no cracking on the shell.",
+    ])
+    def test_inspection_that_found_nothing_is_not_a_refusal(self, answer):
+        """The guard on the widened vocabulary.
+
+        "No defects were noted" is a substantive finding - the inspection
+        happened and saw nothing wrong - not a statement that the documents are
+        silent. The noun list is what separates the two, so it must keep
+        excluding defects, anomalies and corrosion.
+        """
+        assert not is_refusal(answer)
+
     def test_plain_answer_is_not_a_refusal(self):
         assert not is_refusal("PSV-101 is set at 6.0 barg on the pump discharge (SCN-002).")
         assert not is_refusal("No leakage was observed; the pump ran for 1 hour at 4.5 barg.")

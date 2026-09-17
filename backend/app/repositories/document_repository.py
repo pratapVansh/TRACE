@@ -291,6 +291,34 @@ class DocumentRepository:
         )
         return list(result.scalars().all())
 
+    async def count_unfinished_ingestion_jobs(self) -> int:
+        """Ingestion jobs that have not reached a terminal state.
+
+        Counts the same table the background worker drains, which is what
+        makes this number mean anything. The dashboard previously counted
+        ``processing_jobs`` — the legacy queue nothing writes to any more —
+        so its "Processing Queue" tile read 0 no matter how many documents
+        were actually waiting, and the tile is hidden when the count is 0.
+
+        ``processing`` is included alongside ``pending`` because a job being
+        worked on is still outstanding from the dashboard's point of view;
+        counting only ``pending`` would blink to 0 while a long OCR run is
+        in flight.
+        """
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(IngestionJob)
+            .where(
+                IngestionJob.status.in_(
+                    (
+                        ProcessingStatus.PENDING.value,
+                        ProcessingStatus.PROCESSING.value,
+                    ),
+                ),
+            ),
+        )
+        return result.scalar() or 0
+
     async def update_ingestion_job(
         self,
         job_id: uuid.UUID,

@@ -10,6 +10,7 @@ Run 2026-09-15T17:24:11+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 3
 | follow_up | 5 | 40.0% | 40.0% | 40.0% | 56.7% | 80.0% | 19.7% |
 
 - Correct refusal on negatives: 80.0%
+- Empty answers (model produced no text; scored 0.0 coverage): none
 - Grounding sentences: 127 grounded, 9 hedged, 138 unsupported
 - LLM latency (uncached calls): p50 2076 ms, p95 5391 ms
 

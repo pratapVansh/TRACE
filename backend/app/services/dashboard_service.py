@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
 from app.graph.base import GraphStore
-from app.processing.repository import ProcessingJobRepository
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.dashboard import DashboardResponse, RecentUploadItem
@@ -20,7 +19,6 @@ class DashboardService:
         self._graph_store = graph_store
         self._doc_repo = DocumentRepository(session)
         self._conv_repo = ConversationRepository(session)
-        self._job_repo = ProcessingJobRepository(session)
 
     async def get_dashboard(self) -> DashboardResponse:
         document_count = await self._doc_repo.count_documents()
@@ -44,7 +42,7 @@ class DashboardService:
                 logger.warning("Dashboard graph query failed: %s", exc)
 
         conversation_count = await self._conv_repo.count_conversations()
-        pending_jobs = await self._job_repo.count_pending_jobs()
+        pending_jobs = await self._doc_repo.count_unfinished_ingestion_jobs()
 
         raw_docs = await self._doc_repo.list_documents(skip=0, limit=5)
         recent_uploads = [

@@ -1,0 +1,1815 @@
+{
+ "kind": "answers",
+ "run_at": "2026-09-16T17:41:12+00:00",
+ "git": {
+  "head": "fbf3439",
+  "dirty": true
+ },
+ "settings": {
+  "name": "graph_v2",
+  "rerank": true,
+  "graph": true,
+  "collection": null,
+  "rerank_timeout_seconds": null,
+  "prefer_domain_entities": true,
+  "description": "Baseline plus the reworked graph arm: entities ranked by term density rather than raw count, documents ranked below domain entities, and only relationship facts counted in the merge boost",
+  "qdrant_collection": "document_chunks",
+  "rerank_enabled": true,
+  "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "embedding_model": "all-MiniLM-L6-v2",
+  "retrieval_top_k": 15,
+  "vector_top_k": 10,
+  "graph_top_k": 5,
+  "dedup_documents": true,
+  "graph_prefer_domain_entities": true,
+  "llm_model": "openai/gpt-oss-120b"
+ },
+ "llm_cache": {
+  "hits": 0,
+  "misses": 40
+ },
+ "cache_only": false,
+ "skipped_uncached": [],
+ "summary": {
+  "answerable": {
+   "n": 35,
+   "fact_coverage": 0.7071428571428572,
+   "fully_correct_rate": 0.5714285714285714,
+   "false_refusal_rate": 0.11428571428571428,
+   "citation_precision": 0.7979797979797979,
+   "citation_recall": 0.8666666666666666,
+   "grounded_share": 0.49140589569161
+  },
+  "by_type": {
+   "single_hop": {
+    "n": 20,
+    "fact_coverage": 0.625,
+    "fully_correct_rate": 0.5,
+    "false_refusal_rate": 0.15,
+    "citation_precision": 0.8421052631578947,
+    "citation_recall": 0.9,
+    "grounded_share": 0.503968253968254
+   },
+   "multi_hop": {
+    "n": 10,
+    "fact_coverage": 0.825,
+    "fully_correct_rate": 0.6,
+    "false_refusal_rate": 0.0,
+    "citation_precision": 0.8518518518518517,
+    "citation_recall": 0.8333333333333334,
+    "grounded_share": 0.5047619047619047
+   },
+   "follow_up": {
+    "n": 5,
+    "fact_coverage": 0.8,
+    "fully_correct_rate": 0.8,
+    "false_refusal_rate": 0.2,
+    "citation_precision": 0.5333333333333333,
+    "citation_recall": 0.8,
+    "grounded_share": 0.4144444444444444
+   }
+  },
+  "empty_answers": [],
+  "correct_refusal_rate": 1.0,
+  "grounding_totals": {
+   "grounded": 137,
+   "hedged": 8,
+   "unsupported": 136
+  },
+  "llm_ms_p50_uncached": 2476.3,
+  "llm_ms_p95_uncached": 4091.099999999996
+ },
+ "items": [
+  {
+   "id": "S01",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When we bring the steam boiler up from cold, how quickly are we allowed to increase the burn, and is there a cap on how fast the metal can heat up?",
+   "answer": "**Status:** ✅  \n\n**Answer:** During cold‑start, the boiler may be heated no faster than **50 °C per hour** while the pressure is raised to the target of 42 barg. This ramp limit is imposed to avoid thermal shock and protect the metal from excessive heating rates.  \n\n**Recommended Actions:**  \n1. Monitor drum temperature continuously and ensure the heating rate does not exceed 50 °C/hr.  \n2. Follow the SOP‑003 start‑up checklist to verify ramp‑rate compliance before each pressure increase.  \n3. Keep two operators present to watch for any deviation from the prescribed rate.  \n\n> [!EVIDENCE]  \n> - Document: SOP-003_Boiler_Start-Up_Procedure.docx, Confidence: 0.95, Score: 0.92, Click to preview document.  \n> - Highlight: “Bring boiler to 42 barg at <= 50 deg C/hr heating rate.”  \n\nMore details available.",
+   "fact_coverage": 0.5,
+   "facts_hit": {
+    "Firing rate may be increased by at most 5% per minute": false,
+    "Heating rate limited to 50 deg C per hour": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "SOP-003_Boiler_Start-Up_Procedure.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 1,
+    "unsupported": 2,
+    "grounded_share": 0.5714285714285714
+   },
+   "context_docs": [
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Equipment_Register.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "graph_facts": 4,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1543.9,
+   "total_ms": 2433.1
+  },
+  {
+   "id": "S02",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "How dry is the instrument air meant to be, and at what pressure does its relief device open?",
+   "answer": "**Status:** Complete  \n\n**Answer:**  \n- The instrument air dryer on the C‑201 compressor is specified to achieve a dew‑point of **‑40 °C**, indicating very dry air.  \n- No document in the provided set specifies the opening pressure of a relief device for the instrument air system.\n\n**Recommended Actions:**  \n1. Review the detailed compressor safety data sheet or relief valve specification sheet to locate the relief‑device set‑point.  \n2. Verify the actual relief valve setting on‑site against the design pressure of the instrument air system.  \n3. Document the relief‑device pressure in the instrument air system’s operating procedures.\n\n**Evidence:**  \n> [!EVIDENCE]  \n- **Document:** MAN-002_Air_Compressor_Manual.docx – **Confidence:** 0.9 – **Score:** 0.92 – [Click to preview](#) – *Excerpt:* “Dew Point: -40 deg C PDP”.  \n- **Document:** FAILTEST-143234.txt – **Confidence:** 0.8 – **Score:** 0.78 – [Click to preview](#) – *Excerpt:* “Equipment: FAIL-143234 -- Instrument Air Dryer.”  \n- **No supporting evidence found** for the relief‑device opening pressure.\n\nMore details available.",
+   "fact_coverage": 0.5,
+   "facts_hit": {
+    "Pressure dew point of -40 deg C": true,
+    "Pressure safety valve set at 10.5 barg": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 1,
+    "unsupported": 5,
+    "grounded_share": 0.25
+   },
+   "context_docs": [
+    "FAILTEST-143234.txt",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "INC-002_Valve_Failure_V-220.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "Equipment_Register.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "FIX1-PDF-142247.pdf"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2234.5,
+   "total_ms": 3100.7
+  },
+  {
+   "id": "S03",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap"
+   ],
+   "question": "What was suggested to stop grit in the flush water chewing up the seal faces?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \nThe manual advises **thoroughly flushing the seal chamber and barrier circuit before fitting a new cartridge** and treating any repeat failure within 2,000 hours as a cleanliness issue. This practice is intended to remove grit from the flush water that could otherwise “chew up” the seal faces. **FACT**\n\n**Recommended Actions**  \n1. Perform a complete flush of the seal chamber and barrier circuit prior to seal replacement.  \n2. Verify flush water is free of grit; use filtration if needed.  \n3. If a repeat seal failure occurs within 2,000 hours, investigate and address cleanliness as the primary cause.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"confidence\":0.95,\"score\":0.92,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "Install a Y-strainer on the seal water line": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 2,
+    "unsupported": 2,
+    "grounded_share": 0.3333333333333333
+   },
+   "context_docs": [
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "graph_facts": 11,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2321.4,
+   "total_ms": 32324.5
+  },
+  {
+   "id": "S04",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution",
+    "distractor_doc"
+   ],
+   "question": "When we take the condensate return pump off line, how far do we close the discharge valve before pressing stop, and why?",
+   "answer": "**Status:** Success  \n\n**Answer:**  \nWhen taking pump P‑102 (condensate return pump) off‑line, close the discharge valve slowly until it is only 10 % open (i.e., about 90 % closed) before pressing STOP on the local control station or DCS. This partial closure reduces back‑flow pressure on the pump shaft and prevents hydraulic shock that could damage the pump or its seals.  \n\n**Recommended Actions**  \n1. Close the discharge valve to 10 % open, monitoring the movement to avoid rapid closure.  \n2. Verify the valve position on the control panel before proceeding.  \n3. Press STOP on the local control station/DCS and confirm coast‑down.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"SOP-002_Pump_Shut-Down_Procedure.docx\",\"confidence\":0.9,\"score\":0.95,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Close the discharge valve slowly to 10% before stopping": true,
+    "To reduce backflow": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 1,
+    "unsupported": 1,
+    "grounded_share": 0.6666666666666666
+   },
+   "context_docs": [
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2396.4,
+   "total_ms": 31840.9
+  },
+  {
+   "id": "S05",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap",
+    "compound"
+   ],
+   "question": "Which control system vendor runs the site, and what's used for the safety instrumented layer?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The provided documents do not contain information about which control‑system vendor operates the site, nor do they specify the technology used for the safety‑instrumented layer.  \n\n**Recommended Actions**  \n1. Review the plant’s control‑system design or vendor contract files to identify the vendor.  \n2. Examine detailed P&ID or SIS specification documents for the safety‑instrumented layer components (e.g., safety PLCs, SIS controllers).  \n3. Contact the Rotating Equipment Engineer or Safety Officer for clarification on the SIS architecture.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"documents_cited\": [], \"note\": \"No supporting evidence found in the retrieved context.\"}  \n\nMore details available.",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "DCS is Yokogawa CENTUM VP": false,
+    "SIS is Triconex": false
+   },
+   "refusal": "false_refusal",
+   "cited_docs": [],
+   "citation_precision": null,
+   "citation_recall": 0.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.4
+   },
+   "context_docs": [
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "PPT-002_Plant_Overview.pptx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 5567.4,
+   "total_ms": 11569.0
+  },
+  {
+   "id": "S06",
+   "type": "single_hop",
+   "tags": [
+    "no_lexical_overlap"
+   ],
+   "question": "Is there any seasonal change recommended to the water treatment chemical programme?",
+   "answer": "**Status:** ✅ Seasonal recommendation identified  \n\n**Answer:** Yes. The quarterly preventive maintenance report for cooling tower CT‑01 advises increasing the biocide dosing frequency during the monsoon season.  \n\n**Recommended Actions**  \n1. Adjust the water‑treatment schedule to add extra biocide doses throughout the monsoon months.  \n2. Document the revised dosing plan in the water‑treatment log and notify the operations team.  \n3. Monitor biocide residuals after each dosing to confirm effectiveness.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"MNT-001_Quarterly_PM_Cooling_Tower.docx\",\"confidence\":0.92,\"score\":0.94,\"preview_link\":\"#\"}  \n> Highlight: “Increase biocide dosing frequency during monmonsoon months.”  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "For cooling tower CT-01: increase biocide dosing frequency during the monsoon months": true,
+    "For cooling tower CT-01: the change concerns biocide dosing": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 3,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.42857142857142855
+   },
+   "context_docs": [
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "graph_facts": 9,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1818.5,
+   "total_ms": 30618.2
+  },
+  {
+   "id": "S07",
+   "type": "single_hop",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "After the V-220 diaphragm job on the 15-16 July night shift, what time did the valve go back into automatic, and what was the downstream pressure then?",
+   "answer": "**Status:** Information retrieved  \n\n**Answer:** The V‑220 valve was returned to automatic mode at **23:30** on the night shift of 15‑16 July, and the downstream pressure at that time was **7.2 barg**.  \n\n**Recommended Actions**\n1. Continue monitoring V‑220’s position and downstream pressure during the next shift.  \n2. Record pressure trends in the control system log for trend analysis.  \n3. Verify that the actuator diaphragm remains functional during the next routine inspection.  \n\n**Evidence**\n> [!EVIDENCE]\n> {\"document_name\":\"LOG-002_Night_Shift_15-16-Jul-2026.txt\",\"chunk_content\":\"23:30   --  V-220 returned to service in AUTO mode. Downstream pressure: 7.2 barg.\",\"highlighted_excerpt\":\"23:30   --  V-220 returned to service in AUTO mode. Downstream pressure: 7.2 barg.\",\"page_number\":1,\"confidence\":0.95}\n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Returned to AUTO at 23:30": true,
+    "Downstream pressure 7.2 barg": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 2,
+    "grounded_share": 0.7142857142857143
+   },
+   "context_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1744.9,
+   "total_ms": 29658.4
+  },
+  {
+   "id": "S08",
+   "type": "single_hop",
+   "tags": [],
+   "question": "For T-501, what did the grounding cable resistance measurement come out at, and how does that sit against the allowable?",
+   "answer": "**Status:** ✅ Compliant  \n\n**Answer:** The grounding cable resistance for tank T‑501 was measured at **2.3 Ω**. The allowable limit is **< 10 Ω**, so the reading is comfortably within the permitted range.  \n\n**Recommended Actions** (max 3):  \n1. Log the measurement in the asset’s inspection record.  \n2. Include a re‑check of grounding resistance in the next scheduled inspection (2026‑2031).  \n3. No corrective action required at this time.  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"INS-001_Pressure_Vessel_Inspection_T-501\",\"confidence\":0.95,\"score\":\"N/A\",\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Grounding cable resistance measured 2.3 ohm": true,
+    "Allowable limit is less than 10 ohm": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.2857142857142857
+   },
+   "context_docs": [
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-002_Plant_Overview.pptx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "FIX1-PDF-142247.pdf"
+   ],
+   "graph_facts": 8,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2353.5,
+   "total_ms": 30818.7
+  },
+  {
+   "id": "S09",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When V-220 stopped responding, how far was its actual position from what the controller was asking for, and how high did the header pressure climb?",
+   "answer": "**Status:** Investigated  \n\n**Answer:**  \n- The valve remained at **45 % open** while the controller was commanding **25 % open**, a **20 % deviation**.  \n- The steam header pressure climbed to **8.2 barg**, surpassing the 7.5 barg alarm threshold.  \n\n**Recommended Actions**  \n1. Inspect the actuator and positioner for mechanical binding or diaphragm issues.  \n2. Verify the control signal and recalibrate the valve position feedback loop.  \n3. Test the emergency vent valve (PV‑2201) to ensure reliable opening at over‑pressure conditions.  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"INC-002_Valve_Failure_V-220.docx\",\"confidence\":0.95,\"score\":0.92,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Valve stuck at 45% open": true,
+    "Controller demanded 25%": true,
+    "Pressure rose to 8.2 barg": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INC-002_Valve_Failure_V-220.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 3,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.5
+   },
+   "context_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "graph_facts": 15,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2574.5,
+   "total_ms": 31608.5
+  },
+  {
+   "id": "S10",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "no_lexical_overlap"
+   ],
+   "question": "If the feed pump's vibration spectrum picks up a component at a bit under half running speed, what does that point to, and what should be done first?",
+   "answer": "**Status:** FACT  \n\n**Answer:** A vibration component at just under half the pump’s running speed (≈0.42‑0.48 × RPM) is indicative of **oil whirl in a sleeve bearing**.  \n\n**Recommended Actions**  \n1. **Inspect the bearing oil** – verify oil quality, level, and temperature; replace or replenish if contaminated or low.  \n2. **Check bearing load** – ensure the pump is not operating under reduced load conditions that can exacerbate oil whirl.  \n3. **Monitor the vibration** – record the spectrum after corrective actions and compare to the baseline to confirm the issue is resolved.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"documents\":[{\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"highlighted_excerpt\":\"Sub synchronous 0.42 to 0.48x ... Oil whirl in sleeve bearing ... Grows with reduced load\",\"page_number\":null,\"confidence\":0.9},{\"document_name\":\"MAN-001_Centrifugal_Pump_Manual.docx\",\"highlighted_excerpt\":\"High Vibration: Check alignment, bearing condition, cavitation\",\"page_number\":null,\"confidence\":0",
+   "fact_coverage": 0.3333333333333333,
+   "facts_hit": {
+    "It indicates oil whirl": true,
+    "First response: reduce oil temperature by 5 K": false,
+    "Plan a bearing clearance check": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 6,
+    "hedged": 0,
+    "unsupported": 1,
+    "grounded_share": 0.8571428571428571
+   },
+   "context_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "FIX1-DOCX-142247.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 4013.4,
+   "total_ms": 10233.2
+  },
+  {
+   "id": "S11",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "compound",
+    "table_row"
+   ],
+   "question": "Fitting a new bearing to the feed pump - how hot can we take it during the shrink fit, and what does the locknut get tightened to?",
+   "answer": "**Status:** Complete  \n\n**Answer:**  \n- **Shrink‑fit temperature:** Heat the replacement bearing to **no more than 120 °C** (do not exceed 125 °C, as the steel may temper).  \n- **Locknut torque:** The specific tightening value for the bearing locknut is not provided in the retrieved documents; refer to **Section 24** of the pump manual for the exact torque specification.\n\n**Recommended Actions**  \n1. Heat the bearing with an induction heater, monitoring temperature to stay ≤ 120 °C.  \n2. Consult Section 24 of the HPX4000 Boiler Feed Pump manual to obtain the correct locknut torque value.  \n3. After installation, verify torque with a calibrated torque wrench and record the value in the equipment history file.\n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"chunk_content\":\"Heat the replacement bearing in an induction heater to a maximum of 120 degrees Celsius... Ref... tighten to the value given in Section 24...\",\"highlighted_excerpt\":\"maximum of 120 degrees Celsius; tighten to the value given in Section 24\",\"page_number\":1,\"confidence\":0.94}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"FIX1-DOCX-142247.docx\",\"chunk_content\":\"The drive end bearing 6309-2RS was removed... The housing drain plug tightened to 35 Nm and lock‑wired.\",\"highlighted_excerpt\":\"drain plug tightened to 35 Nm\",\"page_number\":1,\"confidence\":0.91}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"MNT-002_Bearing_Replacement_P-101.docx\",\"chunk_content\":\"Installed new DE and NDE bearings using induction heater (max 110 deg C)...\",\"highlighted_excerpt\":\"induction heater (max 110 deg C)\",\"page_number\":1,\"confidence\":0.88}  \n\nMore details available.",
+   "fact_coverage": 0.5,
+   "facts_hit": {
+    "Maximum bearing heating temperature 120 deg C": true,
+    "Bearing locknut KM17 torque 210 Nm": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx"
+   ],
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 7,
+    "hedged": 1,
+    "unsupported": 2,
+    "grounded_share": 0.7
+   },
+   "context_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "FIX1-DOCX-142247.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INS-002_Vibration_Analysis_C-201.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2375.3,
+   "total_ms": 31484.9
+  },
+  {
+   "id": "S12",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "On the E-301 shell survey, what thickness did the north bottom position measure this time round, and what had it been eight years earlier?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The north‑bottom shell survey (grid B3) measured a thickness of **12.4 mm** this inspection. The report does not state the thickness recorded eight years earlier; it only provides the corrosion rate (0.138 mm/yr) over that interval.  \n\n**Recommended Actions**  \n1. Retrieve the prior inspection record to obtain the historic thickness value.  \n2. Compare the observed corrosion rate with the projected remaining life (≈21.7 years).  \n3. Plan the next shell‑thickness survey according to the turnaround schedule.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"chunk_content\":\"The governing location is grid B3 on the bottom of the shell at the mid station, where the measured thickness is 12.4 millimetres and the corrosion rate over the eight year interval is 0.138 millimetres per year...\",\"highlighted_excerpt\":\"measured thickness is 12.4 millimetres\",\"page_number\":null,\"confidence\":0.95}",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "North bottom (A3) measured 12.9 mm in 2026": false,
+    "It was 13.6 mm in 2018": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 1,
+    "grounded_share": 0.8333333333333334
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "FIX1-TXT-142247.txt",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "FIX1-PDF-142247.pdf"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2961.2,
+   "total_ms": 31924.1
+  },
+  {
+   "id": "S13",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution"
+   ],
+   "question": "What turned out to be the source of the oil leak on the cooling water pump in April, and what was it torqued to?",
+   "answer": "**Status:** Identified  \n\n**Answer:** The oil leak on cooling‑water pump P‑101 was traced to a loose bearing‑housing drain plug. The plug was retightened to **35 Nm**.  \n\n**Recommended Actions**  \n1. Add a torque‑verification step for the drain plug to the pump‑maintenance checklist.  \n2. Apply a lock‑wire to the drain plug after tightening to prevent re‑loosening.  \n3. Include periodic torque inspections of the plug in the quarterly preventive‑maintenance program.  \n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"INC-001_Pump_Oil_Leakage_P-101.docx\",\"chunk_content\":\"... Bearing housing drain plug found to be loose -- tightened to 35 Nm ...\",\"highlighted_excerpt\":\"Bearing housing drain plug found to be loose -- tightened to",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Loose bearing housing drain plug": true,
+    "Tightened to 35 Nm": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 2,
+    "grounded_share": 0.7142857142857143
+   },
+   "context_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "Equipment_Register.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2792.5,
+   "total_ms": 32019.5
+  },
+  {
+   "id": "S14",
+   "type": "single_hop",
+   "tags": [
+    "entity_resolution"
+   ],
+   "question": "How bad were the vibration levels on the instrument air compressor in the May survey, and what did the analyst think was causing them?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The May 10‑2026 vibration survey of the instrument air compressor (C‑201) recorded RMS values of **1.5 mm/s – 4.1 mm/s** across the eight bearing points (see measurement summary). The highest reading was **4.1 mm/s** at the compressor drive‑end (X‑axis). According to ISO 10816‑3, these values fall within the **moderate (Level 2)** vibration band.  \n- The analyst, **Suresh Kumar**, did **not** identify a specific cause for the vibration in the report.  \n\n**Recommended Actions (max 3):**  \n1. Compare the current readings with historical trends to verify if vibration is increasing.  \n2. Conduct a visual inspection of bearings, mounts, and couplings per standard procedures.  \n3. Schedule a repeat vibration measurement within 30 days to confirm stability.  \n\n**Evidence:**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-002_Vibration_Analysis_C-201\",\"confidence\":0.9,\"score\":95,\"preview_link\":\"#\"}  \n\n> [!ASSUMPTION] No supporting evidence found regarding the analyst’s suspected cause.  \n\nMore details available.",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "Compressor bearings in the ALERT zone per ISO 10816-3": false,
+    "Likely cause is slight unbalance (1x RPM peak)": false
+   },
+   "refusal": "false_refusal",
+   "cited_docs": [
+    "INS-002_Vibration_Analysis_C-201.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 1,
+    "unsupported": 7,
+    "grounded_share": 0.2
+   },
+   "context_docs": [
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "FIX1-DOCX-142247.docx",
+    "Maintenance_Schedule.xlsx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "FAILTEST-143234.txt"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2646.4,
+   "total_ms": 31195.7
+  },
+  {
+   "id": "S15",
+   "type": "single_hop",
+   "tags": [],
+   "question": "On the cooling water P&ID, what is the relief valve on the pump discharge set to?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about the setpoint or pressure setting of the relief valve on the pump discharge in the cooling water P&ID.\n\n**Recommended Actions**\n1. Review the full engineering P&ID drawing (PID‑CW‑001) for the relief valve specification.  \n2. Contact the process engineering team to confirm the design setpoint.  \n3. Verify the relief valve tag and settings during the next maintenance inspection.\n\n**Evidence**\n> [!DOCUMENT] {\"document_name\":\"SCN-002_P&ID_Cooling_Water.pdf\",\"chunk_content\":\"ABC Petrochemicals Pvt. Ltd. - Gujarat Manufacturing Plant\\nSCN-002: P&ID - COOLING WATER SUPPLY SYSTEM\\nSheet 1 of 1 | Drawing No. PID-CW-001 | Rev B\\nLEGEND:\\n  --|-->  Gate Valve      ||  Pump         PSV  Safety Valve\\n  --|<--  Check Valve     |||  Motor        PIC  Pressure Controller\\n  ==|==  Control Valve    HX  Heat Exchanger  FT   Flow Transmitter\",\"highlighted_excerpt\":\"LEGEND: ... PSV  Safety Valve\",\"page_number\":1,\"confidence\":0.92}  \n\nMore details available.",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "PSV-101 set at 6.0 barg": false
+   },
+   "refusal": "false_refusal",
+   "cited_docs": [
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 6,
+    "hedged": 0,
+    "unsupported": 2,
+    "grounded_share": 0.75
+   },
+   "context_docs": [
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "Equipment_Register.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1780.8,
+   "total_ms": 31470.8
+  },
+  {
+   "id": "S16",
+   "type": "single_hop",
+   "tags": [
+    "ocr_source",
+    "compound"
+   ],
+   "question": "For the hot work on the ethylene pipeline in September, how often did the atmosphere have to be retested, and at what LEL did everyone have to stop and evacuate?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The hot‑work permit requires the atmosphere to be retested **every 2 hours** while work is ongoing, and again immediately after any break longer than 30 minutes. Work must be stopped and all personnel evacuated when the lower explosive limit (LEL) reaches **5 %**.  \n\n**Recommended Actions**\n1. Schedule gas‑monitoring checks at 2‑hour intervals and after any pause >30 min.  \n2. Install an LEL alarm set to trigger at 5 % and conduct a muster‑point evacuation drill.  \n3. Document each retest in the permit log and retain records for audit.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf\",\"confidence\":0.95,\"score\":92,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Retest every 2 hours (and after any break over 30 minutes)": true,
+    "Stop work and evacuate if LEL reaches 5 per cent": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.16666666666666666
+   },
+   "context_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "PPT-002_Plant_Overview.pptx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "graph_facts": 4,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2285.6,
+   "total_ms": 31774.4
+  },
+  {
+   "id": "S17",
+   "type": "single_hop",
+   "tags": [
+    "table_row"
+   ],
+   "question": "How many SKF 6319 C3 bearings for P-101 are in the stores, and what is the minimum we are supposed to keep?",
+   "answer": "**Status:** Completed  \n\n**Answer:** There are **3** SKF 6319 C3 bearings stocked for equipment **P‑101**, and the defined **minimum stock level is 2** units.  \n\n**Recommended Actions**\n1. Verify the bearing count during the next inventory audit.  \n2. If the quantity drops below the minimum, initiate a reorder to restore the level to at least 2.  \n3. Update the maintenance schedule and inventory records to reflect the current stock.  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"Spare_Parts_Inventory.xlsx\",\"chunk_content\":\"BRG-6319 | Bearing SKF 6319 C3 | P-101 | 3 | 2 | pcs | 20-Apr-2026\",\"highlighted_excerpt\":\"BRG-6319 | Bearing SKF 6319 C3 | P-101 | 3 | 2 | pcs\",\"page_number\":1,\"confidence\":0.9}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "3 in stock": true,
+    "Minimum stock 2": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.2
+   },
+   "context_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "Maintenance_Schedule.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "graph_facts": 15,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3737.8,
+   "total_ms": 9570.8
+  },
+  {
+   "id": "S18",
+   "type": "single_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "When starting up P-101, what discharge pressure should we see and how quickly, and what's the most the motor should draw?",
+   "answer": "**Status:** FACT  \n\n**Answer:**  \n- During start‑up of pump P‑101, the discharge pressure must rise to **4.5 barg within 5 seconds** after the drive motor is started.  \n- The SOP does not specify a maximum motor draw (current or power) for P‑101; that information is not present in the retrieved documents.  \n\n**Recommended Actions:**  \n1. Monitor discharge pressure during start‑up to confirm the 4.5 barg/5 s target.  \n2. Record motor current at start‑up and compare it with the motor name‑plate rating (45 kW, 415 V, 3‑phase) to ensure it stays within design limits.  \n3. If motor draw limits are needed, consult the motor data sheet or the OEM manual for P‑101.  \n\n**Evidence:**  \n> [!EVIDENCE] {\"document_name\":\"SOP-001_Pump_Start-Up_Procedure.docx\",\"confidence\":0.95,\"score\":0.92,\"preview_link\":\"#\"}  \n> [!EVIDENCE] {\"document_name\":\"MAN-001_Centrifugal_Pump_Manual.docx\",\"confidence\":0.90,\"score\":0.88,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 0.6666666666666666,
+   "facts_hit": {
+    "Discharge pressure 4.5 barg": true,
+    "Within 5 seconds": true,
+    "Motor current not above FLA of 45 A": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "citation_precision": 0.5,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.2857142857142857
+   },
+   "context_docs": [
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "graph_facts": 17,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2150.4,
+   "total_ms": 31414.1
+  },
+  {
+   "id": "S19",
+   "type": "single_hop",
+   "tags": [
+    "long_doc"
+   ],
+   "question": "What pressures were the two sides of E-301 hydro-tested at after the tubes were plugged, and for how long?",
+   "answer": "**Status:** Complete  \n\n**Answer:**  \n- **Shell side:** 24.1 barg, held for 30 minutes.  \n- **Tube side:** 54.6 barg, held for 30 minutes.  \n\n**Recommended Actions**  \n1. Verify gauge GA‑2026‑0912 calibration before the next hydro‑test.  \n2. Record pressure‑hold times in the test log for traceability.  \n3. Review the defect register for any post‑test observations.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"chunk_content\":\"Both sides were hydrostatically tested after the tube plugging was complete. The shell side was tested at 24.1 barg and the tube side at 54.6 barg, each held for 30 minutes, using demineralised water with chloride content below 25 parts per million at 22 degrees Celsius. No leakage or pressure decay was observed on either side. Test gauge GA-2026-0912, calibration due 14-Mar-2027.\",\"highlighted_excerpt\":\"shell side ... 24.1 barg ... tube side ... 54.6 barg ... each held for 30 minutes\",\"page_number\":1,\"confidence\":0.96}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Shell side 24.1 barg": true,
+    "Tube side 54.6 barg": true,
+    "Held for 30 minutes": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 8,
+    "hedged": 0,
+    "unsupported": 1,
+    "grounded_share": 0.8888888888888888
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "Equipment_Register.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INC-002_Valve_Failure_V-220.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "graph_facts": 11,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2048.1,
+   "total_ms": 31131.0
+  },
+  {
+   "id": "S20",
+   "type": "single_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "At what bearing metal temperature does the boiler feed pump alarm, and at what temperature does it trip?",
+   "answer": "**Answer:**  \nThe boiler feed pump alarms when the bearing metal temperature reaches **85 °C** and trips at **95 °C**.\n\n**Recommended Actions (max 3):**  \n1. Continuously monitor bearing metal temperature against the 85 °C alarm set‑point.  \n2. Activate cooling or reduce load if temperature approaches the alarm threshold.  \n3. Initiate a shutdown procedure if the temperature reaches 95 °C to prevent equipment damage.\n\n**Evidence (max 3):**  \n> [!EVIDENCE]  \n> {\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"confidence\":0.92,\"score\":0.94,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Alarm at 85 deg C": true,
+    "Trip at 95 deg C": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.3333333333333333
+   },
+   "context_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "FIX1-DOCX-142247.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Equipment_Register.xlsx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1884.1,
+   "total_ms": 30921.7
+  },
+  {
+   "id": "M01",
+   "type": "multi_hop",
+   "tags": [],
+   "question": "The P-101 oil leak in April was blamed on an earlier maintenance job. Which job was that, and what was its work order number?",
+   "answer": "**Status:** Identified  \n\n**Answer:** The April oil leak on pump P‑101 was traced to the bearing‑replacement job performed on 12 Mar 2026. The maintenance work order for that job is **WO‑2026‑0341**.  \n\n**Recommended Actions**  \n1. Verify bearing‑plug torque (35 Nm) after every bearing replacement.  \n2. Apply a lock‑wire to the drain plug as a secondary retention method.  \n3. Add a plug‑torque check to the post‑maintenance sign‑off checklist.  \n\n**Evidence**  \n> [!DOCUMENT] {\"document_name\":\"MNT-002_Bearing_Replacement_P-101.docx\",\"chunk_content\":\"... Work Order: WO-2026-0341 ...\",\"highlighted_excerpt\":\"Work Order: WO-2026-0341\",\"page_number\":1,\"confidence\":0.9}  \n\n> [!DOCUMENT] {\"document_name\":\"INC-001_Pump_Oil_Leakage_P-101.docx\",\"chunk_content\":\"... Root Cause: Plug not tightened after bearing replacement ...\",\"highlighted_excerpt\":\"Root Cause: Plug not tightened after bearing replacement\",\"page_number\":1,\"confidence\":0.9}  \n\n> [!DOCUMENT] {\"document_name\":\"PPT-001_Monthly_Safety_Training_Jul2026.ppt",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "The bearing replacement of 12 March 2026 (MNT-002)": true,
+    "Work order WO-2026-0341": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx"
+   ],
+   "citation_precision": 0.6666666666666666,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.5555555555555556
+   },
+   "context_docs": [
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Maintenance_Schedule.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "graph_facts": 17,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2782.0,
+   "total_ms": 31135.5
+  },
+  {
+   "id": "M02",
+   "type": "multi_hop",
+   "tags": [],
+   "question": "After the V-220 valve failure, what replacement interval was set for its actuator diaphragm, and when is the next replacement due?",
+   "answer": "**Status:** Information retrieved  \n\n**Answer:** The actuator diaphragm for valve **V‑220** is now scheduled on a **2‑year replacement interval**. The last diaphragm change was performed on **15 Jul 2026**, so the next replacement is due on **15 Jul 2028**.  \n\n**Recommended Actions**\n1. Enter the 15 Jul 2028 replacement date into the plant maintenance calendar.  \n2. During the next quarterly inspection, visually inspect the diaphragm for signs of wear or cracking.  \n3. Verify that a spare diaphragm (Fisher part DIA‑220‑EPDM‑01) is stocked before the due date.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INC-002_Valve_Failure_V-220.docx\",\"highlighted_excerpt\":\"Added V-220 to critical valve PM schedule with 2-year diaphragm replacement interval.\",\"confidence\":0.95,\"score\":0.92,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"highlighted_excerpt\":\"V-220 | Diaphragm replacement | 2 years | 15-Jul-2026 | 15-Jul-2028 | Suresh Kumar\",\"confidence\":0.96,\"score\":0.94,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "2-year replacement interval": true,
+    "Next due 15 July 2028": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "Maintenance_Schedule.xlsx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.5714285714285714
+   },
+   "context_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "graph_facts": 7,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 5991.6,
+   "total_ms": 11380.8
+  },
+  {
+   "id": "M03",
+   "type": "multi_hop",
+   "tags": [
+    "entity_resolution",
+    "table_row"
+   ],
+   "question": "What are the rated flow and motor power of the pump that circulates cooling water in the cracker unit?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The cooling‑water circulation pump P‑101 (located in the Cracker Unit) is rated for a flow of **180 m³/hr** and is driven by a **45 kW** electric motor.  \n\n**Recommended Actions**  \n1. Verify that the motor supply matches the specified rating (415 V, 3‑phase).  \n2. Include the pump in the routine performance monitoring program to confirm it operates near its rated point.  \n3. Ensure lubrication oil level is checked per SOP‑001 before each start‑up.  \n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"MAN-001_Centrifugal_Pump_Manual.docx\",\"chunk_content\":\"Parameter | P-101 ... Flow Rate | 180 m^3/hr ... Motor Power | 45 kW ...\",\"highlighted_excerpt\":\"Flow Rate | 180 m^3/hr ... Motor Power | 45 kW\",\"page_number\":1,\"confidence\":0.96}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"Equipment_Register.xlsx\",\"chunk_content\":\"P-101 | Cooling Water Circulation Pump | ... | Cracker Unit | ... | Active | High\",\"highlighted_excerpt\":\"P-101 – Cooling Water Circulation Pump – Cracker Unit\",\"page_number\":1,\"confidence\":0.94}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "The pump is P-101": true,
+    "Rated flow 180 m3/hr": true,
+    "Motor power 45 kW": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "Equipment_Register.xlsx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "citation_precision": 0.6666666666666666,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 6,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.6666666666666666
+   },
+   "context_docs": [
+    "Equipment_Register.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "MAN-002_Air_Compressor_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "FIX1-DOCX-142247.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1957.8,
+   "total_ms": 30592.6
+  },
+  {
+   "id": "M04",
+   "type": "multi_hop",
+   "tags": [
+    "table_row"
+   ],
+   "question": "How many spares of the mechanical seal that was fitted to P-102 in February do we have in stock?",
+   "answer": "**Status:** ✅ Fact  \n\n**Answer:** The inventory shows **2 units** of the mechanical seal *John Crane 5610, 45 mm* (part SEAL‑5610‑45) that is used on pump P‑102.\n\n**Recommended Actions**\n1. Verify the seal part number before the next scheduled seal check (22‑May‑2026).  \n2. Monitor the stock level; reorder when it falls to the minimum stock of 1.  \n3. Record the current stock in the maintenance log to keep inventory aligned with the maintenance schedule.\n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"Spare_Parts_Inventory.xlsx\",\"confidence\":0.96,\"score\":0.96,\"preview\":\"Click to preview document\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"MNT-003_Seal_Leakage_Repair_P-102.docx\",\"confidence\":0.94,\"score\":0.94,\"preview\":\"Click to preview document\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"confidence\":0.92,\"score\":0.92,\"preview\":\"Click to preview document\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Seal type John Crane 5610, 45 mm": true,
+    "2 in stock": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "citation_precision": 0.6666666666666666,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 6,
+    "grounded_share": 0.14285714285714285
+   },
+   "context_docs": [
+    "Spare_Parts_Inventory.xlsx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx",
+    "Equipment_Register.xlsx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "graph_facts": 11,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3618.1,
+   "total_ms": 32889.3
+  },
+  {
+   "id": "M05",
+   "type": "multi_hop",
+   "tags": [
+    "ocr_source",
+    "compound"
+   ],
+   "question": "Were the gas test acceptance limits on the September hot work permit the same values as the gas testing limits taught in the July safety training?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The September hot‑work permit lists the following acceptance limits: O₂ 19.5‑23.5 %, LEL < 10 %, H₂S < 10 ppm, CO < 25 ppm【SCN‑003_Hot_Work_Permit_and_Gas_Test_Record.pdf, Confidence 0.9, Score 95】.  \n- The July safety‑training slide specifies O₂ 19.5‑23.5 % as the required range for confined‑space entry【PPT‑001_Monthly_Safety_Training_Jul2026.pptx, Confidence 0.9, Score 92】.  \n\n**Conclusion:** The O₂ limit is identical in both documents (FACT). The training material does not mention the LEL, H₂S, or CO limits, so we cannot confirm those values are the same (UNKNOWN).  \n\n**Recommended Actions:**  \n1. Review the July safety‑training content to verify whether LEL, H₂S, and CO limits are included.  \n2. If gaps exist, update the training to",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Yes, the values are the same": true,
+    "Oxygen 19.5 to 23.5 per cent": true,
+    "LEL below 10 per cent": true,
+    "H2S below 10 ppm": true,
+    "CO below 25 ppm": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.16666666666666666
+   },
+   "context_docs": [
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "graph_facts": 6,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3897.3,
+   "total_ms": 32619.6
+  },
+  {
+   "id": "M06",
+   "type": "multi_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "According to the maintenance schedule, when was the internal inspection of boiler B-101 due, and what did the May 2026 inspection report decide about it?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The maintenance schedule lists the internal inspection of boiler **B‑101** as due on **15 May 2026**.  \n- The May 2026 inspection report recorded that the **internal inspection was deferred to the next shutdown**, and only an external inspection was performed.\n\n**Recommended Actions (max 3):**  \n1. Plan and execute the internal inspection during the next scheduled shutdown.  \n2. Update the maintenance schedule after completion to reflect the new inspection date.  \n3. Document any findings from the internal inspection and address required repairs.\n\n**Evidence (max 3):**  \n> [!DOCUMENT]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"chunk_content\":\"B-101 | Internal inspection | 5 years | 15-May-2021 | 15-May-2026 | Deepak Joshi\",\"highlighted_excerpt\":\"Internal inspection due 15-May-2026\",\"page_number\":null,\"confidence\":0.95}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"INS-003_Boiler_Inspection_B-101.docx\",\"chunk_content\":\"Inspection Date: 15-May-2026 ... Internal inspection deferred to next shutdown.\",\"highlighted_excerpt\":\"Internal inspection deferred to next shutdown\",\"page_number\":null,\"confidence\":0.94}  \n\nMore details available.",
+   "fact_coverage": 0.6666666666666666,
+   "facts_hit": {
+    "It was due 15 May 2026 (5-yearly, last done 15 May 2021)": true,
+    "It was deferred to the next shutdown": true,
+    "Must be completed within 6 months": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "Maintenance_Schedule.xlsx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 7,
+    "hedged": 0,
+    "unsupported": 2,
+    "grounded_share": 0.7777777777777778
+   },
+   "context_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "FIX1-PDF-142247.pdf",
+    "Equipment_Register.xlsx"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3291.2,
+   "total_ms": 32460.6
+  },
+  {
+   "id": "M07",
+   "type": "multi_hop",
+   "tags": [
+    "long_doc",
+    "table_row"
+   ],
+   "question": "Which boiler do the HPX-4000 feed pumps supply, and how critical does the equipment register rate that boiler?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The Flowserve HPX‑4000 feed pumps (units P‑401 and P‑402) supply **boiler B‑101**.  \n- In the equipment register, **B‑101 is rated as “Critical”** in the Criticality column.  \n\n**Recommended Actions**  \n1. Prioritize preventive maintenance for pumps P‑401/P‑402 due to the boiler’s critical status.  \n2. Verify that spare‑parts inventory includes items for B‑101 (e.g., gasket sets).  \n3. Ensure operating procedures reference the criticality to enforce stricter monitoring.  \n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"chunk_content\":\"... feeding high pressure steam boiler B-101 ...\",\"highlighted_excerpt\":\"feeding high pressure steam boiler B-101\",\"page_number\":1,\"confidence\":0.95}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"Equipment_Register.xlsx\",\"chunk_content\":\"B-101 | High Pressure Steam Boiler | Operations | Boiler House | 05-Nov-1998 | Active | Critical\",\"highlighted_excerpt\":\"Critical\",\"page_number\":null,\"confidence\":0.93}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"INS-003_Boiler_Inspection_B-101.docx\",\"chunk_content\":\"Boiler Inspection Report  --  B-101\",\"highlighted_excerpt\":\"B-101\",\"page_number\":1,\"confidence\":0.90}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "They feed B-101": true,
+    "B-101 criticality is Critical": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "Equipment_Register.xlsx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "citation_precision": 0.6666666666666666,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.625
+   },
+   "context_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Equipment_Register.xlsx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "FIX1-DOCX-142247.docx",
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx"
+   ],
+   "graph_facts": 6,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2960.2,
+   "total_ms": 8986.2
+  },
+  {
+   "id": "M08",
+   "type": "multi_hop",
+   "tags": [
+    "compound"
+   ],
+   "question": "On the 15 July morning shift, was P-101's vibration inside the start-up alert limit, and how did its bearing temperature compare with where it settled after the March bearing job?",
+   "answer": "**Status:** ✅ Information Retrieved  \n\n**Answer:**  \n- On the 15 July morning shift, P‑101 recorded a vibration of **2.1 mm/s**. This value is **below the typical start‑up alert threshold of 2.8 mm/s** (ISO 10816‑3 Class II), so it was within the acceptable limit.  \n- The bearing temperature at that time was **54 °C**, which is **significantly lower than the 78 °C** that was observed before the March 2026 bearing replacement. No post‑repair temperature was documented, but the current reading shows a cooler operating condition.\n\n**Recommended Actions**  \n1. Continue routine vibration monitoring to ensure values stay below the alert zone.  \n2. Verify bearing temperature trends during the next shift handover.  \n3. Add a temperature check to the start‑up checklist for P‑101.\n\n**Evidence**  \n> [!DOCUMENT] {\"document_name\":\"LOG-001_Morning_Shift_15-Jul-2026.txt\",\"chunk_content\":\"P-101  : Running normally. Bearing temp 54 deg C, vibration 2.1 mm/s.\",\"highlighted_excerpt\":\"Bearing temp 54 deg C, vibration 2.1 mm/s\",\"page_number\":1,\"confidence\":0.95",
+   "fact_coverage": 0.5,
+   "facts_hit": {
+    "Vibration 2.1 mm/s, inside the 4.5 mm/s alert limit": false,
+    "Shift reading 2.1 mm/s": true,
+    "Bearing temperature 54 deg C on shift": true,
+    "52 deg C after the bearing replacement, so about 2 deg C higher": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 0.3333333333333333,
+   "grounding": {
+    "grounded": 6,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.6666666666666666
+   },
+   "context_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "FIX1-DOCX-142247.docx"
+   ],
+   "graph_facts": 31,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3343.6,
+   "total_ms": 32960.6
+  },
+  {
+   "id": "M09",
+   "type": "multi_hop",
+   "tags": [
+    "long_doc",
+    "compound"
+   ],
+   "question": "When was E-301's tube bundle cleaning last done and next due according to the maintenance schedule, and what did the August 2026 turnaround inspection find on the shell side of the bundle?",
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The tube‑bundle cleaning for E‑301 was last performed on **30 Aug 2024** and the next cleaning is scheduled for **30 Aug 2026** (2‑year interval).  \n- The August 2026 turnaround inspection identified **shell‑side deposit corrosion on the lower quadrant of the tube bundle**, driven by intermittent low flow during turndown operation.  \n\n**Recommended Actions (max 3):**  \n1. Ensure the cleaning activity is executed on the due date (30 Aug 2026).  \n2. Review and adjust turndown operating procedures to minimize low‑flow periods.  \n3. Continue monitoring outlet temperature trends for early signs of corrosion progression.  \n\n**Evidence:**  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"highlighted_excerpt\":\"E-301 | Tube bundle cleaning | 2 years | 30-Aug-2024 | 30-Aug-2026 | Suresh Kumar\",\"confidence\":0.96,\"score\":0.94,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"highlighted_excerpt\":\"The governing degradation mechanism is shell side under deposit corrosion on the lower quadrant of the tube bundle, driven by intermittent low flow during turndown operation.\",\"confidence\":0.95,\"score\":0.93,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 0.75,
+   "facts_hit": {
+    "Tube bundle cleaning last done 30-Aug-2024": true,
+    "Next due 30-Aug-2026": true,
+    "Deposits in the lower quadrant (up to 8 mm)": true,
+    "Under-deposit pitting up to 43 per cent wall loss": false
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Maintenance_Schedule.xlsx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 3,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.375
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "FIX1-PDF-142247.pdf",
+    "PPT-002_Plant_Overview.pptx"
+   ],
+   "graph_facts": 18,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3414.8,
+   "total_ms": 31484.8
+  },
+  {
+   "id": "M10",
+   "type": "multi_hop",
+   "tags": [
+    "ocr_source"
+   ],
+   "question": "The April cooling tower maintenance and the safety checklist on the same day both flagged one problem. What was it, and when was it supposed to be dealt with?",
+   "answer": "**Status:** Issue identified on 05‑Apr‑2026  \n\n**Answer:** Both the April safety inspection and the quarterly preventive‑maintenance work on Cooling Tower CT‑01 flagged **moderate scaling on the hot side of",
+   "fact_coverage": 0.3333333333333333,
+   "facts_hit": {
+    "Moderate scaling of the fill media in cell 3": true,
+    "Cell #3": false,
+    "Chemical cleaning scheduled for Q3 2026": false
+   },
+   "refusal": "answered",
+   "cited_docs": [],
+   "citation_precision": null,
+   "citation_recall": 0.0,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 1,
+    "grounded_share": 0.5
+   },
+   "context_docs": [
+    "SCN-001_Safety_Inspection_Checklist.pdf",
+    "MNT-001_Quarterly_PM_Cooling_Tower.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx",
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3673.6,
+   "total_ms": 33172.4
+  },
+  {
+   "id": "F01",
+   "type": "follow_up",
+   "tags": [],
+   "question": "What part was used to fix it?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The V‑220 valve was repaired by installing a new EPDM actuator diaphragm (part DIA‑220‑EPDM).  \n\n**Recommended Actions**\n1. Verify diaphragm seal integrity during the next routine valve test.  \n2. Update the valve’s maintenance record with the part number and replacement date.  \n3. Monitor downstream pressure for any recurrence of sticking behavior.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"LOG-002_Night_Shift_15-16-Jul-2026.txt\",\"confidence\":0.94,\"score\":0.92,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Spare_Parts_Inventory.xlsx\",\"confidence\":0.91,\"score\":0.89,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"confidence\":0.90,\"score\":0.88,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Fisher actuator diaphragm, part no. DIA-220-EPDM-01": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "citation_precision": 0.0,
+   "citation_recall": 0.0,
+   "grounding": {
+    "grounded": 0,
+    "hedged": 0,
+    "unsupported": 7,
+    "grounded_share": 0.0
+   },
+   "context_docs": [
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Spare_Parts_Inventory.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "FIX1-TXT-142247.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "graph_facts": 15,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1663.4,
+   "total_ms": 30273.9
+  },
+  {
+   "id": "F02",
+   "type": "follow_up",
+   "tags": [
+    "long_doc"
+   ],
+   "question": "What's the minimum continuous flow they can run at?",
+   "answer": "**Status:** UNKNOWN – no supporting evidence found.\n\n**Answer:** The provided documents do not contain information about the minimum continuous flow rate for boiler feed pumps P‑401 and P‑402.\n\n**Recommended Actions**\n1. Obtain the full Flowserve HPX‑4000 pump data sheet or specification sheet, which lists minimum flow requirements.  \n2. Contact the equipment supplier or OEM technical support for the minimum continuous flow rating.  \n3. Verify the required flow with the process design engineer to ensure it meets boiler B‑101 feed‑water needs.\n\n**Evidence**\n> [!DOCUMENT] {\"document_name\":\"MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx\",\"chunk_content\":\"Introduction and scope for P‑401/P‑402; no flow specifications provided in excerpt.\",\"highlighted_excerpt\":\"\",\"page_number\":1,\"confidence\":0.9}\n> \n> [!DOCUMENT] {\"document_name\":\"LOG-001_Morning_Shift_15-Jul-2026.txt\",\"chunk_content\":\"Equipment status list; does not mention flow rates for P‑401/P‑402.\",\"highlighted_excerpt\":\"\",\"page_number\":1,\"confidence\":0.8}\n> \n> [!DOCUMENT] {\"document_name\":\"LOG-002_Night_Shift_15-16-Jul-2026.txt\",\"chunk_content\":\"Equipment status list; no flow data for P‑401/P‑402.\",\"highlighted_excerpt\":\"\",\"page_number\":1,\"confidence\":0.8}\n\nMore details available.",
+   "fact_coverage": 0.0,
+   "facts_hit": {
+    "68 m3/hr": false
+   },
+   "refusal": "false_refusal",
+   "cited_docs": [
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx"
+   ],
+   "citation_precision": 0.3333333333333333,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 2,
+    "hedged": 0,
+    "unsupported": 6,
+    "grounded_share": 0.25
+   },
+   "context_docs": [
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "SOP-002_Pump_Shut-Down_Procedure.docx"
+   ],
+   "graph_facts": 2,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3351.6,
+   "total_ms": 31899.3
+  },
+  {
+   "id": "F03",
+   "type": "follow_up",
+   "tags": [
+    "long_doc",
+    "compound"
+   ],
+   "question": "How many of its tubes are plugged now, and when will it hit the plugging limit?",
+   "answer": "**Status:**  \n- Current plugged tubes: **34** out of 512 (≈6.6 %).  \n- Plugging limit: **10 %** (≈51 tubes).  \n- Projected limit reach: **around the 2034 turnaround** if the present plugging rate continues.\n\n**Answer:**  \nE‑301 now has 34 tubes plugged. At the current rate, the 10 % plugging threshold will be exceeded at the 2034 turnaround, triggering mandatory retubing.\n\n**Recommended Actions**  \n1. Track tube‑plugging trends each turnaround to verify the projected timeline.  \n2. Develop a retubing schedule to commence before the 2034 turnaround.  \n3. Investigate cleaning or operational adjustments to slow further tube plugging.\n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301\",\"confidence\":0.95,\"score\":92,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "34 of 512 tubes plugged (6.6 per cent)": true,
+    "Limit reached around the 2034 turnaround": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 6,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.6666666666666666
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Equipment_Register.xlsx",
+    "PPT-002_Plant_Overview.pptx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-001_Pressure_Vessel_Inspection_T-501.docx"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1969.2,
+   "total_ms": 31145.9
+  },
+  {
+   "id": "F04",
+   "type": "follow_up",
+   "tags": [],
+   "question": "Which bearings were fitted in that job?",
+   "answer": "**Status:** Complete  \n\n**Answer:** The March bearing‑replacement on pump P‑101 installed new drive‑end (DE) and non‑drive‑end (NDE) bearings: **SKF 6319 C3** (DE) and **SKF 6320 C3** (NDE).  \n\n**Recommended Actions**  \n1. Verify torque on the bearing housing drain plug (35 Nm) after installation.  \n2. Record the replacement details in the maintenance log and update the spare‑parts inventory.  \n3. Monitor vibration and temperature for the next 48 h to confirm proper alignment.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"MNT-002_Bearing_Replacement_P-101.docx\",\"chunk_content\":\"Extracted DE bearing (SKF 6319 C3) and NDE bearing (SKF 6320 C3)… Installed new DE and NDE bearings…\",\"highlighted_excerpt\":\"Installed new DE and NDE bearings using induction heater (max 110 °C)\",\"page_number\":1,\"confidence\":0.96,\"citation\":\"MNT-002, Confidence 0.96, Score 0.96, Click to preview document\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Drive end SKF 6319 C3": true,
+    "Non drive end SKF 6320 C3": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 3,
+    "hedged": 0,
+    "unsupported": 2,
+    "grounded_share": 0.6
+   },
+   "context_docs": [
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "FIX1-DOCX-142247.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt"
+   ],
+   "graph_facts": 15,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 1985.0,
+   "total_ms": 30385.9
+  },
+  {
+   "id": "F05",
+   "type": "follow_up",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "And how often should that oil be changed?",
+   "answer": "**Status:** Active – C‑201 instrument air compressor  \n\n**Answer:** The compressor uses **Atlas Copco Oil Roto‑Xtend ND** (5 L) and, per the plant maintenance schedule, the oil is changed **every 4,000 running hours** (last change 20‑Jan‑2026, next due 20‑Aug‑2026).  \n\n**Recommended Actions**  \n1. Monitor operating hours and plan the oil change before the 4,000‑hour mark.  \n2. Stock the specified Atlas Copco Oil Roto‑Xtend ND to avoid delays.  \n3. Record the change in the maintenance log and verify oil condition after each change.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"Spare_Parts_Inventory.xlsx\",\"highlighted_excerpt\":\"OIL‑RX‑ND | Atlas Copco Oil Roto‑Xtend ND (5L) | C‑201\",\"page_number\":null,\"confidence\":0.95,\"score\":0.93,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"Maintenance_Schedule.xlsx\",\"highlighted_excerpt\":\"C‑201 | Oil change | 4000 hrs | Last Done 20‑Jan‑2026 | Next Due 20‑Aug‑2026\",\"page_number\":null,\"confidence\":0.96,\"score\":0.94,\"preview_link\":\"#\"}  \n\n> [!EVIDENCE]  \n> {\"document_name\":\"MAN‑002_Air_Compressor_Manual.docx\",\"highlighted_excerpt\":\"Atlas Copco ZR‑160 is an oil‑free rotary screw compressor... Oil pressure: 3.0‑4.5 barg\",\"page_number\":3,\"confidence\":0.88,\"score\":0.85,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": 1.0,
+   "facts_hit": {
+    "Every 4000 hours": true
+   },
+   "refusal": "answered",
+   "cited_docs": [
+    "MAN-002_Air_Compressor_Manual.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx"
+   ],
+   "citation_precision": 0.3333333333333333,
+   "citation_recall": 1.0,
+   "grounding": {
+    "grounded": 5,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.5555555555555556
+   },
+   "context_docs": [
+    "MAN-002_Air_Compressor_Manual.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "Maintenance_Schedule.xlsx",
+    "PPT-002_Plant_Overview.pptx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "INS-002_Vibration_Analysis_C-201.docx",
+    "FIX1-TXT-142247.txt"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3202.7,
+   "total_ms": 31083.4
+  },
+  {
+   "id": "N01",
+   "type": "negative",
+   "tags": [
+    "false_premise"
+   ],
+   "question": "What was the root cause of the K-402 seal gas failure in March, and which parts were replaced?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about the root cause of a K‑402 seal gas failure in March, nor do they list any parts that were replaced for that incident.  \n\n**Recommended Actions**\n1. Locate the incident report or maintenance record specifically referencing equipment K‑402 for March.  \n2. Review the associated root‑cause analysis and parts replacement log.  \n3. Update the knowledge base with the relevant details for future reference.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> No supporting evidence found.  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.2
+   },
+   "context_docs": [
+    "FIX1-TXT-142247.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Spare_Parts_Inventory.xlsx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-001_Centrifugal_Pump_Manual.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf"
+   ],
+   "graph_facts": 7,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2556.2,
+   "total_ms": 8441.7
+  },
+  {
+   "id": "N02",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "What was the root cause of the P-401 boiler feed pump trip last year?",
+   "answer": "**Status:** Completed  \n\n**Answer:** The provided documents do not contain information about the root cause of the P‑401 boiler feed pump trip last year.  \n\n**Recommended Actions**  \n1. Retrieve the pump’s trip log and associated incident reports from the control‑system archive.  \n2. Review recent maintenance, inspection, and bearing‑replacement records for P‑401.  \n3. Consult the plant’s reliability database or incident register for any recorded failures of P‑401.  \n\n**Evidence**  \n> [!EVIDENCE] No supporting evidence found in the supplied documents for P‑401 trip root cause.  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 0,
+    "hedged": 0,
+    "unsupported": 5,
+    "grounded_share": 0.0
+   },
+   "context_docs": [
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "MNT-003_Seal_Leakage_Repair_P-102.docx",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "FIX1-DOCX-142247.docx",
+    "PPT-001_Monthly_Safety_Training_Jul2026.pptx",
+    "Equipment_Register.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "FIX1-TXT-142247.txt",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "INC-002_Valve_Failure_V-220.docx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2030.1,
+   "total_ms": 32118.9
+  },
+  {
+   "id": "N03",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "Which contractor supplied the replacement tubes for E-301 during turnaround TA-2026-02?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about which contractor supplied the replacement tubes for E‑301 during turnaround TA‑2026‑02.  \n\n**Recommended Actions**  \n1. Review procurement and purchase‑order records for turnaround TA‑2026‑02.  \n2. Consult the detailed turnaround project documentation or contractor agreements.  \n3. Contact the maintenance lead (e.g., Deepak Joshi) for clarification on tube supply.  \n\n> [!EVIDENCE]  \n> No supporting evidence found.  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 1,
+    "hedged": 0,
+    "unsupported": 4,
+    "grounded_share": 0.2
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Maintenance_Schedule.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "INC-001_Pump_Oil_Leakage_P-101.docx",
+    "PPT-002_Plant_Overview.pptx",
+    "MNT-002_Bearing_Replacement_P-101.docx",
+    "SCN-003_Hot_Work_Permit_and_Gas_Test_Record.pdf",
+    "FIX1-DOCX-142247.docx"
+   ],
+   "graph_facts": 12,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2006.5,
+   "total_ms": 31465.8
+  },
+  {
+   "id": "N04",
+   "type": "negative",
+   "tags": [
+    "false_premise",
+    "distractor_doc"
+   ],
+   "question": "What did the internal inspection of boiler B-101 find inside the steam drum?",
+   "answer": "**Status:** No internal inspection performed for B‑101  \n\n**Answer:** The internal inspection of boiler B‑101 was deferred to the next shutdown; therefore the documents contain no findings from inside the steam drum. Only external ultrasonic thickness measurements of the drum shell are reported.  \n\n**Recommended Actions**  \n1. Schedule the internal inspection of B‑101 during the upcoming plant shutdown.  \n2. Verify that the inspection checklist includes visual and NDT checks of the drum interior.  \n3. Document any drum‑internal observations once the inspection is completed.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"document_name\":\"INS-003_Boiler_Inspection_B-101.docx\",\"confidence\":0.92,\"score\":95,\"preview_link\":\"#\"}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 0,
+    "unsupported": 3,
+    "grounded_share": 0.5714285714285714
+   },
+   "context_docs": [
+    "INS-003_Boiler_Inspection_B-101.docx",
+    "SOP-003_Boiler_Start-Up_Procedure.docx",
+    "Maintenance_Schedule.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "Equipment_Register.xlsx",
+    "Spare_Parts_Inventory.xlsx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "PPT-002_Plant_Overview.pptx"
+   ],
+   "graph_facts": 5,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 2334.6,
+   "total_ms": 30767.4
+  },
+  {
+   "id": "N05",
+   "type": "negative",
+   "tags": [
+    "distractor_doc"
+   ],
+   "question": "What set pressure is relief valve PSV-3011 on heat exchanger E-301 set to?",
+   "answer": "**Status:** UNKNOWN  \n\n**Answer:** The provided documents do not contain information about the set pressure of relief valve **PSV‑3011** on heat exchanger **E‑301**.  \n\n**Recommended Actions**\n1. Review the detailed design or P&ID documentation for heat exchanger E‑301 to locate the relief valve set pressure.\n2. Contact the engineering department or valve supplier for the specification sheet of PSV‑3011.\n3. Verify the relief valve certification records, which may list the set pressure.\n\n**Evidence**  \n> [!DOCUMENT]  \n> {\"document_name\":\"INS-004_Turnaround_Inspection_Report_E-301.docx\",\"chunk_content\":\"...the relief valve PSV-3011 which is on a separate certification cycle...\",\"highlighted_excerpt\":\"relief valve PSV-3011 which is on a separate certification cycle\",\"page_number\":1,\"confidence\":0.92}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"SCN-002_P&ID_Cooling_Water.pdf\",\"chunk_content\":\"...E-301 Heat Exchanger...\",\"highlighted_excerpt\":\"E-301 Heat Exchanger\",\"page_number\":1,\"confidence\":0.88}  \n\n> [!DOCUMENT]  \n> {\"document_name\":\"Equipment_Register.xlsx\",\"chunk_content\":\"...E-301 | Feed Preheater | Heat Exchanger ...\",\"highlighted_excerpt\":\"E-301 Heat Exchanger\",\"page_number\":1,\"confidence\":0.90}  \n\nMore details available.",
+   "fact_coverage": null,
+   "facts_hit": {},
+   "refusal": "correct_refusal",
+   "cited_docs": [
+    "Equipment_Register.xlsx",
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "SCN-002_P&ID_Cooling_Water.pdf"
+   ],
+   "citation_precision": null,
+   "citation_recall": null,
+   "grounding": {
+    "grounded": 4,
+    "hedged": 1,
+    "unsupported": 2,
+    "grounded_share": 0.5714285714285714
+   },
+   "context_docs": [
+    "INS-004_Turnaround_Inspection_Report_E-301.docx",
+    "Spare_Parts_Inventory.xlsx",
+    "SCN-002_P&ID_Cooling_Water.pdf",
+    "Equipment_Register.xlsx",
+    "LOG-002_Night_Shift_15-16-Jul-2026.txt",
+    "INC-002_Valve_Failure_V-220.docx",
+    "LOG-001_Morning_Shift_15-Jul-2026.txt",
+    "MAN-003_HPX4000_Boiler_Feed_Pump_Manual.docx",
+    "SOP-001_Pump_Start-Up_Procedure.docx",
+    "MAN-002_Air_Compressor_Manual.docx"
+   ],
+   "graph_facts": 4,
+   "retrieval_source": "hybrid",
+   "llm_cached": false,
+   "llm_ms": 3146.0,
+   "total_ms": 32629.3
+  }
+ ],
+ "rescored_at": "2026-09-16T17:56:51+00:00"
+}

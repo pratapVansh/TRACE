@@ -259,10 +259,17 @@ def summarize_answers(records: list[dict]) -> dict:
     answerable = [r for r in records if r["type"] != "negative"]
     negatives = [r for r in records if r["type"] == "negative"]
     llm_ms = [r["llm_ms"] for r in records if r["llm_ms"]]
+    # An answer the model never produced scores 0.0 coverage, exactly like an
+    # answer that is wrong - and the two were being read as the same failure.
+    # They are not: an empty generation is the model running out of output
+    # budget, and it says nothing about retrieval. Name them so any slice they
+    # land in can be read with that in mind.
+    empty = [r["id"] for r in records if not (r["answer"] or "").strip()]
     return {
         "answerable": _answer_block(answerable),
         "by_type": {t: _answer_block([r for r in answerable if r["type"] == t])
                     for t in ("single_hop", "multi_hop", "follow_up")},
+        "empty_answers": empty,
         "correct_refusal_rate": m.mean(r["refusal"] == "correct_refusal" for r in negatives),
         "grounding_totals": {k: sum(r["grounding"][k] for r in records) for k in ("grounded", "hedged", "unsupported")},
         "llm_ms_p50_uncached": m.percentile(llm_ms, 50),
@@ -341,6 +348,8 @@ def answers_markdown(result: dict) -> str:
     lines += [
         "",
         f"- Correct refusal on negatives: {_fmt(s['correct_refusal_rate'])}",
+        f"- Empty answers (model produced no text; scored 0.0 coverage): "
+        f"{', '.join(s['empty_answers']) if s.get('empty_answers') else 'none'}",
         f"- Grounding sentences: {g['grounded']} grounded, {g['hedged']} hedged, {g['unsupported']} unsupported",
         f"- LLM latency (uncached calls): p50 {_fmt(s['llm_ms_p50_uncached'], False)} ms, p95 {_fmt(s['llm_ms_p95_uncached'], False)} ms",
         "",

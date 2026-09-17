@@ -1,8 +1,8 @@
 {
  "kind": "answers",
- "run_at": "2026-09-13T11:53:03+00:00",
+ "run_at": "2026-09-16T18:31:12+00:00",
  "git": {
-  "head": "e647562",
+  "head": "fbf3439",
   "dirty": true
  },
  "settings": {
@@ -11,6 +11,7 @@
   "graph": true,
   "collection": null,
   "rerank_timeout_seconds": null,
+  "prefer_domain_entities": false,
   "description": "Current pipeline: hybrid search + reranker + graph, chunk 256",
   "qdrant_collection": "document_chunks",
   "rerank_enabled": true,
@@ -20,31 +21,34 @@
   "vector_top_k": 10,
   "graph_top_k": 5,
   "dedup_documents": true,
+  "graph_prefer_domain_entities": false,
   "llm_model": "openai/gpt-oss-120b"
  },
  "llm_cache": {
-  "hits": 0,
-  "misses": 40
+  "hits": 40,
+  "misses": 1
  },
+ "cache_only": false,
+ "skipped_uncached": [],
  "summary": {
   "answerable": {
    "n": 35,
-   "fact_coverage": 0.7261904761904763,
+   "fact_coverage": 0.7404761904761905,
    "fully_correct_rate": 0.6,
    "false_refusal_rate": 0.11428571428571428,
-   "citation_precision": 0.7777777777777778,
-   "citation_recall": 0.8190476190476191,
-   "grounded_share": 0.48770477888124947
+   "citation_precision": 0.7843137254901961,
+   "citation_recall": 0.8476190476190476,
+   "grounded_share": 0.4900968872397444
   },
   "by_type": {
    "single_hop": {
     "n": 20,
-    "fact_coverage": 0.625,
+    "fact_coverage": 0.65,
     "fully_correct_rate": 0.5,
     "false_refusal_rate": 0.15,
-    "citation_precision": 0.7407407407407408,
-    "citation_recall": 0.85,
-    "grounded_share": 0.4892230576441102
+    "citation_precision": 0.7543859649122807,
+    "citation_recall": 0.9,
+    "grounded_share": 0.49333333333333335
    },
    "multi_hop": {
     "n": 10,
@@ -65,14 +69,15 @@
     "grounded_share": 0.38095238095238093
    }
   },
+  "empty_answers": [],
   "correct_refusal_rate": 1.0,
   "grounding_totals": {
-   "grounded": 132,
+   "grounded": 140,
    "hedged": 8,
-   "unsupported": 126
+   "unsupported": 132
   },
-  "llm_ms_p50_uncached": 2660.6000000000004,
-  "llm_ms_p95_uncached": 5473.14
+  "llm_ms_p50_uncached": 2330.6,
+  "llm_ms_p95_uncached": 2330.6
  },
  "items": [
   {
@@ -115,9 +120,9 @@
    ],
    "graph_facts": 7,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2303.9,
-   "total_ms": 7706.3
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5773.5
   },
   {
    "id": "S02",
@@ -158,9 +163,9 @@
    ],
    "graph_facts": 8,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2118.2,
-   "total_ms": 7436.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5508.4
   },
   {
    "id": "S03",
@@ -200,9 +205,9 @@
    ],
    "graph_facts": 16,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 1892.7,
-   "total_ms": 31320.9
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6271.8
   },
   {
    "id": "S04",
@@ -244,9 +249,9 @@
    ],
    "graph_facts": 6,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 1771.6,
-   "total_ms": 32615.3
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6793.9
   },
   {
    "id": "S05",
@@ -286,9 +291,9 @@
    ],
    "graph_facts": 7,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2105.4,
-   "total_ms": 8937.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6212.3
   },
   {
    "id": "S06",
@@ -330,9 +335,9 @@
    ],
    "graph_facts": 10,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2629.9,
-   "total_ms": 33593.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6283.4
   },
   {
    "id": "S07",
@@ -375,9 +380,9 @@
    ],
    "graph_facts": 15,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2218.3,
-   "total_ms": 32697.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5580.8
   },
   {
    "id": "S08",
@@ -416,9 +421,9 @@
    ],
    "graph_facts": 10,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2521.6,
-   "total_ms": 32719.8
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5756.2
   },
   {
    "id": "S09",
@@ -461,9 +466,9 @@
    ],
    "graph_facts": 19,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 6627.4,
-   "total_ms": 12897.5
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5715.5
   },
   {
    "id": "S10",
@@ -505,9 +510,9 @@
    ],
    "graph_facts": 11,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2219.3,
-   "total_ms": 32253.8
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6776.9
   },
   {
    "id": "S11",
@@ -549,9 +554,9 @@
    ],
    "graph_facts": 11,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2530.2,
-   "total_ms": 32765.2
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6619.9
   },
   {
    "id": "S12",
@@ -594,9 +599,9 @@
    ],
    "graph_facts": 14,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 4089.7,
-   "total_ms": 32819.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6361.0
   },
   {
    "id": "S13",
@@ -638,9 +643,9 @@
    ],
    "graph_facts": 16,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2741.1,
-   "total_ms": 8530.2
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6604.2
   },
   {
    "id": "S14",
@@ -649,21 +654,23 @@
     "entity_resolution"
    ],
    "question": "How bad were the vibration levels on the instrument air compressor in the May survey, and what did the analyst think was causing them?",
-   "answer": "",
-   "fact_coverage": 0.0,
+   "answer": "**Status:** Completed  \n\n**Answer:**  \n- The vibration survey on 10 May 2026 recorded the following RMS velocities (mm/s) at the four bearing points of compressor C‑201:  \n\n  • Motor DE: X 1.8, Y 2.1, Z 1.5  \n  • Motor NDE: X 2.0, Y 2.3, Z 1.7  \n  • Compressor DE: X 3.5, Y 4.1, Z 2.9  \n  • Compressor NDE: X 3.2, Y 3.8, Z 2.6  \n\n  The highest measured value was **4.1 mm/s** on the compressor drive‑end Y‑axis.  \n\n- The analyst’s (Suresh Kumar) interpretation of the cause of these vibration levels is **not provided** in the retrieved excerpt.  \n\n**Recommended Actions (max 3):**  \n1. Review the full analysis section of INS‑002_Vibration_Analysis_C‑201 for the analyst’s diagnosis.  \n2. Compare the measured values against the ISO 10816‑3 limits for the compressor’s power class.  \n3. If values exceed acceptable limits, schedule a detailed mechanical inspection (e.g., bearing, alignment, imbalance).  \n\n**Evidence (max 3):**  \n> [!DOCUMENT]  \n> {\"document_name\":\"INS-002_Vibration_Analysis_C-201.docx\",\"chunk_content\":\"Measurement Summary ... Point | X (mm/s) | Y (mm/s) | Z (mm/s) ... Motor DE | 1.8 | 2.1 | 1.5 ... Comp DE | 3.5 | 4.1 | 2.9 ...\",\"highlighted_excerpt\":\"Comp DE | 3.5 | 4.1 | 2.9\",\"page_number\":1,\"confidence\":0.94}  \n\nMore details available.",
+   "fact_coverage": 0.5,
    "facts_hit": {
     "Compressor bearings in the ALERT zone per ISO 10816-3": false,
-    "Likely cause is slight unbalance (1x RPM peak)": false
+    "Likely cause is slight unbalance (1x RPM peak)": true
    },
    "refusal": "answered",
-   "cited_docs": [],
-   "citation_precision": null,
-   "citation_recall": 0.0,
+   "cited_docs": [
+    "INS-002_Vibration_Analysis_C-201.docx"
+   ],
+   "citation_precision": 1.0,
+   "citation_recall": 1.0,
    "grounding": {
-    "grounded": 0,
+    "grounded": 8,
     "hedged": 0,
-    "unsupported": 0,
-    "grounded_share": null
+    "unsupported": 6,
+    "grounded_share": 0.5714285714285714
    },
    "context_docs": [
     "INS-002_Vibration_Analysis_C-201.docx",
@@ -680,8 +687,8 @@
    "graph_facts": 16,
    "retrieval_source": "hybrid",
    "llm_cached": false,
-   "llm_ms": 2945.3,
-   "total_ms": 28980.9
+   "llm_ms": 2330.6,
+   "total_ms": 7651.3
   },
   {
    "id": "S15",
@@ -719,9 +726,9 @@
    ],
    "graph_facts": 12,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 1569.6,
-   "total_ms": 30798.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6444.1
   },
   {
    "id": "S16",
@@ -763,9 +770,9 @@
    ],
    "graph_facts": 5,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 1805.8,
-   "total_ms": 31956.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6839.3
   },
   {
    "id": "S17",
@@ -806,9 +813,9 @@
    ],
    "graph_facts": 18,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2115.7,
-   "total_ms": 32852.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5765.4
   },
   {
    "id": "S18",
@@ -851,9 +858,9 @@
    ],
    "graph_facts": 21,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2898.2,
-   "total_ms": 8911.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5933.1
   },
   {
    "id": "S19",
@@ -895,9 +902,9 @@
    ],
    "graph_facts": 13,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2624.7,
-   "total_ms": 33264.0
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6728.2
   },
   {
    "id": "S20",
@@ -939,9 +946,9 @@
    ],
    "graph_facts": 8,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2380.1,
-   "total_ms": 26422.9
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6246.0
   },
   {
    "id": "M01",
@@ -981,9 +988,9 @@
    ],
    "graph_facts": 9,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 3645.3,
-   "total_ms": 34183.9
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5868.8
   },
   {
    "id": "M02",
@@ -1023,9 +1030,9 @@
    ],
    "graph_facts": 10,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 5536.6,
-   "total_ms": 11574.9
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5740.9
   },
   {
    "id": "M03",
@@ -1069,9 +1076,9 @@
    ],
    "graph_facts": 13,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2208.9,
-   "total_ms": 32769.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6502.3
   },
   {
    "id": "M04",
@@ -1112,9 +1119,9 @@
    ],
    "graph_facts": 13,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2622.7,
-   "total_ms": 32857.8
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6631.1
   },
   {
    "id": "M05",
@@ -1160,9 +1167,9 @@
    ],
    "graph_facts": 9,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 3021.8,
-   "total_ms": 33482.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6329.6
   },
   {
    "id": "M06",
@@ -1205,9 +1212,9 @@
    ],
    "graph_facts": 18,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2905.5,
-   "total_ms": 32774.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5902.8
   },
   {
    "id": "M07",
@@ -1250,9 +1257,9 @@
    ],
    "graph_facts": 8,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 5469.8,
-   "total_ms": 13115.3
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6508.4
   },
   {
    "id": "M08",
@@ -1296,9 +1303,9 @@
    ],
    "graph_facts": 24,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2927.2,
-   "total_ms": 34685.3
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6870.5
   },
   {
    "id": "M09",
@@ -1342,9 +1349,9 @@
    ],
    "graph_facts": 25,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2924.7,
-   "total_ms": 33076.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5733.2
   },
   {
    "id": "M10",
@@ -1386,9 +1393,9 @@
    ],
    "graph_facts": 15,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2619.8,
-   "total_ms": 34403.7
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6751.9
   },
   {
    "id": "F01",
@@ -1428,9 +1435,9 @@
    ],
    "graph_facts": 9,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 3135.3,
-   "total_ms": 33779.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5361.9
   },
   {
    "id": "F02",
@@ -1470,9 +1477,9 @@
    ],
    "graph_facts": 3,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2882.0,
-   "total_ms": 12895.4
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5412.0
   },
   {
    "id": "F03",
@@ -1514,9 +1521,9 @@
    ],
    "graph_facts": 14,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2530.1,
-   "total_ms": 35332.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 6551.2
   },
   {
    "id": "F04",
@@ -1556,9 +1563,9 @@
    ],
    "graph_facts": 18,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2822.1,
-   "total_ms": 34915.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5640.4
   },
   {
    "id": "F05",
@@ -1599,9 +1606,9 @@
    ],
    "graph_facts": 15,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 3422.5,
-   "total_ms": 12486.1
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 5461.3
   },
   {
    "id": "N01",
@@ -1637,9 +1644,9 @@
    ],
    "graph_facts": 10,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2322.8,
-   "total_ms": 35427.0
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 4724.8
   },
   {
    "id": "N02",
@@ -1680,9 +1687,9 @@
    ],
    "graph_facts": 8,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2720.0,
-   "total_ms": 35929.7
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 2004.4
   },
   {
    "id": "N03",
@@ -1723,9 +1730,9 @@
    ],
    "graph_facts": 15,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2837.0,
-   "total_ms": 11366.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 1557.5
   },
   {
    "id": "N04",
@@ -1764,9 +1771,9 @@
    ],
    "graph_facts": 12,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 3026.5,
-   "total_ms": 34197.5
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 1025.7
   },
   {
    "id": "N05",
@@ -1804,10 +1811,9 @@
    ],
    "graph_facts": 5,
    "retrieval_source": "hybrid",
-   "llm_cached": false,
-   "llm_ms": 2691.3,
-   "total_ms": 11937.6
+   "llm_cached": true,
+   "llm_ms": null,
+   "total_ms": 1132.6
   }
- ],
- "rescored_at": "2026-09-14T13:26:03+00:00"
+ ]
 }

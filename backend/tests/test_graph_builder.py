@@ -124,10 +124,37 @@ class TestMergeRelQuery:
 # GraphBuilderService
 # ══════════════════════════════════════════════════════════════════════
 
+class _FakeResult:
+    """Stands in for a driver result carrying one ``RETURN count(...)`` row.
+
+    ``written`` is what the relationship merge reports back, which is not
+    necessarily the number of rows handed to it: the query opens with MATCH
+    on both endpoints, so rows naming an entity that is not a node are
+    dropped by Cypher. Tests set it independently for exactly that reason.
+    """
+
+    def __init__(self, written: int | None = None) -> None:
+        self._written = written
+
+    async def single(self):
+        return None if self._written is None else {"written": self._written}
+
+    async def consume(self):
+        return None
+
+
 @pytest.fixture
 def mock_tx():
     tx = AsyncMock()
-    tx.run.return_value = AsyncMock()
+
+    def _run(query, params=None):
+        # The node batch is consumed, not read; only the relationship batch
+        # returns a count. Default to "everything was written", which is the
+        # healthy case, so existing assertions keep their meaning.
+        written = len((params or {}).get("rels", [])) if "RETURN count(rel)" in query else None
+        return _FakeResult(written)
+
+    tx.run = AsyncMock(side_effect=_run)
     tx.closed = False
     return tx
 
@@ -167,6 +194,76 @@ def sample_relationships():
                      type=RelationshipType.PART_OF, confidence=0.85,
                      chunk_id="c1", document_id="d1"),
     ]
+
+
+class TestRelationshipCounting:
+    """``relationships_merged`` must report writes, not attempts.
+
+    The merge query opens ``MATCH (src:Entity) ... MATCH (tgt:Entity)``, so a
+    relationship whose endpoint was never extracted as an entity is dropped by
+    Cypher without error. Counting the input list made the build log
+    relationships that do not exist — one real build reported 16 for a
+    document Neo4j holds 0 relationships for.
+    """
+
+    async def test_counts_only_relationships_the_query_wrote(
+        self, builder, mock_tx, sample_entities, sample_relationships,
+    ):
+        # Both batches match one relationship each but write nothing: their
+        # endpoints are missing from the graph.
+        mock_tx.run = AsyncMock(
+            side_effect=lambda query, params=None: _FakeResult(
+                0 if "RETURN count(rel)" in query else None,
+            ),
+        )
+
+        result = await builder.process_document(
+            document_id="d1",
+            entities=sample_entities,
+            relationships=sample_relationships,
+            source_document="proc.pdf",
+        )
+
+        assert result.successful is True
+        assert result.relationships_merged == 0, (
+            "silently dropped relationships must not be counted as merged"
+        )
+
+    async def test_counts_partial_writes(
+        self, builder, mock_tx, sample_entities, sample_relationships,
+    ):
+        """One of the two relationship batches lands, the other is dropped."""
+        seen: list[str] = []
+
+        def _run(query, params=None):
+            if "RETURN count(rel)" not in query:
+                return _FakeResult(None)
+            seen.append(query)
+            return _FakeResult(1 if len(seen) == 1 else 0)
+
+        mock_tx.run = AsyncMock(side_effect=_run)
+
+        result = await builder.process_document(
+            document_id="d1",
+            entities=sample_entities,
+            relationships=sample_relationships,
+        )
+
+        assert result.relationships_merged == 1
+
+    async def test_merge_query_returns_the_written_count(self):
+        query, _ = _merge_rels_batch(
+            "CONNECTED_TO",
+            [
+                Relationship(source="P-101", target="TK-305",
+                             type=RelationshipType.CONNECTED_TO, confidence=0.9,
+                             chunk_id="c1", document_id="d1"),
+            ],
+            "d1",
+            "proc.pdf",
+            _NOW,
+        )
+        assert "RETURN count(rel) AS written" in query
 
 
 class TestProcessDocument:

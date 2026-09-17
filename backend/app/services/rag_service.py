@@ -74,6 +74,47 @@ def _merge_system_context(
     return "\n\n".join(parts) if parts else None
 
 
+async def _generate_answer(llm: LLMProvider, prompt, history: list[dict] | None) -> str:
+    """Generate an answer, retrying once with a larger ceiling if it comes back blank.
+
+    ``max_tokens`` on a reasoning model covers the reasoning *and* the visible
+    answer, and ``gpt-oss-120b`` spends the budget on reasoning first. A question
+    that needs a long chain of thought can therefore exhaust the ceiling before a
+    single visible token is emitted, and the user gets an empty answer — the worst
+    failure this pipeline has, because it is indistinguishable from an outage.
+
+    Measured in Stage 5: 3 of 200 generations came back empty (baseline S14,
+    chunk512 M05 and M10), and two of those were misread as a retrieval
+    regression because an empty answer scores exactly like a wrong one.
+
+    Retrying *only when the answer is blank* is what keeps this cheap. Raising
+    the ceiling for every call would spend the extra budget on all 200
+    generations to fix 3; this spends it on the 3.
+    """
+    answer = await llm.generate(
+        prompt=prompt.user_prompt,
+        system_prompt=prompt.system_prompt,
+        history=history,
+        temperature=0.1,
+        max_tokens=settings.llm_answer_max_tokens,
+    )
+    if answer.strip():
+        return answer
+
+    logger.warning(
+        "LLM returned an empty answer at max_tokens=%d; retrying at %d",
+        settings.llm_answer_max_tokens,
+        settings.llm_answer_retry_max_tokens,
+    )
+    return await llm.generate(
+        prompt=prompt.user_prompt,
+        system_prompt=prompt.system_prompt,
+        history=history,
+        temperature=0.1,
+        max_tokens=settings.llm_answer_retry_max_tokens,
+    )
+
+
 class RagService:
     def __init__(
         self,
@@ -126,13 +167,7 @@ class RagService:
         )
 
         try:
-            answer = await self._llm.generate(
-                prompt=prompt.user_prompt,
-                system_prompt=prompt.system_prompt,
-                history=prompt.history,
-                temperature=0.1,
-                max_tokens=1024,
-            )
+            answer = await _generate_answer(self._llm, prompt, prompt.history)
         except LLMGenerationError as exc:
             logger.error("LLM generation failed during RAG query: %s", exc)
             raise
@@ -217,14 +252,24 @@ class RagService:
         yield f"event: citations\ndata: {json.dumps({'citations': [c.model_dump() for c in citations], 'sources': sources})}\n\n"
 
         try:
+            emitted = 0
             async for token in self._llm.stream_generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
                 history=prompt.history,
                 temperature=0.1,
-                max_tokens=1024,
+                max_tokens=settings.llm_answer_max_tokens,
             ):
+                emitted += len(token)
                 yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+            if emitted == 0:
+                # The same reasoning-budget exhaustion as _generate_answer,
+                # seen from the streaming side: the stream closes having
+                # yielded nothing and the user is left with a blank answer.
+                # Fall back to one buffered call at the larger ceiling.
+                retry = await _generate_answer(self._llm, prompt, prompt.history)
+                if retry.strip():
+                    yield f"event: token\ndata: {json.dumps({'token': retry})}\n\n"
         except LLMGenerationError as exc:
             logger.error("LLM streaming failed during RAG query: %s", exc)
             yield f"event: error\ndata: {json.dumps({'message': str(exc)})}\n\n"
@@ -405,13 +450,7 @@ class GraphRagService:
         )
 
         try:
-            answer = await self._llm.generate(
-                prompt=prompt.user_prompt,
-                system_prompt=prompt.system_prompt,
-                history=prompt.history,
-                temperature=0.1,
-                max_tokens=1024,
-            )
+            answer = await _generate_answer(self._llm, prompt, prompt.history)
         except LLMGenerationError as exc:
             logger.error("LLM generation failed during GraphRAG query: %s", exc)
             raise
@@ -531,14 +570,24 @@ class GraphRagService:
         yield f"event: citations\ndata: {json.dumps({'citations': [c.model_dump() for c in citations], 'sources': sources})}\n\n"
 
         try:
+            emitted = 0
             async for token in self._llm.stream_generate(
                 prompt=prompt.user_prompt,
                 system_prompt=prompt.system_prompt,
                 history=prompt.history,
                 temperature=0.1,
-                max_tokens=1024,
+                max_tokens=settings.llm_answer_max_tokens,
             ):
+                emitted += len(token)
                 yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+            if emitted == 0:
+                # The same reasoning-budget exhaustion as _generate_answer,
+                # seen from the streaming side: the stream closes having
+                # yielded nothing and the user is left with a blank answer.
+                # Fall back to one buffered call at the larger ceiling.
+                retry = await _generate_answer(self._llm, prompt, prompt.history)
+                if retry.strip():
+                    yield f"event: token\ndata: {json.dumps({'token': retry})}\n\n"
         except LLMGenerationError as exc:
             logger.error("GraphRAG streaming failed: %s", exc)
             yield f"event: error\ndata: {json.dumps({'message': str(exc)})}\n\n"

@@ -1,17 +1,18 @@
 # Answers — baseline
 
-Run 2026-09-13T11:53:03+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 0, calls 40
+Run 2026-09-16T18:31:12+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 40, calls 1
 
 | Slice | n | Fact coverage | Fully correct | False refusal | Citation P | Citation R | Grounded share |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| All answerable | 35 | 72.6% | 60.0% | 11.4% | 77.8% | 81.9% | 48.8% |
-| single_hop | 20 | 62.5% | 50.0% | 15.0% | 74.1% | 85.0% | 48.9% |
+| All answerable | 35 | 74.0% | 60.0% | 11.4% | 78.4% | 84.8% | 49.0% |
+| single_hop | 20 | 65.0% | 50.0% | 15.0% | 75.4% | 90.0% | 49.3% |
 | multi_hop | 10 | 89.2% | 70.0% | 0.0% | 95.0% | 76.7% | 53.8% |
 | follow_up | 5 | 80.0% | 80.0% | 20.0% | 56.7% | 80.0% | 38.1% |
 
 - Correct refusal on negatives: 100.0%
-- Grounding sentences: 132 grounded, 8 hedged, 126 unsupported
-- LLM latency (uncached calls): p50 2661 ms, p95 5473 ms
+- Empty answers (model produced no text; scored 0.0 coverage): none
+- Grounding sentences: 140 grounded, 8 hedged, 132 unsupported
+- LLM latency (uncached calls): p50 2331 ms, p95 2331 ms
 
 ## Per item
 
@@ -30,7 +31,7 @@ Run 2026-09-13T11:53:03+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 0
 | S11 | single_hop | 50.0% | answered | MAN-003 | 87.5% |
 | S12 | single_hop | 0.0% | false_refusal | INS-004, Maintenance | 33.3% |
 | S13 | single_hop | 100.0% | answered | INC-001, PPT-001 | 100.0% |
-| S14 | single_hop | 0.0% | answered | — | — |
+| S14 | single_hop | 50.0% | answered | INS-002 | 57.1% |
 | S15 | single_hop | 0.0% | false_refusal | SCN-002 | 33.3% |
 | S16 | single_hop | 100.0% | answered | SCN-003 | 33.3% |
 | S17 | single_hop | 100.0% | answered | Spare | 33.3% |
