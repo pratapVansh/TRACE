@@ -1,13 +1,26 @@
 # TRACE — Roadmap
 
-**Branch:** `main` · **Last verified:** 18 September 2026 (late) — **the graph question is
-settled at the answer level, and every open measurement is now closed.**
-Stage 5 remains complete and its frozen configs are untouched. Earlier the same day
-`passage2` — the configuration production runs — was validated at the answer level:
-+13.6 pts fact coverage, +20.0 fully correct, negatives 5/5, after a fourth
+**Branch:** `main` · **Last verified:** 19 September 2026 — **Stage 6 is written and
+verified locally; its first run on GitHub is the only thing left in it.**
+
+Two CI workflows and a retrieval gate now exist (`.github/workflows/ci.yml`,
+`.github/workflows/eval.yml`, `backend/eval/gate.py`). Everything verifiable without a
+runner has been verified: the full suite passes under the exact CI command with no Groq
+credential (**1120 passed, 0 failed, 0 skipped, 2m27s**, coverage 67%), the floors are
+re-derived from `passage2` rather than the stale baseline, and the Stage 5 baseline
+correctly **fails** them — the deliberate-regression demonstration, using real measured
+data. **Nothing has executed on a runner yet; expect the first push to be red for ordinary
+first-run reasons.** See *Stage 6*.
+
+---
+
+**18 September (late) — the graph question is settled at the answer level, and every open
+measurement is closed.** Stage 5 remains complete and its frozen configs are untouched.
+Earlier that day `passage2` — the configuration production runs — was validated at the
+answer level: +13.6 pts fact coverage, +20.0 fully correct, negatives 5/5, after a fourth
 refusal-classifier gap was found and fixed.
 
-**Four things closed in the final pass:**
+**Four things closed in that pass:**
 
 1. **`passage2_graphv2` is complete at 40/40** (8 cached + **32 new Groq calls**), so the
    last blocked measurement is done. **`graph_prefer_domain_entities` stays off** — on top
@@ -70,18 +83,18 @@ the README is stale in four places, listed under *Known debt*.
 | Files over 500 lines | 6 | `find … -exec wc -l` (was 7) |
 | `except: … pass` blocks | **9** (re-counted 17 Sep; the 10 here was wrong — *Known debt* said 9 and was right) | `grep -A1` over `backend/app` |
 | Migrations | 19 files, single head `017_investigations` | `alembic heads` |
-| Backend tests | **1108 passed, 0 failed, 0 skipped, 5m06s** (18 Sep, final pass — after the F05 alias fix and its 3 tests, with both datastore containers up). An intermediate run the same evening, before those 3 tests existed, was **1105 passed in 2m42s**; the spread is warm-cache variance, not flakiness. ⚠️ With Docker **stopped** the same suite is unusable — 5 failures in `test_health_degradation.py` and roughly 18 tests in 15 minutes. Earlier: 1080 on 16 Sep, 1061 on 14 Sep, 1011 on 13 Sep | `pytest -q -rs` |
+| Backend tests | **1120 passed, 0 failed, 0 skipped, 2m27s** (19 Sep, under the exact CI command — `--timeout=120 --cov=app` — and with `GROQ_API_KEY=""` to match a runner; 12 gate tests added). Earlier on 18 Sep: 1108 passed in 5m06s after the F05 alias fix. An intermediate run the same evening, before those 3 tests existed, was **1105 passed in 2m42s**; the spread is warm-cache variance, not flakiness. ⚠️ With Docker **stopped** the same suite is unusable — 5 failures in `test_health_degradation.py` and roughly 18 tests in 15 minutes. Earlier: 1080 on 16 Sep, 1061 on 14 Sep, 1011 on 13 Sep | `pytest -q -rs` |
 | Frontend tests | 61 passed, 6 files — **re-verified 17 Sep** | `npx vitest run` |
 | Frontend typecheck | clean — **re-verified 17 Sep** | `npx tsc --noEmit` |
 | Frontend routes | 12 | `find frontend/app -name page.tsx` |
 | eslint | 42 problems (23 errors, 19 warnings) | `npx eslint .` |
-| Pinned direct deps | 34 (all `==`) | `grep -c "==" backend/requirements.txt` |
+| Pinned direct deps | 37 (all `==`) — `pytest-timeout`, `pytest-cov` and `PyYAML` added for stage 6 | `grep -c "==" backend/requirements.txt` |
 | Lockfile | `backend/requirements.lock.txt`, 138 lines | present |
 | API routers mounted | 17 under `/api` | `main.py` `include_router` calls |
 | Docker | **backend image built 10 Sep and full stack run once**; Neo4j + Qdrant containers in daily use since 13 Sep | `docker image inspect trace-backend:dev`, `docker ps -a` |
 | Frontend container | **none** | no `frontend/Dockerfile`; not a compose service |
-| CI | **none** | no `.github/` |
-| `pytest-timeout` | **not installed** | `pytest --timeout=120` → unrecognized argument |
+| CI | **two workflows, never yet run on GitHub** — `ci.yml` (backend + frontend) and `eval.yml` (retrieval floors) | `.github/workflows/`, uncommitted |
+| `pytest-timeout` | **installed, 2.4.0**, CI runs at a 120s per-test cap | `pytest --timeout=60` → 1120 passed |
 
 **The health-test failures were the dead graph, and are gone — but there are five of
 them, not two.** Measured 18 September 2026 with the Docker daemon stopped:
@@ -503,7 +516,7 @@ Generated tables: `backend/eval/results/comparison.md`.
 | Evaluation harness (validator, metrics, retrieval + answer runners, LLM cache) | ✅ complete |
 | Golden set — 40 questions | ✅ reviewed and validated (`python -m eval.validate`: 0 errors, 7 warnings, against both collections) |
 | **Retrieval evaluation** — baseline + 4 ablations | ✅ **complete** (baseline rerun reproduced identical numbers) |
-| Backend tests | ✅ **full suite green** — **1108 passed, 0 failed, 0 skipped** (18 Sep, final pass after the F05 alias fix; 51 eval-metrics tests) |
+| Backend tests | ✅ **full suite green** — **1120 passed, 0 failed, 0 skipped** (19 Sep, under the CI command; 51 eval-metrics tests, 12 gate tests) |
 | **Answer evaluation — baseline** | ✅ **40 / 40** |
 | **Answer ablation — graph_off** | ✅ **40 / 40** (14 Sep) |
 | **Answer ablation — rerank_off** | ✅ **40 / 40** (15 Sep) |
@@ -786,12 +799,17 @@ timestamp and identical numbers.
 
 ### Next stage
 
-**→ Stage 6 — CI.** Stage 5 exists to give CI something meaningful to gate on, and it now has
-it: **gate on the retrieval metrics only** — they are deterministic and reran identically
-twice. Suggested floors, set below the measured baseline so ordinary variation does not trip
-them: **doc recall@5 ≥ 0.85, MRR ≥ 0.80, passage recall@5 ≥ 0.50**. **Answer metrics stay
-reported and must never gate** — they need Groq, they carry one-sample noise, and the
-`max_tokens` truncation puts a floor under their reproducibility.
+**→ Stage 6 — CI.** ✅ **Started and largely built, 19 September 2026.** Stage 5 exists to
+give CI something meaningful to gate on, and it now does: **the retrieval metrics only** —
+deterministic, and they reran identically twice. **Answer metrics stay reported and must
+never gate** — they need Groq and carry one-sample noise.
+
+The floors suggested here were **doc recall@5 ≥ 0.85, MRR ≥ 0.80, passage recall@5 ≥ 0.50**,
+derived from the Stage 5 baseline. They were re-derived from `passage2` before the workflow
+was written, exactly as the warning below demanded: the shipped floors are **doc recall@5
+≥ 0.84, hit@5 ≥ 0.80, passage recall@5 ≥ 0.68, evidence-in-context ≥ 0.81, MRR ≥ 0.80**.
+The old passage-recall floor of 0.50 would have admitted the Stage 5 baseline itself, a
+16.7-point regression; the new one rejects it. See *Stage 6* for the measured results.
 
 Ranked follow-on work, by measured leverage (tracked separately from Stage 6):
 
@@ -1077,54 +1095,126 @@ none were regenerated. All 200 are now cached, so every table in the report rebu
 
 ---
 
-## Stage 6 — CI ⏳ not started
+## Stage 6 — CI 🟡 written and verified locally; the first run on GitHub is the open item
 
-**Effort: 2 days.**
+**Built 19 September 2026.** Three files, all uncommitted: `.github/workflows/ci.yml`,
+`.github/workflows/eval.yml` and `backend/eval/gate.py` (plus `tests/test_eval_gate.py`).
+Everything that *can* be verified without pushing has been, and the one thing that cannot
+is named at the bottom.
 
-**What.** `.github/workflows/ci.yml`, running on pull request and on push to
-`main`.
+### Measured, on this machine, with the containers up
 
-**Why now.** CI is only worth having once there is something meaningful to run.
-**Stage 5 is complete and supplies exactly that.** Gate on the *retrieval* metrics only —
-they are deterministic and reran identically twice. Suggested floors, set below the measured
-baseline (doc recall@5 91.9%, MRR 0.860, passage recall@5 56.7%) so ordinary variation does
-not trip them: **doc recall@5 ≥ 0.85, MRR ≥ 0.80, passage recall@5 ≥ 0.50**. **Answer metrics
-stay reported and must never gate** — they need Groq, they carry one-sample noise, and the
-`max_tokens=1024` truncation found in Stage 5 puts a floor under their reproducibility.
+| Check | Result |
+| --- | --- |
+| Full backend suite, exact CI command (`pytest -q -rs --timeout=120 --cov=app`) | ✅ **1120 passed, 0 failed, 0 skipped, 2m27s** |
+| The same, with `GROQ_API_KEY=""` — i.e. what a runner has | ✅ **1120 passed** (this is the run quoted above) |
+| Coverage, reported not gated | **67%** — 10,537 statements, 3,456 missed |
+| Per-test timeout | ✅ `--timeout=60` also passes; slowest item is **10.9s** (`test_api_smoke` setup) |
+| `python -m eval.gate` on the shipped config | ✅ exit 0, all five floors met |
+| `python -m eval.gate --config baseline` | ✅ exit 1 — the regression demonstration, below |
+| Gate unit tests | ✅ 12 passed |
+| Gate dependencies in a clean venv | ✅ runs on `pydantic`, `pydantic-settings`, `PyYAML` alone — no torch |
+| Both workflow files parse as YAML | ✅ |
+| Qdrant health probe `bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'` | ✅ against the real `qdrant/qdrant:v1.18.3` container |
+| Neo4j health probe `cypher-shell … 'RETURN 1'` | ✅ against the real `neo4j:5.26-community` container |
+| Action versions | ✅ checked against each action's releases page: `checkout@v7`, `setup-python@v7`, `setup-node@v7`, `cache@v6` |
 
-> ⚠️ **Re-derive these floors before writing the workflow.** They were chosen against the
-> Stage 5 baseline, which is no longer what production runs. `passage2` measures passage
-> recall@5 at **73.3%**, so a 0.50 floor would let a 23-point regression through unnoticed
-> — and passage recall is the metric Stage 5 identified as gating answer quality. Gate the
-> *shipped* configuration, and set the floor a few points under its own measured value.
-> The empty-answer retry also removes the `max_tokens` caveat above: 0 of 200 answers are
-> empty now. Answer metrics still must not gate, for the other two reasons.
+### The floors — derived from `passage2`, not the baseline
 
-**Steps.**
+The earlier suggestion in this file (doc recall@5 ≥ 0.85, MRR ≥ 0.80, passage recall@5
+≥ 0.50) was derived from the Stage 5 baseline and **would not have worked**. It is kept
+below as the warning it became.
 
-- [ ] **Backend job:** Python 3.14, install from `requirements.txt`, run
-      `pytest`.
-- [ ] **Frontend job:** `npm ci`, `tsc --noEmit`, `vitest run`, `eslint`.
-- [ ] **`pytest-timeout` with a 60s per-test cap.** Confirmed absent —
-      `pytest --timeout=120` is rejected as an unrecognized argument. The suite
-      runs in **6m02s** with no upper bound at all, so a hung test hangs the job
-      until the runner kills it.
-- [ ] **`pytest-cov`, report only. No floor** until one has been measured — a
-      floor picked before measurement either blocks everything or means nothing.
-- [ ] **eslint starts non-blocking.** Current state (10 September 2026): **42
-      problems, 23 errors, 19 warnings** — down from 59/30/29. A separate
-      cleanup task takes it to zero. Lint becomes blocking once the count is
-      zero. `npx tsc --noEmit` is already clean, so the typecheck job can be
-      blocking from day one.
-- [ ] **Service containers for Qdrant and Neo4j** so the 8 integration tests that
-      currently skip for lack of a live service finally run.
-- [ ] **A separate eval workflow** gating on recall@5, triggered on changes to
-      `services/retrieval*`, `services/rag*`, `services/reranker*`, `graph/` and
-      the prompt builder, plus nightly on `main`.
+| Metric | `passage2` measured | Floor | Slack |
+| --- | ---: | ---: | ---: |
+| `doc_recall_at_5` | 0.8905 | **0.84** | ~1.7 items |
+| `doc_hit_rate_at_5` | 0.8571 | **0.80** | ~2.0 items |
+| `passage_recall_at_5` | 0.7333 | **0.68** | ~1.8 items |
+| `evidence_in_context` | 0.8619 | **0.81** | ~1.8 items |
+| `mrr` | 0.8508 | **0.80** | — |
 
-**Exit criterion.** A pull request runs both jobs to green; a deliberately
-introduced retrieval regression fails the eval workflow; the 8 previously
-skipped integration tests report as run.
+One golden-set item is worth 2.9 points, so each floor is about two items of slack:
+loose enough that churn does not trip it, tight enough to catch a systematic regression.
+
+**The deliberate-regression test is real data, not a fixture.** The Stage 5 baseline is a
+once-shipped configuration that is 16.7 points worse on passage recall. Under the old
+suggested floors it passed; under these it **fails on `passage_recall_at_5` and
+`evidence_in_context`**. `eval.yml` runs exactly that check on every trigger and fails the
+job if the baseline ever starts passing — a floor loose enough to admit the configuration
+it was written to reject is not a gate. A unit test pins the same property.
+
+**The gate also fails on configuration drift.** `check_config_drift` compares the stored
+run's settings snapshot against what `config.py` ships — `chunks_per_document`,
+`rerank_enabled`, `graph_prefer_domain_entities`, `retrieval_top_k`, `embedding_model`. A
+green gate over a configuration production stopped running reports safety it is not
+measuring; promoting the graph flag without re-measuring now fails the build.
+
+### What this gate does not do — the honest limit
+
+**It does not re-run retrieval in CI.** There is no corpus on a runner: the 138 production
+chunks live in a local Postgres, are not in the repository, and an empty Qdrant measures
+nothing. So the gate checks the *recorded* metrics, which catches a regression at the
+moment new results are committed — the moment a retrieval change is measured — and cannot
+catch a retrieval change that ships without being re-measured. The config-drift check is
+the stand-in that keeps it from going quietly stale.
+
+Closing the gap properly needs a seeded corpus in CI: a fixture dataset plus a documented
+ingest, or a dumped Qdrant snapshot restored at job start. That is its own piece of work
+and is **not** scheduled here.
+
+### Two code changes CI required
+
+- **`test_health_degradation.py` now pins the LLM component.** Five tests assert a
+  baseline of `status == "ok"`, which needs every optional component up. Postgres, Qdrant
+  and Neo4j are real service containers in CI, but `llm` is only `ok` after
+  `GroqProvider.initialize()` completes a live `models.list()` call — a credential CI does
+  not have. Verified directly: with `GROQ_API_KEY=""` the endpoint returns
+  `degraded: ['llm']`, so all five would have failed on a runner for a reason unrelated to
+  what they cover. This is the "pin the components under test" fix this file deferred to
+  stage 6. It pins **only** the LLM flag; the other four stay real, so a broken Qdrant or
+  Neo4j still fails these tests as it should.
+- **`PyYAML` is now a direct dependency.** `eval/schema.py` imports it to read
+  `golden_set.yaml`; it previously arrived only transitively through
+  `sentence-transformers → transformers`. Same class as the `certifi` and `tenacity`
+  entries already in `requirements.txt`.
+
+`pytest-timeout==2.4.0` and `pytest-cov==7.1.0` were added at the same time and are
+installed in the local venv.
+
+### Steps
+
+- [x] **Backend job:** Python 3.14, install from `requirements.txt`, run `pytest`.
+- [x] **Frontend job:** `npm ci`, `tsc --noEmit` (blocking), `vitest run` (blocking),
+      `eslint` (non-blocking).
+- [x] **`pytest-timeout`.** Set to **120s**, not the 60s suggested here. 60s passes
+      locally against a 10.9s worst case, but the first job on a cold Hugging Face cache
+      pays the model download inside a test setup. The workflow caches `~/.cache/huggingface`
+      *and* leaves the wider margin; either alone would be a flake risk.
+- [x] **`pytest-cov`, report only. No floor.** Measured at **67%** — recorded so a floor
+      can one day be set from a number rather than a guess.
+- [x] **eslint starts non-blocking** (`continue-on-error: true`). Still **42 problems
+      (23 errors, 19 warnings)**, re-verified 18 September. Flip the flag off in the same
+      change that clears the last one.
+- [x] **Service containers for Postgres, Qdrant and Neo4j.** Postgres was not in the
+      original list and is required: `test_document_pipeline_integration.py` uses real
+      tables inside a rolled-back transaction and skips itself without one, and the health
+      tests need `database` green. `alembic upgrade head` runs before pytest.
+- [x] **A separate eval workflow** gating on the retrieval floors, triggered on the
+      retrieval, graph, prompt-builder and config paths, plus nightly on `main` and
+      `workflow_dispatch`.
+- [ ] **Run it on GitHub.** Nothing here has executed on a runner — there is no remote CI
+      history, and `act` was not used. Expect the first push to surface the ordinary
+      first-run problems: an image or action tag that resolves differently, service
+      containers needing longer start periods, or a Linux-only dependency gap. **Treat the
+      first red run as expected, not as a defect in this design.**
+- [ ] **Decide whether the eval workflow should block merges** or only report until it has
+      a few runs of history.
+
+**Exit criterion** — *partially met.* A deliberately introduced retrieval regression fails
+the eval workflow ✅ (demonstrated with the Stage 5 baseline, twice: in the workflow and in
+a unit test). The previously-skipped integration tests report as run ✅ (0 skipped, locally,
+with the same services CI provides). **A pull request running both jobs to green ⏳ — this
+cannot be verified from a local machine and is what is left of this stage.**
 
 ---
 

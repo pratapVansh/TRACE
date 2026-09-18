@@ -22,6 +22,34 @@ def health_client():
 
 
 @pytest.fixture(autouse=True)
+def _llm_provider_present(health_client):
+    """Pin the one component CI cannot supply with a service container.
+
+    Five tests in this file assert a baseline of ``status == "ok"``, which
+    holds only when *every* optional component is up. Postgres, Qdrant and
+    Neo4j are all real in CI — they are service containers — but the LLM
+    component is only ``ok`` when ``GroqProvider.initialize()`` has completed a
+    live ``models.list()`` call, which needs a credential CI does not have and
+    an external service whose availability is not this suite's business.
+
+    Without this, all five fail on a runner for a reason that has nothing to do
+    with the reranker and optional-store reporting they exist to cover. This is
+    the "pin the components under test" fix the roadmap deferred to stage 6.
+    It deliberately pins *only* the LLM flag: the other four components stay
+    real, so a broken Qdrant or Neo4j still fails these tests as it should.
+    """
+    if getattr(app.state, "llm_provider", None) is not None:
+        yield
+        return
+
+    app.state.llm_provider = object()
+    try:
+        yield
+    finally:
+        app.state.llm_provider = None
+
+
+@pytest.fixture(autouse=True)
 def _restore_reranker_state():
     saved = (
         reranker_service._DISABLED,

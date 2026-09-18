@@ -1,0 +1,89 @@
+name: Retrieval floors
+
+# Stage 6's quality gate. Runs `python -m eval.gate`, which checks the stored
+# retrieval metrics of the *shipped* configuration (passage2) against floors
+# set roughly five points under their measured values.
+#
+# WHAT THIS GATE DOES NOT DO: it does not re-run retrieval. CI has no corpus —
+# the 138 production chunks live in a local Postgres and are not in the
+# repository, and an empty Qdrant proves nothing. So this catches a regression
+# at the moment new results are committed, which is the moment a retrieval
+# change gets measured. It cannot catch a retrieval change that ships without
+# being re-measured. Closing that needs a seeded corpus in CI; until then the
+# config-drift check is the stand-in — it fails when the stored run stops
+# describing what the code ships, which is the way this gate would otherwise
+# go quietly stale.
+#
+# Answer metrics are never gated: they need Groq and carry one-sample noise.
+# They are reported in backend/eval/results/comparison.md.
+
+on:
+  pull_request:
+    paths:
+      - "backend/app/services/retriever_service.py"
+      - "backend/app/services/retrieval_dedup.py"
+      - "backend/app/services/hybrid_retriever.py"
+      - "backend/app/services/rag_service.py"
+      - "backend/app/services/ranking_service.py"
+      - "backend/app/services/reranker_service.py"
+      - "backend/app/services/prompt_builder.py"
+      - "backend/app/services/query_understanding.py"
+      - "backend/app/services/vector_store.py"
+      - "backend/app/graph/**"
+      - "backend/app/core/config.py"
+      - "backend/eval/**"
+      - ".github/workflows/eval.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/app/services/**"
+      - "backend/app/graph/**"
+      - "backend/app/core/config.py"
+      - "backend/eval/**"
+  schedule:
+    # Nightly on main, so a floor breach is found even when nothing touched
+    # the paths above.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  floors:
+    name: Retrieval floors
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install gate dependencies
+        # Deliberately not requirements.txt. The gate imports eval.schema
+        # (pydantic, PyYAML) and app.core.config (pydantic-settings) and
+        # nothing else — verified in a clean environment — so this job does
+        # not need torch and finishes in seconds.
+        run: pip install pydantic pydantic-settings PyYAML
+
+      - name: Check retrieval floors
+        run: python -m eval.gate
+
+      - name: Check the frozen Stage 5 baseline is still gated correctly
+        # The floors are derived from passage2, not the Stage 5 baseline. The
+        # baseline is 16.7 points worse on passage recall and must fail them —
+        # if it ever passes, the floors have been loosened into meaninglessness.
+        run: |
+          if python -m eval.gate --config baseline; then
+            echo "::error::The Stage 5 baseline passed the shipped floors. The floors are too loose to detect the regression they exist for."
+            exit 1
+          fi
+          echo "Baseline correctly fails the shipped floors."

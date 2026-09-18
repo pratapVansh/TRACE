@@ -29,6 +29,14 @@ python-jose[cryptography]==3.5.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 httpx==0.28.1
+# CI (stage 6). The suite has no upper time bound of its own: with Qdrant
+# unreachable a single call burns QDRANT_TIMEOUT_SECONDS x QDRANT_MAX_RETRIES
+# and the run degrades from ~5 minutes to ~15 for 18 tests, so a hung test
+# would hang the job until the runner killed it. Coverage is reported, never
+# gated — a floor picked before measurement either blocks everything or means
+# nothing.
+pytest-timeout==2.4.0
+pytest-cov==7.1.0
 
 # Document parsing
 pymupdf==1.28.0
@@ -58,3 +66,7 @@ certifi==2026.6.17
 # Imported directly by app/api/routes/agents.py; previously arrived only as a
 # transitive dependency of langchain-core.
 tenacity==9.1.4
+# Imported directly by the evaluation harness (eval/schema.py reads
+# golden_set.yaml and corpus_manifest.yaml); arrives otherwise only as a
+# transitive dependency of transformers via sentence-transformers.
+PyYAML==6.0.3
