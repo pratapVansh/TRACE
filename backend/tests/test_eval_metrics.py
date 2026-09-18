@@ -14,6 +14,7 @@ from eval.metrics import (
     reciprocal_rank,
     refusal_outcome,
 )
+from eval.schema import load_golden_set
 
 DOCS = ["B.docx", "A.docx", "B.docx", "C.docx", "D.docx", "E.docx", "F.docx"]
 
@@ -146,6 +147,53 @@ class TestAnswers:
         """Same absence, stated subject-verb-object rather than passively."""
         assert is_refusal(answer)
 
+    def test_n04_regression_passage2_do_not_report_any_phrasing(self):
+        """Eval N04, passage2: negated-active, "do not report any".
+
+        A fourth wording of the one premise correction, scoring a fourth way.
+        "The available documents do not report any internal inspection
+        findings" states exactly what the baseline's "no findings were
+        recorded" and graph_v2's "the documents contain no findings" state —
+        the verb is simply negated rather than paired with "no", so neither
+        existing pattern could see it. Without this, two passages per document
+        appeared to cost a negative it had nothing to do with: the answer
+        correctly says the inspection was deferred and invents no findings.
+        """
+        baseline = ("The internal inspection of boiler B‑101 was **deferred** to the next plant shutdown, "
+                    "so no internal visual findings inside the steam drum were recorded.")
+        passage2 = ("The available documents do not report any internal inspection findings for boiler "
+                    "B‑101's steam drum. The most recent inspection (INS‑003) notes that the internal "
+                    "inspection was deferred to the next shutdown, and only external ultrasonic "
+                    "thickness measurements of the drum shell are provided.")
+        assert is_refusal(baseline) == is_refusal(passage2) is True
+        assert refusal_outcome(baseline, True, None) == refusal_outcome(passage2, True, None) == "correct_refusal"
+
+    @pytest.mark.parametrize("answer", [
+        "The provided documents do not report any readings for that survey.",
+        "The available documents do not report any findings for the drum.",
+    ])
+    def test_do_not_report_joins_the_negated_active_verbs(self, answer):
+        """``report`` reads identically to ``contain`` and ``mention`` here.
+
+        Those two were already accepted; ``report`` was the one verb missing
+        from the set, which is the whole of the N04 gap.
+        """
+        assert is_refusal(answer)
+
+    @pytest.mark.parametrize("answer", [
+        "The documents do not list any records of the 2018 outage.",
+        "The sources do not show any entries for that valve.",
+    ])
+    def test_list_and_show_stay_out_of_the_negated_active_verbs(self, answer):
+        """Deliberately not accepted, and the reason is measured.
+
+        They look like they belong for symmetry, but neither is evidenced by a
+        stored answer and ``list`` is not free: adding it reclassifies
+        rerank_off's M01, an answerable item this fix has no evidence about.
+        The set stays at what the corpus actually shows.
+        """
+        assert not is_refusal(answer)
+
     @pytest.mark.parametrize("answer", [
         "No defects were noted during the internal inspection of the drum.",
         "No anomalies were found during the walkdown; the unit ran normally.",
@@ -171,6 +219,26 @@ class TestAnswers:
         coverage, _ = fact_coverage("- **Minimum required stock:** 2 pcs.", [
             {"fact": "min 2", "any_of": ["minimum required stock: 2"]},
         ])
+        assert coverage == 1.0
+
+    @pytest.mark.parametrize("answer", [
+        "The oil should be changed every **4,000 operating hours**.",
+        "Change the oil every 4000 operating hours.",
+        'Excerpt: "Oil change interval: 4000 hours."',
+    ])
+    def test_f05_interval_phrasings_in_stored_answers_are_credited(self, answer):
+        """F05 regression: three correct answers scored 0.0 on a synonym gap.
+
+        chunk512, rerank_off and passage2_graphv2 all answer "every 4,000
+        operating hours" - the right interval, stated plainly - and all three
+        scored zero coverage because ``any_of`` listed "running hours" and not
+        "operating hours". passage2 scored 1.0 on the same interval only
+        because its evidence block quoted the source as "4000 hours". The
+        pipelines were never the difference; the alias list was, and it decided
+        the graph flag's only fact-coverage delta.
+        """
+        item = next(i for i in load_golden_set().active_items() if i.id == "F05")
+        coverage, _ = fact_coverage(answer, [f.model_dump() for f in item.expected_facts])
         assert coverage == 1.0
 
     def test_refusal_outcomes(self):

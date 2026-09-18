@@ -1,16 +1,32 @@
 # TRACE — Roadmap
 
-**Branch:** `main` · **Last verified:** 17 September 2026 — **production-readiness audit.**
-Stage 5 remains complete and its frozen configs are untouched. Since the 16 September entry,
-three things happened that this file had not recorded: the `max_tokens` empty-answer retry
-shipped and the 3 empty generations were regenerated; `retrieval_chunks_per_document` was
-raised to **2** in production on the `passage2` retrieval evidence; and a `passage2`
-experiment was measured at retrieval level. The audit then found and fixed a dedup ordering
-regression that change had introduced, a dashboard counting the wrong queue, and the graph
-relationship over-count. A second pass profiled OCR (9.4 s/page) and bounded it: a failing
-page no longer destroys the document, and `ocr_max_pages` caps per-document cost. **No graph
-flag was promoted — none meets the answer-level bar.** See *Graph promotion status*,
-*Post-Stage-5 changes*, and *Known debt → 17 September audit*.
+**Branch:** `main` · **Last verified:** 18 September 2026 (late) — **the graph question is
+settled at the answer level, and every open measurement is now closed.**
+Stage 5 remains complete and its frozen configs are untouched. Earlier the same day
+`passage2` — the configuration production runs — was validated at the answer level:
++13.6 pts fact coverage, +20.0 fully correct, negatives 5/5, after a fourth
+refusal-classifier gap was found and fixed.
+
+**Four things closed in the final pass:**
+
+1. **`passage2_graphv2` is complete at 40/40** (8 cached + **32 new Groq calls**), so the
+   last blocked measurement is done. **`graph_prefer_domain_entities` stays off** — on top
+   of `passage2` it is **identical to it on fact coverage, item for item** (87.6% / 80.0%
+   fully correct, both). See *Graph promotion status*.
+2. **A fifth scoring gap was found and fixed** — `golden_set.yaml` F05 accepted "running
+   hours" but not "operating hours", so **three correct answers scored 0.0**. Correcting it
+   moved chunk512 (+2.9 coverage) and rerank_off (+2.8), and it was the *only* fact-coverage
+   difference between `passage2` and `passage2_graphv2` — i.e. the metric, not the graph,
+   produced the apparent regression.
+3. **The full backend suite is green with the datastores up: 1108 passed, 0 failed,
+   0 skipped.** The 5 failures seen with Docker stopped are environmental, not real.
+4. **The documented chunk configuration was wrong.** Production runs **256/40**, not the
+   "256/64" this file and `stage5_report.md` claimed in five places. Corrected; the corpus
+   was built at 256/40 (`probe_results.md` had it right all along).
+
+**No graph flag is promoted — none meets the answer-level bar, and this is now measured
+rather than pending.** See *Graph promotion status*, *Post-Stage-5 changes*, and
+*Known debt → 17 September audit*.
 
 ---
 
@@ -54,7 +70,7 @@ the README is stale in four places, listed under *Known debt*.
 | Files over 500 lines | 6 | `find … -exec wc -l` (was 7) |
 | `except: … pass` blocks | **9** (re-counted 17 Sep; the 10 here was wrong — *Known debt* said 9 and was right) | `grep -A1` over `backend/app` |
 | Migrations | 19 files, single head `017_investigations` | `alembic heads` |
-| Backend tests | **1100 passed, 0 failed, 5m57s** (17 Sep, after the audit fixes and the OCR bounding work; 17 tests added across both passes). ⚠️ The run *before* those fixes was **1084 passed, 2 failed** — both in `test_retrieval_dedup.py`, both pre-existing, both caused by the uncommitted `passage2` change and unnoticed because the suite had not been re-run since. Earlier: 1080 on 16 Sep, 1061 on 14 Sep, 1011 on 13 Sep | `pytest -q` |
+| Backend tests | **1108 passed, 0 failed, 0 skipped, 5m06s** (18 Sep, final pass — after the F05 alias fix and its 3 tests, with both datastore containers up). An intermediate run the same evening, before those 3 tests existed, was **1105 passed in 2m42s**; the spread is warm-cache variance, not flakiness. ⚠️ With Docker **stopped** the same suite is unusable — 5 failures in `test_health_degradation.py` and roughly 18 tests in 15 minutes. Earlier: 1080 on 16 Sep, 1061 on 14 Sep, 1011 on 13 Sep | `pytest -q -rs` |
 | Frontend tests | 61 passed, 6 files — **re-verified 17 Sep** | `npx vitest run` |
 | Frontend typecheck | clean — **re-verified 17 Sep** | `npx tsc --noEmit` |
 | Frontend routes | 12 | `find frontend/app -name page.tsx` |
@@ -67,15 +83,29 @@ the README is stale in four places, listed under *Known debt*.
 | CI | **none** | no `.github/` |
 | `pytest-timeout` | **not installed** | `pytest --timeout=120` → unrecognized argument |
 
-**The two health-test failures were the dead graph, and are gone.**
-`test_health_degradation.py::test_runtime_disabled_reranker_is_reported` and
-`::test_reranking_switched_off_is_not_degraded` assert a baseline of
-`status == "ok"`. With the Aura instance deleted (and later with nothing on
-`127.0.0.1:7687`) health was `degraded`, so both failed. With the Neo4j
-container up they pass. They still assume an all-green environment — see
-*Known debt*.
+**The health-test failures were the dead graph, and are gone — but there are five of
+them, not two.** Measured 18 September 2026 with the Docker daemon stopped:
+`test_health_degradation.py` reports **5 failed, 2 passed in 2m36s**, and the failures are
+`::test_runtime_disabled_reranker_is_reported`, `::test_failed_model_load_is_reported`,
+`::test_unwarmed_model_is_reported`, `::test_reranking_switched_off_is_not_degraded` and
+`::test_optional_store_down_is_degraded_not_unavailable`. All five assert a baseline of
+`status == "ok"`, which holds only when every optional service is reachable. With the
+containers up all seven pass. The same run skips the 7 `test_rag_integration.py` tests and
+drags the whole suite to a crawl — ~18 tests in 15 minutes against 1108 in 2m42s — because
+every Qdrant call burns `QDRANT_TIMEOUT_SECONDS=30` × `QDRANT_MAX_RETRIES=3`. **Start
+`trace-qdrant-1` and `trace-neo4j-1` before running the suite.** See *Known debt*.
 
-### Live services, re-checked 16 September 2026
+### Live services, re-checked 18 September 2026
+
+**18 September re-check (Docker restarted for the final pass):** Qdrant
+`document_chunks` **138 points, status green**; Neo4j **171 nodes / 87 relationships** —
+both identical to the 16 September figures below, so nothing drifted while the containers
+were stopped. Postgres holds **29 active documents / 138 chunks** (16 soft-deleted), and
+`ingestion_jobs` **33 completed / 8 queued / 3 failed**. One of the 29 active documents is
+`FAILTEST-143234.txt`, status `failed` — a deliberate failure-path artefact from
+5 September, so the real corpus is **28 indexed documents + 1 test row**.
+
+### Live services, as recorded 16 September 2026
 
 | Service | State |
 | --- | --- |
@@ -308,7 +338,8 @@ the exit criterion below — restart persistence and the in-container test run.
 - [x] **Compose no longer keys dev Neo4j on the cloud secret.**
       `docker-compose.local.yml` uses a literal `tracedevpassword` instead of
       `${NEO4J_PASSWORD:-…}`, which interpolated the root `.env` password.
-      *Uncommitted.*
+      *Committed in `6d57238`* — the earlier "uncommitted" note here was wrong
+      (verified 18 September against `git show HEAD:docker-compose.local.yml`).
 - [ ] **Bootstrap a user.** Nothing in compose creates the SuperAdmin.
       `backend/scripts/create_super_admin.py` reads `SUPER_ADMIN_EMAIL` /
       `_PASSWORD` / `_FULL_NAME`, none of which are in `.env.docker` — a fresh
@@ -439,47 +470,66 @@ render both verified).
 were closed on 16 September for **41 Groq calls**: chunk512's outstanding negative N05 (1 call,
 39 reused from cache) and the full `graph_v2` answer run (40 calls, none reusable by design).
 
-**Final decision: keep the baseline pipeline exactly as it is** — hybrid search +
-cross-encoder reranker + graph, 256/64 chunks, `graph_prefer_domain_entities` **off**.
-Nothing in production changes as a result of Stage 5. See *Final decision* below.
+**Two further configurations were measured after the stage closed** — `passage2` and
+`passage2_graphv2`, both 40/40 on 18 September — so the answer-level picture now covers
+**seven** configurations and **280 answers**. Neither reopens Stage 5; both are recorded
+under *Post-Stage-5 changes* and *`passage2_graphv2`* below.
+
+**Final decision (as of stage close): keep the baseline pipeline exactly as it is** —
+hybrid search + cross-encoder reranker + graph, 256/40 chunks,
+`graph_prefer_domain_entities` **off**. ⚠️ **One half of this has since changed:**
+`retrieval_chunks_per_document` moved 1 → **2** on 17 September and was validated at the
+answer level on 18 September, so production now runs `passage2`, not the Stage 5 baseline.
+The graph flag stayed off and is now settled on answer-level evidence. See *Final decision*
+below and *Post-Stage-5 changes*.
 
 **Effort: 4 days.** Carried out 13–16 September 2026.
-**Nothing is committed** — all Stage 5 files are uncommitted in the working tree.
+
+**Commit state, corrected 18 September 2026.** The earlier "nothing is committed" note is
+**stale**. The harness, the golden set and the results were committed across `6d57238`,
+`bbf5806`, `fbf3439` and `f545e67`; so were the 17 September OCR bounding, dedup, dashboard
+and graph-count fixes (`f545e67`). What is *still* uncommitted is only the 18 September
+work: `eval/metrics.py` (the `report` verb), `eval/golden_set.yaml` (the F05 aliases),
+`eval/report.py`, `eval/stage5_report.md`, the rescored `results/*/answers.*`,
+`results/passage2_graphv2/answers.*`, `tests/test_eval_metrics.py` and this file.
 
 **Full results and interpretation: [`backend/eval/stage5_report.md`](backend/eval/stage5_report.md).**
 Generated tables: `backend/eval/results/comparison.md`.
 
-### Status summary (16 September 2026 — final)
+### Status summary (18 September 2026 — final)
 
 | Area | State |
 | --- | --- |
 | Evaluation harness (validator, metrics, retrieval + answer runners, LLM cache) | ✅ complete |
 | Golden set — 40 questions | ✅ reviewed and validated (`python -m eval.validate`: 0 errors, 7 warnings, against both collections) |
 | **Retrieval evaluation** — baseline + 4 ablations | ✅ **complete** (baseline rerun reproduced identical numbers) |
-| Backend tests | ✅ **full suite green** — 1100 passed, 0 failed (17 Sep, re-verified after the audit and OCR work; 43 eval-metrics tests) |
+| Backend tests | ✅ **full suite green** — **1108 passed, 0 failed, 0 skipped** (18 Sep, final pass after the F05 alias fix; 51 eval-metrics tests) |
 | **Answer evaluation — baseline** | ✅ **40 / 40** |
 | **Answer ablation — graph_off** | ✅ **40 / 40** (14 Sep) |
 | **Answer ablation — rerank_off** | ✅ **40 / 40** (15 Sep) |
 | **Answer ablation — chunk512** | ✅ **40 / 40** (16 Sep) — N05 generated; negatives now **5 / 5** |
 | **Answer run — `graph_v2`** | ✅ **40 / 40** (16 Sep) — 40 new calls. **Result: no answer-level effect** |
+| **Answer run — `passage2`** | ✅ **40 / 40** (18 Sep) — **validated**, +13.6 coverage, +20.0 fully correct |
+| **Answer run — `passage2_graphv2`** | ✅ **40 / 40** (18 Sep) — 8 cached + **32 new calls**. **Result: identical to `passage2` on fact coverage, item for item** |
 | LLM-as-judge | ⏳ **not implemented** (optional step 7; never gated) |
 | Scoring fixes (16 Sep) | ✅ third refusal-classifier wording gap + one S17 fact phrasing; move **exactly 3 records**, leave baseline / rerank_off / graph_off byte-identical; 6 new tests |
-| Empty-generation artefact | ✅ **found, quantified, corrected in the report** — 3 of 200 answers are empty (`max_tokens=1024`); it had corrupted two Stage 5 conclusions |
-| Blocker | **None.** All 200 answers cached; every table rebuilds with `rescore` + `report`, no Groq |
-| Cached answers | **200** in `backend/eval/cache/llm/` (gitignored) |
-| Git | **Nothing committed** — all Stage 5 files remain uncommitted in the working tree |
+| Scoring fixes (18 Sep) | ✅ fourth refusal-classifier gap (`report`, moves 1 record) and the **F05 "operating hours" alias gap** (moves **3 records**: chunk512, rerank_off, passage2_graphv2); 3 further tests |
+| Empty-generation artefact | ✅ **found, quantified, corrected in the report** — 3 of 200 answers are empty (`max_tokens=1024`); it had corrupted two Stage 5 conclusions. Fixed by the retry; every config now reports `empty_answers: []` |
+| Blocker | **None.** All 280 answers cached; every table rebuilds with `rescore` + `report`, no Groq |
+| Cached answers | **283** in `backend/eval/cache/llm/` (gitignored) |
+| Git | **The 18 September work is uncommitted**; everything earlier is committed — see *Commit state, corrected 18 September* above |
 
 ### Final decision
 
 **Chosen configuration: the baseline pipeline, unchanged.** Hybrid search + cross-encoder
-reranker + knowledge graph, 256/64 chunks, `graph_prefer_domain_entities` **off**.
+reranker + knowledge graph, 256/40 chunks, `graph_prefer_domain_entities` **off**.
 
 | Component | Decision | Why |
 | --- | --- | --- |
 | Cross-encoder reranker | **Keep** — and its CPU latency is a deployment blocker | Removing it costs 11.4 pts fully-correct, 40 pts on follow-up, and one negative to a genuine missed refusal |
 | Knowledge graph | **Keep enabled** | Product feature; reworked it is the best retrieval config measured. Nothing was removed from Neo4j |
 | `graph_prefer_domain_entities` (`graph_v2`) | **Stays off by default. Code kept, gated, unchanged** | The criterion was fixed *before* the run: promote it only if the retrieval gain reaches the answers. It does not (see below) |
-| Chunk size | **Stays 256/64** | 512 is the biggest answer gain in Stage 5 but is read through a 256-wordpiece embedding window that truncates it. Change the embedding model first |
+| Chunk size | **Stays 256/40** | 512 is the biggest answer gain in Stage 5 but is read through a 256-wordpiece embedding window that truncates it. Change the embedding model first |
 | `max_tokens=1024` | **Raise it** — the one code change Stage 5 clearly earns, deliberately *not* made here | It produced 3 empty and several truncated answers in 200 generations. Changing it invalidates all 200 cached answers, so it needs a fresh quota day |
 
 **The `graph_v2` verdict, stated plainly.** The reworked graph arm is a genuine *retrieval*
@@ -501,6 +551,13 @@ multi-document *recall* cost is real and stands; the claim it had been measured 
 answers does not.
 
 ### Final Stage 5 metrics
+
+> **The answer table in this section is the 16 September scoring and is kept as the record
+> of what Stage 5 concluded. It is not current.** Two later scoring corrections moved it —
+> the empty-answer retry (17 Sep) and the F05 alias fix (18 Sep) — and `passage2` /
+> `passage2_graphv2` are not in it at all. **Quote `backend/eval/results/comparison.md`**,
+> which `python -m eval.run report` regenerates, for anything current. The retrieval table
+> below is unaffected by both corrections and still reproduces exactly.
 
 **Retrieval** (35 answerable, deterministic, reruns identically):
 
@@ -543,7 +600,95 @@ but it is what shows the two artefacts above:
 §3.6 the two scoring fixes, §8 chosen configuration.
 Generated tables: `backend/eval/results/comparison.md`.
 
-### Graph promotion status — nothing is validated, defaults stay (17 September 2026)
+### `passage2` answer evaluation — ✅ validated (18 September 2026)
+
+**The configuration production already runs is now measured at the answer level, and it
+is the largest answer-level gain in the project.** 40/40, one LLM sample per question,
+`eval/results/passage2/answers.json`.
+
+| Metric (35 answerable) | baseline | **passage2** |
+| --- | ---: | ---: |
+| Fact coverage | 74.0% | **87.6% (+13.6)** |
+| Fully correct | 60.0% | **80.0% (+20.0)** |
+| Fact coverage — single_hop | 65.0% | **87.5% (+22.5)** |
+| Fact coverage — multi_hop | 89.2% | 91.7% (+2.5) |
+| Fact coverage — follow_up | 80.0% | 80.0% |
+| False refusal | 11.4% | **8.6% (−2.9)** |
+| Citation precision / recall | 78.4% / 84.8% | **85.5%** (+7.1) / 85.7% (+1.0) |
+| Grounded sentence share | 49.0% | **57.2% (+8.2)** |
+| Correct refusal (5 negatives) | 5 / 5 | **5 / 5** |
+| Empty answers | 0 | 0 |
+
+Against chunk512 it **ties on coverage (87.6% each) and trails by 2.9 pts on
+fully-correct (80.0% against 82.9%)** — figures corrected by the F05 alias fix later the
+same day, which moved chunk512 up from 84.7% / 80.0%; the pre-fix reading that `passage2`
+"beats chunk512 on coverage" was an artefact of that gap. Unlike chunk512, `passage2`
+needs no re-embedding and suffers no 256-wordpiece truncation, which is why it ships.
+This is conclusion 1 confirmed end to end: `passage2` raised evidence-in-context 61.4% →
+86.2%, and the answers followed. **The default shipped on 17 September is correct.**
+
+**A fourth refusal-classifier gap was found and fixed first.** The raw run scored N04
+`missed_refusal`, showing correct refusal at 4/5 — which would have been a genuine
+trade-off against all the gains above. It was not one. The answer reads *"the available
+documents do not report any internal inspection findings … the internal inspection was
+deferred to the next shutdown"*: a correct premise correction that invents nothing,
+citing INS-003 and LOG-001.
+
+The cause was one missing verb. Pattern 1 (`(do|does) not (contain|include|provide|
+mention|specify|record)`) already accepts the negated-active form unrestricted; it
+simply lacked `report`. Fixed to the same standard as the three earlier gaps:
+
+- **Minimal** — one verb added, not a new pattern. A restricted subject/object pattern
+  was drafted first and discarded as redundant once pattern 1's actual breadth was read.
+- **`list` and `show` deliberately excluded.** Both look symmetric, neither is evidenced
+  by a stored answer, and `list` is not free: it reclassifies rerank_off's M01, an
+  answerable item this fix has no evidence about. A test pins the exclusion.
+- **Verified** against every stored answer in all six configs: adding `report` alone
+  moves **exactly one record**.
+- **Rescored** with `python -m eval.run rescore` (no Groq): only `passage2` changed,
+  correct refusal 0.80 → 1.00. Every other config byte-identical on refusal *and*
+  coverage.
+- 48 tests in `test_eval_metrics.py`, including the N04 regression case. Full backend
+  suite re-run after the change: **1105 passed, 0 failed**.
+
+### `passage2_graphv2` — ✅ complete, 40 / 40 (18 September 2026)
+
+**The run the graph decision needed is done**, and it settles the question. The 8 cached
+answers were reused and **32 new calls** finished it — no empty generations, nothing
+skipped. The run hit Groq's 8,000 **tokens-per-minute** ceiling repeatedly (not the daily
+cap) and the client's retry absorbed it, so the run is slow but complete.
+
+| Metric (35 answerable) | `passage2` (shipped) | `passage2_graphv2` |
+| --- | ---: | ---: |
+| Fact coverage | 87.6% | **87.6%** |
+| Fully correct | 80.0% | **80.0%** |
+| Fact coverage — single_hop / multi_hop / follow_up | 87.5 / 91.7 / 80.0 | **87.5 / 91.7 / 80.0** |
+| Correct refusal (5 negatives) | 5 / 5 | **5 / 5** |
+| False refusal | 8.6% | 5.7% |
+| Citation precision / recall | 85.5% / 85.7% | 85.5% / **93.3%** |
+| Grounded sentence share | 57.2% | 59.0% |
+| Retrieval: doc recall@5 / hit@5 / MRR | 89.0% / 85.7% / 0.851 | **98.6% / 97.1% / 0.920** |
+
+**Fact coverage is identical on all 40 items** — not identical in aggregate, identical
+item for item. 16 of 40 items differ at all, and 15 of those differ *only* in citation
+precision or recall.
+
+**The one substantive difference is S12, and it is not an improvement.** The metric says
+`false_refusal → answered`, which reads like a win. Reading the answers says otherwise.
+The true values are 12.9 mm (2026) and 13.6 mm (2018) for grid A3; both configs retrieve
+the wrong row and report 12.4 mm, and both score **0.0 coverage**. `passage2` then states
+that the eight-year-old value is not in the documents. `passage2_graphv2` instead
+**extrapolates "≈13.5 mm" from a corrosion rate** and labels it a hypothesis. A wrong
+number offered with a derivation is a worse failure than an admission of absence, so the
+−2.9 pts false-refusal "gain" is, on inspection, a regression in failure mode.
+
+**The apparent fact-coverage regression was a scoring bug, and is gone.** Before the F05
+fix this run scored 84.8% coverage and 60.0% follow-up, which looked like a real 2.9-point
+cost. The entire difference was F05: both configs answer "every 4,000 operating hours",
+and only `passage2` was credited — because its evidence block happened to quote the source
+verbatim as "4000 hours", which the alias list accepted. See *Scoring fixes (18 Sep)*.
+
+### Graph promotion status — settled on answer-level evidence, defaults stay (18 September 2026)
 
 Three graph changes now exist as gated, measured code. **None meets the promotion bar,
 so every one of them stays off and the graph itself stays enabled.** Recorded here so
@@ -551,16 +696,27 @@ the question is not reopened without new evidence.
 
 | Change | Retrieval | Answers | Decision |
 | --- | --- | --- | --- |
-| `graph_prefer_domain_entities` (`graph_v2`) | **better** — hit@5 97.1%, MRR 0.920 | ✅ measured — **neutral** (3 of 40 differ; identical on the 32 every config completed) | **Off.** Criterion was fixed before the run: promote only if the gain reaches the answers. It does not |
+| `graph_prefer_domain_entities` (`graph_v2`) | **better** — hit@5 97.1%, MRR 0.920, on both chunk settings | ✅ **measured twice** — neutral on the 256 baseline, and on `passage2` **identical item for item on fact coverage** (87.6% / 80.0% each) | **Off.** The criterion fixed before the run — promote only if the retrieval gain reaches the answers — is not met on either base. Its only substantive answer change (S12) swaps a refusal for an extrapolated number |
 | `graph_fact_relationship_provenance` | **neutral** — identical on all 40 items bar one MRR | ❌ **not measured** | **Off.** Retrieval-neutral proves it is *safe*, not that it helps; its benefit is citation correctness, an answer metric |
 | Neighbour-pair dedup (keeps 1 edge per pair) | ❌ not measured | ❌ not measured | **Unchanged.** Strongest remaining lead — it *adds* missing facts rather than reordering present ones |
 
-The pattern is consistent and worth stating: **three independent measurements now say
-the graph does not move answers.** It is kept because it is a product feature and
-because `graph_v2` is the best retrieval configuration measured — not because any
-version of it has been shown to improve answer quality.
+The pattern is consistent and worth stating: **four independent measurements now say
+the graph does not move answers** — graph_off on the baseline, `graph_v2` on the baseline,
+`graph_provenance` at retrieval level, and now `graph_v2` on top of `passage2`, where its
+large retrieval advantage produced **zero** change in fact coverage on any of the 40 items.
+The graph is kept because it is a product feature and because `graph_v2` is the best
+retrieval configuration measured — not because any version of it has been shown to improve
+answer quality. **This question is now closed on evidence; reopen it only with a new
+measurement, not a new intuition.**
 
-### Post-Stage-5 changes to the production pipeline (16–17 September 2026)
+The honest counter-argument, recorded so it is not lost: on `passage2` the flag does
+improve citation recall (85.7% → 93.3%) and grounded share (57.2% → 59.0%) at identical
+citation precision, and its retrieval is strictly better. If citation correctness later
+becomes the metric that matters — it is what `graph_fact_relationship_provenance` targets
+— this flag is the cheapest thing to revisit, and the run above is the evidence to start
+from.
+
+### Post-Stage-5 changes to the production pipeline (16–18 September 2026)
 
 Stage 5 concluded "nothing in production changes". That is **no longer true** — two
 defaults moved afterwards. The frozen eval configs pin their own values, so every
@@ -569,8 +725,8 @@ Stage 5 number above still reproduces; what follows is what the *product* now ru
 | Setting | Stage 5 | Now | Evidence | Answer-level? |
 | --- | --- | --- | --- | --- |
 | `llm_answer_max_tokens` | 1024 | 1024 **+ 3072 retry** | 3 of 200 generations empty | n/a — strictly removes a failure |
-| `retrieval_chunks_per_document` | 1 | **2** | `passage2`: evidence-in-context 61.4% → **86.2%** | ⚠️ **not measured** |
-| `graph_prefer_domain_entities` | off | off | measured neutral on answers | ✅ measured |
+| `retrieval_chunks_per_document` | 1 | **2** | `passage2`: evidence-in-context 61.4% → **86.2%** | ✅ **measured 18 Sep — validated**, coverage +13.6, fully-correct +20.0, negatives 5/5 |
+| `graph_prefer_domain_entities` | off | off | neutral on answers on **both** chunk settings | ✅ **measured twice** (18 Sep: `passage2_graphv2`, 40/40) |
 | `graph_fact_relationship_provenance` | — | off (new) | retrieval-neutral | ⚠️ not measured |
 
 **The empty-answer retry.** `_generate_answer` retries once at
@@ -591,17 +747,22 @@ MRR (0.860 → 0.851).
 
 Two things are worth stating plainly:
 
-1. **It was promoted on retrieval evidence alone.** There is no `answers.json` in any
-   `passage2*` directory. This is the criterion `graph_v2` was held to and was not
-   applied here. Given conclusion 1 the answer gain is *likely* — but it is unmeasured.
-2. **`passage2_graphv2` is measured and strictly better, and is not what ships.**
-   Doc recall@5 **98.6%**, hit@5 **97.1%**, passage recall@5 **75.2%**,
-   evidence-in-context **85.2%**, MRR **0.920** — better than the baseline on every
-   metric, with none of `passage2`'s doc-recall cost. Production currently runs
-   `passage2` with the graph flag off, i.e. the half that carries the regression.
+1. ~~**It was promoted on retrieval evidence alone.**~~ ✅ **Closed 18 September** — the
+   answer run is complete at 40/40 and the promotion is vindicated: +13.6 pts coverage,
+   +20.0 fully correct, negatives 5/5, no metric regressed. See *`passage2` answer
+   evaluation* above. The process criticism still stands even though the call was right:
+   it shipped before the evidence existed.
+2. **`passage2_graphv2` is strictly better at retrieval, and is deliberately not what
+   ships.** ✅ **Settled 18 September** — the answer run is complete at 40/40. Retrieval is
+   better on every metric (doc recall@5 **98.6%**, hit@5 **97.1%**, passage recall@5
+   **75.2%**, MRR **0.920**, with none of `passage2`'s doc-recall cost), and **fact
+   coverage is identical to `passage2` on every one of the 40 items**. Production keeps the
+   graph flag off: the pre-fixed criterion asks whether the retrieval gain reaches the
+   answers, and measured twice now, on two different chunk settings, it does not.
 
-Neither is a reason to revert; both are reasons the next answer run should cover
-`passage2` and `passage2_graphv2` together rather than one at a time.
+Neither was a reason to revert, and both have now been measured together rather than one
+at a time — which is what showed that the only apparent difference between them was a
+scoring gap.
 
 **The frozen baseline still reproduces exactly — verified after the 17 September
 changes.** `python -m eval.run retrieval --config baseline`, diffed against the
@@ -614,6 +775,14 @@ That is the check that matters for the dedup fix, and it is the predicted result
 `rerank` sorts its output, so selecting a document's best passages by score rather
 than by arrival is a no-op on the live path and changes behaviour only in the
 degraded case the fix exists for. **Nothing in Stage 5 is invalidated.**
+
+**The 18 September F05 alias fix cannot touch any retrieval number, and no rerun was
+spent proving it.** `evaluate_retrieval` reads `question`, `expected_docs`,
+`expected_evidence` and `expected_resolution` from each golden item and never reads
+`expected_facts`, which is the only field the fix changed (`eval/run.py`, the
+`evaluate_retrieval` body). Retrieval results were therefore left untouched on disk rather
+than regenerated — a rerun would have rewritten nine `retrieval.json` files with a new
+timestamp and identical numbers.
 
 ### Next stage
 
@@ -629,16 +798,19 @@ Ranked follow-on work, by measured leverage (tracked separately from Stage 6):
 1. ~~**Raise `max_tokens`** and regenerate the 3 empty answers~~ ✅ **done** (16–17 Sep) —
    shipped as a retry rather than a raised ceiling, all three regenerated, and it
    **confirmed** the corrected multi-hop reading: chunk512 multi-hop 77.5% → **91.5%**.
-2. **One answer run covering `passage2` and `passage2_graphv2` together** — ~80 Groq calls,
-   one quota day. This is now the top item: `passage2` is *already shipped* on retrieval
-   evidence alone, and `passage2_graphv2` is measured strictly better than it at retrieval
-   level. The run either confirms what production runs or corrects it, and settles the
-   graph flag at the same time. Fold `graph_provenance` (retrieval-neutral, correctness
-   fix) and the pair-dedup lead below into the same batch if quota allows.
-3. **Fit the embedding window to the chunk size**, then re-run the 512 ablation. Still where
-   the largest fully-correct gain sits — but note `passage2` already captured most of the
-   evidence-in-context benefit (86.2%, the same figure) *without* re-embedding, so measure
-   whether the two stack before spending on it.
+2. ~~**One answer run covering `passage2` and `passage2_graphv2` together**~~ ✅ **done**
+   (18 Sep) — both are complete at 40/40. `passage2` is **validated** and the graph flag is
+   **settled off** on answer-level evidence. Still unmeasured at the answer level:
+   `graph_provenance` (retrieval-neutral; its benefit is citation correctness) and the
+   **neighbour-pair dedup**, which remains the strongest untested graph lead because it adds
+   missing facts rather than reordering present ones. Both want a free retrieval run first,
+   then one batched answer run.
+3. **Fit the embedding window to the chunk size**, then re-run the 512 ablation. After the
+   18 September rescore chunk512 still holds the highest fully-correct rate measured
+   (**82.9%** against `passage2`'s 80.0%) — but the two are now **tied on fact coverage at
+   87.6%**, and `passage2` reaches it *without* re-embedding and without the 256-wordpiece
+   truncation. The remaining case for 512 is that last 2.9 pts, so measure whether the two
+   stack before spending on it.
 4. **Move the reranker off CPU** or cut its candidate count before any deployment.
 5. LLM-as-judge (step 7) — only worth building with a larger token budget.
 
@@ -1086,6 +1258,40 @@ verification, not quality testing. Quality was settled in stages 1 and 5.
 Kept rather than deleted: the diagnosis is the useful part, and the measurement
 is what justifies the change.
 
+**The documented chunk configuration was wrong in five places.** *Resolved
+18 September 2026.* This file and `stage5_report.md` described the production pipeline as
+**256/64** in five places. `config.py:124` is `chunk_overlap = 40`, and it has been since
+`a86cefe` (6 September), which lowered it from 64 while tuning against the probe. The
+corpus in Qdrant — 138 chunks over 29 documents — was built at **256/40**;
+`probe_results.md` recorded that correctly from run 2 onward and was never reconciled with
+the prose elsewhere. Every "256/64" is now "256/40". **The "512/64" references are correct
+and were left alone:** `eval/chunk512.py` sets `CHUNK_SIZE = 512` and `CHUNK_OVERLAP = 64`
+explicitly for the ablation, so that config really does use a 64-token overlap. *No code
+changed* — the code was right and the documentation was wrong, which is the safer of the
+two ways round but the harder one to notice.
+
+**A fifth scoring gap: F05 accepted "running hours" but not "operating hours".**
+*Resolved 18 September 2026.* Three correct answers — chunk512, rerank_off and
+`passage2_graphv2` — state the oil-change interval as "every 4,000 operating hours" and
+were scored **0.0 coverage**. `passage2` scored 1.0 on the same interval only because its
+evidence block quoted the source verbatim as "4000 hours", which the alias list did accept.
+The pipelines were never the difference; the alias list was — and it was the **only**
+fact-coverage difference between `passage2` and `passage2_graphv2`, i.e. it was deciding
+the graph flag.
+
+Fixed to the same standard as the four refusal-classifier gaps: two phrasings added to
+`golden_set.yaml` F05, both **evidenced by a stored answer**, no speculative variants;
+verified across every stored answer in every config to move **exactly three records**;
+3 tests pin it; rescored with `python -m eval.run rescore` (no Groq). The moves are
+chunk512 coverage 84.7% → **87.6%** and follow-up 80.0% → **100.0%**, and rerank_off
+63.8% → **66.6%**, follow-up 40.0% → **60.0%**. baseline, graph_off, graph_v2 and
+`passage2` are unchanged. `python -m eval.validate` stays at 0 errors, 7 warnings.
+
+**The lesson, since this is the fifth of its kind:** every one of these gaps was found by
+reading an answer that the metric had marked wrong, and every one was a *phrasing* gap
+rather than a pipeline defect. Before accepting any conclusion drawn from a coverage or
+refusal delta, read the answers behind the items that moved.
+
 **Scanned tables were silently lost to OCR misconfiguration.** *Resolved
 6 September 2026.* A three-page scanned permit ingested clean — `indexed`, six
 chunks, no warning — having dropped every data row of the gas test record it
@@ -1442,15 +1648,23 @@ these layouts) but misleading to anyone reading the tree, and it makes
 `backend/app/agents/` look like a live package. *Deferred because:* it is
 `git clean -xdf backend/app/agents` and nothing depends on the timing.
 
-**Two tests assume an all-green environment.**
-`test_health_degradation.py::test_runtime_disabled_reranker_is_reported` and
-`::test_reranking_switched_off_is_not_degraded` both start by asserting the
-health endpoint reports `"ok"`, which is only true when *every* optional
-service — Qdrant, Neo4j, Groq — is reachable. They failed until 13 September
-2026 for a reason that has nothing to do with the reranker they exist to cover,
-and pass now only because the stage 4.5 containers are up; stop Neo4j and they
-fail again. *Deferred because:* the right fix (pin the components under test)
-belongs with stage 6, where CI decides which services exist.
+**Five tests assume an all-green environment — re-counted 18 September 2026.**
+The count here was **two** and was wrong. Measured with the Docker daemon stopped,
+`test_health_degradation.py` reports **5 failed, 2 passed**:
+`::test_runtime_disabled_reranker_is_reported`, `::test_failed_model_load_is_reported`,
+`::test_unwarmed_model_is_reported`, `::test_reranking_switched_off_is_not_degraded` and
+`::test_optional_store_down_is_degraded_not_unavailable`. All five start by asserting the
+health endpoint reports `"ok"`, which is only true when *every* optional service — Qdrant,
+Neo4j, Groq — is reachable. They pass only because the stage 4.5 containers are up; stop
+them and all five fail for a reason that has nothing to do with the behaviour they cover.
+
+The same environment also costs *time*: with Qdrant unreachable every call burns
+`QDRANT_TIMEOUT_SECONDS=30` × `QDRANT_MAX_RETRIES=3`, and the suite drops from 2m42s to
+roughly 18 tests in 15 minutes. That is the more expensive half of this debt, and CI will
+hit it the first time a service container fails to come up.
+
+*Deferred because:* the right fix (pin the components under test) belongs with stage 6,
+where CI decides which services exist. **Do not size that work from "two tests".**
 
 
 **Retrieval scores whole questions against whole passages.**

@@ -33,8 +33,8 @@
  "summary": {
   "answerable": {
    "n": 35,
-   "fact_coverage": 0.6376190476190476,
-   "fully_correct_rate": 0.4857142857142857,
+   "fact_coverage": 0.6661904761904762,
+   "fully_correct_rate": 0.5142857142857142,
    "false_refusal_rate": 0.14285714285714285,
    "citation_precision": 0.75,
    "citation_recall": 0.8142857142857143,
@@ -61,8 +61,8 @@
    },
    "follow_up": {
     "n": 5,
-    "fact_coverage": 0.4,
-    "fully_correct_rate": 0.4,
+    "fact_coverage": 0.6,
+    "fully_correct_rate": 0.6,
     "false_refusal_rate": 0.4,
     "citation_precision": 0.5666666666666667,
     "citation_recall": 0.8,
@@ -1567,9 +1567,9 @@
    ],
    "question": "And how often should that oil be changed?",
    "answer": "**Status:** Answered  \n\n**Answer:**  \nThe oil in the C‑201 instrument air compressor should be changed every **4,000 operating hours**.\n\n**Recommended Actions**\n1. Monitor cumulative run hours and schedule the oil change at the next 4,000‑hour interval.  \n2. Verify oil condition (color, viscosity) during each monthly bearing‑greasing task.  \n3. Record the oil‑change event in the maintenance log and update the next‑due date.\n\n**Evidence**  \n> [!EVIDENCE]  \n> {\"documents\":[{\"document_name\":\"Maintenance_Schedule.xlsx\",\"confidence\":0.9,\"score\":95,\"preview_link\":\"#\"}]}  \n\nMore details available.",
-   "fact_coverage": 0.0,
+   "fact_coverage": 1.0,
    "facts_hit": {
-    "Every 4000 hours": false
+    "Every 4000 hours": true
    },
    "refusal": "answered",
    "cited_docs": [
@@ -1803,5 +1803,5 @@
    "total_ms": 29890.3
   }
  ],
- "rescored_at": "2026-09-16T17:56:51+00:00"
+ "rescored_at": "2026-09-18T18:06:12+00:00"
 }

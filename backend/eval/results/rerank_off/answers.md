@@ -4,10 +4,10 @@ Run 2026-09-15T17:24:11+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 3
 
 | Slice | n | Fact coverage | Fully correct | False refusal | Citation P | Citation R | Grounded share |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| All answerable | 35 | 63.8% | 48.6% | 14.3% | 75.0% | 81.4% | 45.8% |
+| All answerable | 35 | 66.6% | 51.4% | 14.3% | 75.0% | 81.4% | 45.8% |
 | single_hop | 20 | 62.5% | 50.0% | 15.0% | 75.9% | 85.0% | 47.5% |
 | multi_hop | 10 | 78.2% | 50.0% | 0.0% | 83.3% | 75.0% | 55.6% |
-| follow_up | 5 | 40.0% | 40.0% | 40.0% | 56.7% | 80.0% | 19.7% |
+| follow_up | 5 | 60.0% | 60.0% | 40.0% | 56.7% | 80.0% | 19.7% |
 
 - Correct refusal on negatives: 80.0%
 - Empty answers (model produced no text; scored 0.0 coverage): none
@@ -52,7 +52,7 @@ Run 2026-09-15T17:24:11+00:00 · model `openai/gpt-oss-120b` · LLM cache hits 3
 | F02 | follow_up | 0.0% | false_refusal | MAN-003 | 25.0% |
 | F03 | follow_up | 0.0% | false_refusal | INS-004 | 0.0% |
 | F04 | follow_up | 100.0% | answered | MNT-002, Spare | 33.3% |
-| F05 | follow_up | 0.0% | answered | Maintenance | 40.0% |
+| F05 | follow_up | 100.0% | answered | Maintenance | 40.0% |
 | N01 | negative | — | correct_refusal | — | 40.0% |
 | N02 | negative | — | correct_refusal | — | 0.0% |
 | N03 | negative | — | correct_refusal | INS-004, LOG-002, Spare | 40.0% |

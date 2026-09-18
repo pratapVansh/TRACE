@@ -33,8 +33,8 @@
  "summary": {
   "answerable": {
    "n": 35,
-   "fact_coverage": 0.8471428571428571,
-   "fully_correct_rate": 0.8,
+   "fact_coverage": 0.8757142857142857,
+   "fully_correct_rate": 0.8285714285714286,
    "false_refusal_rate": 0.08571428571428572,
    "citation_precision": 0.9044117647058824,
    "citation_recall": 0.9285714285714286,
@@ -61,8 +61,8 @@
    },
    "follow_up": {
     "n": 5,
-    "fact_coverage": 0.8,
-    "fully_correct_rate": 0.8,
+    "fact_coverage": 1.0,
+    "fully_correct_rate": 1.0,
     "false_refusal_rate": 0.0,
     "citation_precision": 0.75,
     "citation_recall": 1.0,
@@ -1573,9 +1573,9 @@
    ],
    "question": "And how often should that oil be changed?",
    "answer": "**Status:** ✅  \n**Answer:** The Atlas Copco Oil Roto‑Xtend ND used in the C‑201 ZR‑160 instrument air compressor should be changed every **4,000 operating hours**.  \n\n**Recommended Actions**  \n1. Track compressor run‑hours and schedule oil changes at the 4,000‑hour mark.  \n2. Verify oil level and condition during each scheduled change.  \n3. Record the change in the maintenance log and update the next‑due date.  \n\n**Evidence**  \n> [!EVIDENCE]  \n> - Document: **MAN-002_Air_Compressor_Manual.docx** – Confidence 0.9 – Score 95 – [Click to preview](#)  \n> - Document: **Maintenance_Schedule.xlsx** – Confidence 0.9 – Score 92 – [Click to preview](#)  \n\nMore details available.",
-   "fact_coverage": 0.0,
+   "fact_coverage": 1.0,
    "facts_hit": {
-    "Every 4000 hours": false
+    "Every 4000 hours": true
    },
    "refusal": "answered",
    "cited_docs": [
@@ -1810,5 +1810,6 @@
    "llm_ms": null,
    "total_ms": 3773.4
   }
- ]
+ ],
+ "rescored_at": "2026-09-18T18:06:13+00:00"
 }

@@ -986,8 +986,16 @@ items:
     - doc: MAN-002_Air_Compressor_Manual.docx
       contains: "Oil change interval: 4000 hours."
   expected_facts:
+    # "operating hours" is the wording three stored answers actually use
+    # (chunk512, rerank_off, passage2_graphv2); the list anticipated "running
+    # hours" and missed its synonym, so three correct answers scored 0.0 while
+    # passage2 scored 1.0 only because its evidence block quoted the source
+    # verbatim as "4000 hours". Both spellings of the thousands separator are
+    # listed because the matcher is literal. No further variants are added:
+    # each one here is evidenced by a stored answer.
     - fact: "Every 4000 hours"
-      any_of: ["4000 hours", "4,000 hours", "4000 hrs", "4000 running hours"]
+      any_of: ["4000 hours", "4,000 hours", "4000 hrs", "4000 running hours",
+               "4000 operating hours", "4,000 operating hours"]
   must_refuse: false
   tags: [distractor_doc]
   review:

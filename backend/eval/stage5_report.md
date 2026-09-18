@@ -13,6 +13,20 @@ Every number below comes from `eval/results/*/*.json`; the tables are reproduced
 `eval/results/comparison.md`, which `python -m eval.run report` generates. Nothing was
 typed in by hand except the interpretation.
 
+> **The answer tables below are the 16 September scoring and have been superseded twice.**
+> `eval/results/comparison.md` is the current source; regenerate it rather than quoting
+> this file. What moved, in both cases because scoring was corrected and never because a
+> pipeline changed: (1) **17 September**, the empty-answer retry regenerated the 3 empty
+> generations — baseline coverage 72.6% → 74.0%, chunk512 80.7% → 84.7%, chunk512
+> multi-hop 77.5% → 91.5%; (2) **18 September**, the F05 alias gap was fixed
+> (`golden_set.yaml`: "operating hours" had been missing beside "running hours"), which
+> credited three correct answers that had scored zero — **chunk512** coverage 84.7% →
+> **87.6%**, fully-correct 80.0% → **82.9%**, follow-up 80.0% → **100.0%**; **rerank_off**
+> coverage 63.8% → **66.6%**, fully-correct 48.6% → **51.4%**, follow-up 40.0% → **60.0%**.
+> The baseline, graph_off, graph_v2 and passage2 answer numbers are unchanged by (2).
+> None of this changes a Stage 5 conclusion: the reranker still earns its cost, larger
+> chunks are still the biggest single lever, and the graph still does not move answers.
+
 ---
 
 ## 1. What was measured and how
@@ -565,7 +579,7 @@ retrieval, changed chunking) produces new cache keys and needs quota.
 ## 8. Chosen configuration and what Stage 6 inherits
 
 **Chosen: the baseline pipeline, unchanged — hybrid search + cross-encoder reranker + graph,
-256/64 chunks, `graph_prefer_domain_entities` off.** Nothing in production changes as a result
+256/40 chunks, `graph_prefer_domain_entities` off.** Nothing in production changes as a result
 of Stage 5. Each part of that is a decision, not a default:
 
 | Component | Decision | Evidence |
@@ -573,7 +587,7 @@ of Stage 5. Each part of that is a decision, not a default:
 | Cross-encoder reranker | **Keep, and treat its latency as a deployment blocker** | Removing it costs 11.4 pts fully-correct, 8.9 pts coverage, 40 pts on follow-up and one negative to a genuine missed refusal (§3.2). It costs ~40× latency, and the slowest query (9.4 s) is inside the 10 s timeout that silently disables it |
 | Knowledge graph | **Keep enabled** | It is a product feature and, reworked, it is the best retrieval configuration measured (§3.1). Measured three ways, it does not change answers (§3.4) |
 | `graph_prefer_domain_entities` | **Stays off by default; `graph_v2` code kept, gated, unchanged** | The criterion fixed in advance — does the retrieval gain reach the answers — is not met (§3.4). The flag makes promoting it a one-line change if a later measurement supports it |
-| Chunk size | **Stays 256/64 for now** | 512/64 is the largest answer-level gain in Stage 5 (+17.1 pts fully correct) but costs 10 pts multi-document recall and is read through a 256-wordpiece embedding window that truncates it (§3.3, conclusion 4). Switching needs the embedding model changed first |
+| Chunk size | **Stays 256/40 for now** | 512/64 is the largest answer-level gain in Stage 5 (+17.1 pts fully correct) but costs 10 pts multi-document recall and is read through a 256-wordpiece embedding window that truncates it (§3.3, conclusion 4). Switching needs the embedding model changed first |
 | `max_tokens` | **Raise it — the one code change Stage 5 clearly earns** | 1024 produced 3 empty and several truncated answers across 200 generations (§3.5), a defect that reaches real users and that corrupted two Stage 5 conclusions. Deliberately not changed here: it would invalidate all 200 cached answers and needs a fresh quota day |
 
 **What Stage 6 (CI) can gate on.** The retrieval metrics only — they are deterministic and

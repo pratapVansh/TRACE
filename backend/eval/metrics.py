@@ -79,7 +79,20 @@ def follow_up_resolved(search_query: str, targets: Sequence[str]) -> bool | None
 
 _REFUSAL_PATTERNS = [
     r"could not find (this|that|the|any)? ?information",
-    r"(do|does) not (contain|include|provide|mention|specify|record)",
+    # ``report`` belongs with the rest: a model writes this negated-active
+    # absence as "do not contain", "do not mention" or "do not report"
+    # interchangeably, and the sibling "contains no ..." pattern below already
+    # accepts reports. Omitting it made passage2's N04 — "the available
+    # documents do not report any internal inspection findings", which refuses
+    # correctly and says the inspection was deferred — score as a missed
+    # refusal: a fourth wording of one premise correction scoring a fourth way.
+    #
+    # Only ``report`` is added. ``list`` and ``show`` look like they belong for
+    # symmetry, but neither is evidenced by a stored answer and ``list`` is not
+    # free: it reclassifies rerank_off's M01, an answerable item, which is a
+    # change this fix has no evidence for. Verified across every stored answer
+    # in all six configs, adding ``report`` alone moves exactly one record.
+    r"(do|does) not (contain|include|provide|mention|specify|record|report)",
     r"no supporting evidence",
     r"not (mentioned|found|recorded|documented|specified|available|provided|included|stated|listed|given)"
     r" (in|within|anywhere in) (the |any of the )?(provided |uploaded |retrieved |available |supplied )?"

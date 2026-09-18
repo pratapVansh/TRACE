@@ -8,7 +8,10 @@ Generated purely from the JSON results; no numbers are typed by hand.
 import json
 from pathlib import Path
 
-ORDER = ["baseline", "rerank_off", "graph_off", "chunk512", "graph_v2", "passage2", "passage2_ctx25"]
+ORDER = [
+    "baseline", "rerank_off", "graph_off", "chunk512", "graph_v2",
+    "passage2", "passage2_graphv2", "passage2_ctx25", "graph_provenance",
+]
 
 
 def _load(results_dir: Path, kind: str) -> dict[str, dict]:
