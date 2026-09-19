@@ -53,5 +53,14 @@ datasets/raw/
 logs/
 
 # Document storage (local uploads)
+#
+# Anchored on purpose, and never as a bare "storage/". A .gitignore pattern
+# with no slash except a trailing one matches a directory of that name at ANY
+# depth, so a bare "storage/" also matched backend/app/core/storage/ — the
+# StorageBackend protocol and its local implementation, which app/api/deps.py
+# imports. Those four files were silently never committed, and a fresh clone
+# could not import the app at all: CI was the first clean checkout this project
+# ever had, and it failed on exactly that (conftest ImportError, pytest exit 4).
+# backend/.dockerignore already documents this hazard for the image build; the
+# same reasoning belongs here.
 backend/storage/
-storage/

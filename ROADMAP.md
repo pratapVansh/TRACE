@@ -1,16 +1,21 @@
 # TRACE — Roadmap
 
-**Branch:** `main` · **Last verified:** 19 September 2026 — **Stage 6 is written and
-verified locally; its first run on GitHub is the only thing left in it.**
+**Branch:** `main` · **Last verified:** 19 September 2026 — **Stage 6 has run on GitHub.
+The eval and frontend jobs are green; the backend job found a real repository bug.**
 
-Two CI workflows and a retrieval gate now exist (`.github/workflows/ci.yml`,
-`.github/workflows/eval.yml`, `backend/eval/gate.py`). Everything verifiable without a
-runner has been verified: the full suite passes under the exact CI command with no Groq
-credential (**1120 passed, 0 failed, 0 skipped, 2m27s**, coverage 67%), the floors are
-re-derived from `passage2` rather than the stale baseline, and the Stage 5 baseline
-correctly **fails** them — the deliberate-regression demonstration, using real measured
-data. **Nothing has executed on a runner yet; expect the first push to be red for ordinary
-first-run reasons.** See *Stage 6*.
+Run `35382694525` on `8e42d40`: **Retrieval floors ✅, Frontend checks ✅, Backend tests ❌**
+— the backend job exited **4** (a pytest *usage* error) after 4 seconds, with every step
+before it green. Root cause, reproduced in a Linux container built from `git archive HEAD`:
+a bare `storage/` line in `.gitignore` matches a directory of that name **at any depth**,
+so it had silently excluded `backend/app/core/storage/` — four source files that
+`app/api/deps.py` imports. **No clean clone of this repository could import the
+application.** `backend/.dockerignore` already documented that exact hazard; `.gitignore`
+never got the same treatment.
+
+The ignore rule is fixed. The four files still have to be **committed** before the backend
+job can go green — the fix only makes them trackable. With them present, the exact CI
+command passes in a CI-equivalent Linux environment: **1120 passed, 0 failed, 0 skipped,
+exit 0**, coverage 67%. See *Stage 6*.
 
 ---
 
@@ -93,7 +98,7 @@ the README is stale in four places, listed under *Known debt*.
 | API routers mounted | 17 under `/api` | `main.py` `include_router` calls |
 | Docker | **backend image built 10 Sep and full stack run once**; Neo4j + Qdrant containers in daily use since 13 Sep | `docker image inspect trace-backend:dev`, `docker ps -a` |
 | Frontend container | **none** | no `frontend/Dockerfile`; not a compose service |
-| CI | **two workflows, never yet run on GitHub** — `ci.yml` (backend + frontend) and `eval.yml` (retrieval floors) | `.github/workflows/`, uncommitted |
+| CI | **two workflows, run once on GitHub** — `eval.yml` ✅ and the frontend half of `ci.yml` ✅; the backend half ❌ on the `.gitignore` defect below, fixed but needing a commit | run `35382694525` |
 | `pytest-timeout` | **installed, 2.4.0**, CI runs at a 120s per-test cap | `pytest --timeout=60` → 1120 passed |
 
 **The health-test failures were the dead graph, and are gone — but there are five of
@@ -1095,12 +1100,71 @@ none were regenerated. All 200 are now cached, so every table in the report rebu
 
 ---
 
-## Stage 6 — CI 🟡 written and verified locally; the first run on GitHub is the open item
+## Stage 6 — CI 🟡 first run done; eval + frontend green, backend red on a repository bug now fixed
 
-**Built 19 September 2026.** Three files, all uncommitted: `.github/workflows/ci.yml`,
-`.github/workflows/eval.yml` and `backend/eval/gate.py` (plus `tests/test_eval_gate.py`).
-Everything that *can* be verified without pushing has been, and the one thing that cannot
-is named at the bottom.
+**Built 19 September 2026**, committed and pushed as `8e42d40`, and **run on GitHub the
+same day.** Files: `.github/workflows/ci.yml`, `.github/workflows/eval.yml` and
+`backend/eval/gate.py` (plus `tests/test_eval_gate.py`).
+
+### First run on GitHub — run `35382694525`, commit `8e42d40`
+
+| Job | Result |
+| --- | --- |
+| **Retrieval floors** (`eval.yml`) | ✅ **success** — the gate and its baseline guard both behaved on a runner |
+| **Frontend checks** | ✅ **success** — checkout, `npm ci`, typecheck, vitest, and eslint reported non-blocking as designed |
+| **Backend tests** | ❌ **failure** — `Run tests` exited **4** after **4 seconds** |
+
+**Every step before `Run tests` passed**, including container init (61s), dependency
+install (209s) and `alembic upgrade head` (3s). So the workflow, the service containers
+and the environment were all correct on the first attempt; what failed was the repository.
+
+### Root cause: four source files had never been committed
+
+`pytest` exit code 4 is a *usage* error, not a test failure — here a conftest that could
+not be imported. Reproduced locally in a Linux container built from `git archive HEAD`
+(i.e. exactly what `actions/checkout` sees), against Postgres, Qdrant and Neo4j service
+containers, running the identical command:
+
+```
+ImportError while loading conftest '/w/backend/tests/conftest.py'.
+tests/conftest.py:12: in <module>
+    from app.api.deps import get_current_user, get_document_service
+app/api/deps.py:11: in <module>
+    from app.core.storage import create_storage_service
+E   ModuleNotFoundError: No module named 'app.core.storage'
+PYTEST_EXIT=4
+```
+
+`.gitignore` carried a bare `storage/` beside the anchored `backend/storage/`. **A
+.gitignore pattern whose only slash is the trailing one matches a directory of that name
+at any depth**, so it also matched `backend/app/core/storage/` — `StorageBackend`, its
+local implementation, the exceptions and the package `__init__`. Those four files were
+never committed. `app/api/deps.py` imports them, so **no fresh clone of this repository
+could import the application at all**; every local run worked only because the files exist
+on this machine.
+
+Two things are worth recording about it:
+
+- **`backend/.dockerignore` already documented this exact hazard** — *"Root-anchored on
+  purpose: app/core/storage/ is application source, and a recursive `**/storage/` would
+  silently drop it and break the build."* The image build was therefore safe. The same
+  reasoning was never carried across to `.gitignore`.
+- **This is what CI is for.** It was the first clean checkout the project ever had, and it
+  found a latent packaging defect in four seconds — one that no amount of local testing
+  could have surfaced, because local testing never uses a clean checkout.
+
+*Fix:* the bare `storage/` line is removed; `backend/storage/` (anchored, and the actual
+upload directory) still ignores what it always did. Verified both ways: the four source
+files are now trackable, and `backend/storage/` is still ignored.
+
+**Verified end to end.** The tree CI would check out after those files are added
+(`git archive HEAD` plus the four files) was run in the Linux container with the exact CI
+command against real Postgres, Qdrant and Neo4j: **1120 passed, 0 failed, 0 skipped,
+3m28s, exit 0**, coverage 67% — the same result as on Windows.
+
+> ⚠️ **Not yet green on GitHub.** The `.gitignore` fix only makes the files *trackable*;
+> they still have to be added and committed. Until `backend/app/core/storage/` is in the
+> repository, the backend job fails exactly as above.
 
 ### Measured, on this machine, with the containers up
 
@@ -1202,19 +1266,29 @@ installed in the local venv.
 - [x] **A separate eval workflow** gating on the retrieval floors, triggered on the
       retrieval, graph, prompt-builder and config paths, plus nightly on `main` and
       `workflow_dispatch`.
-- [ ] **Run it on GitHub.** Nothing here has executed on a runner — there is no remote CI
-      history, and `act` was not used. Expect the first push to surface the ordinary
-      first-run problems: an image or action tag that resolves differently, service
-      containers needing longer start periods, or a Linux-only dependency gap. **Treat the
-      first red run as expected, not as a defect in this design.**
+- [x] **Run it on GitHub.** Done — run `35382694525`. The prediction that the first run
+      would be red held, but not for any of the reasons guessed: the images, action tags,
+      service containers and Linux dependencies were all fine on the first attempt. What
+      failed was a four-year-old class of bug in `.gitignore` that only a clean checkout
+      could expose.
+- [ ] **Commit `backend/app/core/storage/`** (4 files) and re-run. This is the one thing
+      standing between the backend job and green, and it is the only remaining step whose
+      result has not been observed on a runner.
 - [ ] **Decide whether the eval workflow should block merges** or only report until it has
       a few runs of history.
+- [ ] **Consider a "clean checkout imports" smoke check.** The failure above is cheap to
+      catch directly — `git archive HEAD | tar -x -C tmp && python -c "import app.main"` in
+      a clean environment — and would have named the missing module without running 1120
+      tests. Not scheduled; the backend job now covers it implicitly.
 
 **Exit criterion** — *partially met.* A deliberately introduced retrieval regression fails
 the eval workflow ✅ (demonstrated with the Stage 5 baseline, twice: in the workflow and in
-a unit test). The previously-skipped integration tests report as run ✅ (0 skipped, locally,
-with the same services CI provides). **A pull request running both jobs to green ⏳ — this
-cannot be verified from a local machine and is what is left of this stage.**
+a unit test; the workflow itself ran green on GitHub). The previously-skipped integration
+tests report as run ✅ (0 skipped — locally on Windows, and in the Linux container with the
+same service containers CI provides). **Both jobs green on a runner ⏳ — the frontend job is
+already green on GitHub and the backend passes the identical command in a CI-equivalent
+Linux environment, but it has not yet been observed green on GitHub because the fix needs
+`backend/app/core/storage/` committed first.**
 
 ---
 
