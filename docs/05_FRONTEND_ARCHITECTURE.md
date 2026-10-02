@@ -30,16 +30,18 @@ The frontend is a **Next.js (App Router) + TypeScript** application styled with
 experience: conversational AI, semantic search, asset intelligence, knowledge-graph
 exploration, maintenance, and compliance views.
 
-> **Implementation status (Milestones 1–2):** Authentication, token persistence, protected
-> routes, and the industrial dashboard shell are **implemented**. Copilot, search, assets,
-> graph, maintenance, compliance, and admin pages remain **planned** (sidebar links are
-> placeholders).
+> **Implementation status (2 October 2026):** Authentication, protected routing, dashboard,
+> documents/upload, semantic search, streaming Copilot with conversations/citations,
+> knowledge-graph visualization, audit logs, and admin user management are implemented.
+> Asset registry, maintenance, compliance, notifications, roles editor, and system-settings
+> pages were removed because no backend domain supports them. The current app builds with
+> Next.js 16.2.9 and has 61 passing frontend tests.
 
 | Concern | Approach (target) | Current implementation |
 | --- | --- | --- |
 | Rendering | Server Components for data-heavy pages; Client Components for interactivity | Client Components for auth and dashboard |
-| Data fetching | Server-side fetch + React Query (client cache) | Axios client; React Query planned |
-| Streaming | Server-Sent Events for Copilot token streaming | Not yet implemented |
+| Data fetching | Typed API modules and client hooks | Axios client with refresh handling |
+| Streaming | Server-Sent Events for Copilot token streaming | Implemented |
 | State | Local component state + lightweight global store (auth, theme) | `AuthProvider` context + localStorage tokens |
 | Styling | Tailwind tokens + shadcn/ui | Industrial dark theme (see [`07_UI_UX_DESIGN.md`](07_UI_UX_DESIGN.md)) |
 | Type safety | TypeScript end-to-end with shared API types | `types/auth.ts`, `types/api.ts` |

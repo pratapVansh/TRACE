@@ -256,6 +256,51 @@ class TestChatServiceMemoryRetrieval:
         _, kwargs = mock_graph_rag.query.call_args
         assert kwargs.get("additional_system_context") is None
 
+    async def test_successful_consolidation_is_committed(
+        self, mock_graph_rag, mock_repo, mock_memory_service
+    ):
+        session = AsyncMock()
+        svc = ChatService(
+            rag=mock_graph_rag,
+            conversation_repository=mock_repo,
+            session=session,
+            memory_service=mock_memory_service,
+        )
+
+        await svc._consolidate_memory(
+            conversation_id=mock_repo.get_conversation.return_value.id,
+            user_id=mock_repo.get_conversation.return_value.user_id,
+            question="Remember P-101",
+            answer="Noted",
+        )
+
+        mock_memory_service.consolidate_conversation.assert_awaited_once()
+        session.commit.assert_awaited_once()
+        session.rollback.assert_not_awaited()
+
+    async def test_failed_consolidation_rolls_back_only_its_transaction(
+        self, mock_graph_rag, mock_repo
+    ):
+        memory_service = AsyncMock()
+        memory_service.consolidate_conversation.side_effect = RuntimeError("extract failed")
+        session = AsyncMock()
+        svc = ChatService(
+            rag=mock_graph_rag,
+            conversation_repository=mock_repo,
+            session=session,
+            memory_service=memory_service,
+        )
+
+        await svc._consolidate_memory(
+            conversation_id=mock_repo.get_conversation.return_value.id,
+            user_id=mock_repo.get_conversation.return_value.user_id,
+            question="Remember P-101",
+            answer="Noted",
+        )
+
+        session.commit.assert_not_awaited()
+        session.rollback.assert_awaited_once()
+
 
 class TestPromptBuilderSystemContext:
     def test_additional_context_appended_to_system_prompt(self):

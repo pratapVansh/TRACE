@@ -43,6 +43,8 @@ class RankingService:
         fetch_k = top_k * limit_factor
 
         candidates: dict[str, dict] = {}
+        vector_error: VectorStoreOperationError | None = None
+        keyword_error: VectorStoreOperationError | None = None
 
         try:
             vector_results = await self._vector_store.search(
@@ -62,8 +64,9 @@ class RankingService:
                     candidates[pid]["vector_score"] = max(
                         candidates[pid]["vector_score"], hit["score"]
                     )
-        except VectorStoreOperationError:
-            pass
+        except VectorStoreOperationError as exc:
+            vector_error = exc
+            logger.warning("Ranked search vector arm failed: %s", exc)
 
         try:
             text_results = await self._vector_store.fulltext_search(
@@ -79,8 +82,15 @@ class RankingService:
                         "vector_score": 0.0,
                         "vector_rank": None,
                     }
-        except VectorStoreOperationError:
-            pass
+        except VectorStoreOperationError as exc:
+            keyword_error = exc
+            logger.warning("Ranked search keyword arm failed: %s", exc)
+
+        if vector_error is not None and keyword_error is not None:
+            raise VectorStoreOperationError(
+                "Ranked search failed because neither vector nor keyword "
+                "retrieval is available"
+            ) from vector_error
 
         if not candidates:
             return []

@@ -27,6 +27,7 @@ class MemoryStatus(str, Enum):
 
 class MemoryCreate(BaseModel):
     user_id: str
+    conversation_id: str | None = None
     type: MemoryType
     title: str
     content: str
@@ -38,6 +39,7 @@ class MemoryCreate(BaseModel):
     entities: list[dict] | None = None
     relationships: list[dict] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    expires_at: datetime | None = None
 
     class Config:
         use_enum_values = True
@@ -69,6 +71,7 @@ class MemoryMerge(BaseModel):
 
 class MemoryResponse(BaseModel):
     memory_id: str
+    conversation_id: str | None = None
     type: str
     title: str
     content: str

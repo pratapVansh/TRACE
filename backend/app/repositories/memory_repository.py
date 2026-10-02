@@ -2,12 +2,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
-from sqlalchemy import Select, and_, func, select, text, update
+from sqlalchemy import delete as sa_delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from app.models.memory import MemoryModel
-from app.schemas.memory import MemoryCreate, MemoryStatus, MemoryType, MemoryUpdate
+from app.schemas.memory import MemoryCreate, MemoryType, MemoryUpdate
 
 
 class MemoryRepository:
@@ -22,6 +20,9 @@ class MemoryRepository:
         now = datetime.now(timezone.utc)
         mem = MemoryModel(
             user_id=uuid.UUID(payload.user_id),
+            conversation_id=(
+                uuid.UUID(payload.conversation_id) if payload.conversation_id else None
+            ),
             type=payload.type.value if isinstance(payload.type, MemoryType) else payload.type,
             title=payload.title,
             content=payload.content,
@@ -32,10 +33,11 @@ class MemoryRepository:
             category=payload.category,
             entities=payload.entities,
             relationships=payload.relationships,
-            metadata=payload.metadata,
+            metadata_=payload.metadata,
             embedding=embedding,
             status="active",
             last_accessed=now,
+            expires_at=payload.expires_at,
             created_at=now,
             updated_at=now,
         )
@@ -43,9 +45,12 @@ class MemoryRepository:
         await self._session.flush()
         return mem
 
-    async def get(self, memory_id: uuid.UUID) -> MemoryModel | None:
+    async def get(
+        self, memory_id: uuid.UUID, user_id: uuid.UUID
+    ) -> MemoryModel | None:
         stmt = select(MemoryModel).where(
             MemoryModel.id == memory_id,
+            MemoryModel.user_id == user_id,
         )
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none()
@@ -53,10 +58,11 @@ class MemoryRepository:
     async def update(
         self,
         memory_id: uuid.UUID,
+        user_id: uuid.UUID,
         payload: MemoryUpdate,
         embedding: list[float] | None = None,
     ) -> MemoryModel | None:
-        mem = await self.get(memory_id)
+        mem = await self.get(memory_id, user_id)
         if mem is None:
             return None
 
@@ -80,7 +86,7 @@ class MemoryRepository:
         if payload.relationships is not None:
             vals["relationships"] = payload.relationships
         if payload.metadata is not None:
-            vals["metadata"] = payload.metadata
+            vals["metadata_"] = payload.metadata
         if embedding is not None:
             vals["embedding"] = embedding
         vals["updated_at"] = datetime.now(timezone.utc)
@@ -95,13 +101,14 @@ class MemoryRepository:
         self,
         target_id: uuid.UUID,
         source_ids: list[uuid.UUID],
+        user_id: uuid.UUID,
         new_content: str,
         new_title: str | None = None,
         new_summary: str | None = None,
         importance: float | None = None,
         confidence: float | None = None,
     ) -> MemoryModel | None:
-        target = await self.get(target_id)
+        target = await self.get(target_id, user_id)
         if target is None:
             return None
 
@@ -117,7 +124,7 @@ class MemoryRepository:
             target.confidence = min(max(confidence, 0.0), 1.0)
 
         for sid in source_ids:
-            source = await self.get(sid)
+            source = await self.get(sid, user_id)
             if source is not None and source.id != target.id:
                 source.status = "merged"
                 source.metadata_ = {
@@ -128,8 +135,8 @@ class MemoryRepository:
         await self._session.flush()
         return target
 
-    async def delete(self, memory_id: uuid.UUID) -> bool:
-        mem = await self.get(memory_id)
+    async def delete(self, memory_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        mem = await self.get(memory_id, user_id)
         if mem is None:
             return False
         mem.status = "forgotten"
@@ -137,8 +144,8 @@ class MemoryRepository:
         await self._session.flush()
         return True
 
-    async def archive(self, memory_id: uuid.UUID) -> bool:
-        mem = await self.get(memory_id)
+    async def archive(self, memory_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        mem = await self.get(memory_id, user_id)
         if mem is None:
             return False
         mem.status = "archived"
@@ -146,7 +153,7 @@ class MemoryRepository:
         await self._session.flush()
         return True
 
-    async def expire_batch(self) -> int:
+    async def expire_batch(self, limit: int = 500) -> int:
         now = datetime.now(timezone.utc)
         stmt = (
             select(MemoryModel)
@@ -155,6 +162,8 @@ class MemoryRepository:
                 MemoryModel.expires_at <= now,
                 MemoryModel.status == "active",
             )
+            .order_by(MemoryModel.expires_at, MemoryModel.id)
+            .limit(max(limit, 1))
         )
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
@@ -167,8 +176,8 @@ class MemoryRepository:
             await self._session.flush()
         return count
 
-    async def touch(self, memory_id: uuid.UUID) -> None:
-        mem = await self.get(memory_id)
+    async def touch(self, memory_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        mem = await self.get(memory_id, user_id)
         if mem is not None:
             mem.last_accessed = datetime.now(timezone.utc)
             await self._session.flush()
@@ -176,7 +185,7 @@ class MemoryRepository:
     async def search_by_embedding(
         self,
         query_embedding: list[float],
-        user_id: uuid.UUID | None = None,
+        user_id: uuid.UUID,
         type_filter: str | None = None,
         status: str = "active",
         limit: int = 10,
@@ -185,8 +194,7 @@ class MemoryRepository:
             MemoryModel.status == status,
             MemoryModel.embedding.isnot(None),
         )
-        if user_id is not None:
-            stmt = stmt.where(MemoryModel.user_id == user_id)
+        stmt = stmt.where(MemoryModel.user_id == user_id)
         if type_filter is not None:
             stmt = stmt.where(MemoryModel.type == type_filter)
 
@@ -208,15 +216,17 @@ class MemoryRepository:
     async def search_by_keyword(
         self,
         query: str,
-        user_id: uuid.UUID | None = None,
+        user_id: uuid.UUID,
+        conversation_id: uuid.UUID | None = None,
         type_filter: str | None = None,
         status: str = "active",
         limit: int = 20,
     ) -> Sequence[MemoryModel]:
         q = query.lower()
         stmt = select(MemoryModel).where(MemoryModel.status == status)
-        if user_id is not None:
-            stmt = stmt.where(MemoryModel.user_id == user_id)
+        stmt = stmt.where(MemoryModel.user_id == user_id)
+        if conversation_id is not None:
+            stmt = stmt.where(MemoryModel.conversation_id == conversation_id)
         if type_filter is not None:
             stmt = stmt.where(MemoryModel.type == type_filter)
 
@@ -236,7 +246,7 @@ class MemoryRepository:
     async def search_by_entity(
         self,
         entity_name: str,
-        user_id: uuid.UUID | None = None,
+        user_id: uuid.UUID,
         status: str = "active",
         limit: int = 10,
     ) -> Sequence[MemoryModel]:
@@ -245,8 +255,7 @@ class MemoryRepository:
             MemoryModel.status == status,
             MemoryModel.entities.isnot(None),
         )
-        if user_id is not None:
-            stmt = stmt.where(MemoryModel.user_id == user_id)
+        stmt = stmt.where(MemoryModel.user_id == user_id)
 
         result = await self._session.execute(stmt)
         all_memories = result.scalars().all()
@@ -308,8 +317,25 @@ class MemoryRepository:
             return 0.0
         return dot / (norm_a * norm_b)
 
-    async def hard_delete(self, memory_id: uuid.UUID) -> bool:
-        mem = await self.get(memory_id)
+    async def purge_inactive_before(
+        self, cutoff: datetime, limit: int = 500
+    ) -> int:
+        candidates = (
+            select(MemoryModel.id)
+            .where(
+                MemoryModel.status.in_(("archived", "expired", "forgotten", "merged")),
+                MemoryModel.updated_at < cutoff,
+            )
+            .order_by(MemoryModel.updated_at, MemoryModel.id)
+            .limit(max(limit, 1))
+        )
+        stmt = sa_delete(MemoryModel).where(MemoryModel.id.in_(candidates))
+        result = await self._session.execute(stmt)
+        await self._session.flush()
+        return result.rowcount or 0
+
+    async def hard_delete(self, memory_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        mem = await self.get(memory_id, user_id)
         if mem is None:
             return False
         await self._session.delete(mem)

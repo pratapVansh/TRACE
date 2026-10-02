@@ -86,9 +86,12 @@ class DocumentProcessingService:
         if job is None:
             raise IngestionJobNotFoundError()
 
-        if job.status != ProcessingStatus.PENDING.value:
+        if job.status not in {
+            ProcessingStatus.PENDING.value,
+            ProcessingStatus.PROCESSING.value,
+        }:
             raise InvalidProcessingStateError(
-                f"Job {job_id} is not pending (status={job.status})",
+                f"Job {job_id} is not pending or claimed (status={job.status})",
             )
 
         document = await self._document_repository.get_document_by_id(job.document_id)
@@ -251,6 +254,5 @@ class DocumentProcessingService:
             return
 
         await self._sync_document_status(document_id, ProcessingStatus.COMPLETED.value)
-
 
 

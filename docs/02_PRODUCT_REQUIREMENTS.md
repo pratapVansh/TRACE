@@ -2,6 +2,16 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current implementation baseline (2 October 2026).** TRACE is a document-intelligence
+> product built around deterministic hybrid retrieval and a single Copilot/RAG path. The
+> earlier multi-agent plan was removed after execution testing showed that it was unused or
+> non-functional. Asset registry, maintenance workflow, compliance-state, notification, and
+> investigation domains are not current product capabilities. Implemented scope includes
+> ingestion, OCR, document management, Qdrant search, Neo4j graph retrieval, grounded
+> Copilot answers, authentication/RBAC, administration, dashboard, audit-log read/UI, and
+> observability. Requirements below retain product aspirations only where they are clearly
+> labelled rather than presenting them as shipped behavior.
+
 ---
 
 ## Table of Contents
@@ -25,8 +35,8 @@
 
 TRACE behaves like **Microsoft Copilot for industrial operations**. It is not a single-document
 chatbot; it reasons across hundreds of thousands of heterogeneous documents, connects them
-through a knowledge graph, and uses AI agents to plan, retrieve, verify, and synthesize
-answers — always with citations.
+through a knowledge graph, and uses a measured hybrid RAG pipeline to retrieve, rerank,
+ground, and synthesize answers — always with citations.
 
 ```mermaid
 flowchart LR
@@ -45,7 +55,7 @@ flowchart LR
 | --- | --- |
 | **Grounded** | Every answer is backed by source documents and citations |
 | **Connected** | Knowledge is linked across documents via a graph |
-| **Agentic** | The system reasons in multiple steps, not single lookups |
+| **Evidence-driven** | Retrieval, reranking, grounding, and refusal behavior are measured |
 | **Trustworthy** | Auditable, traceable, and transparent |
 | **Accessible** | Simple conversational experience for non-technical and expert users |
 
@@ -119,7 +129,7 @@ flowchart TB
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | FR-11 | Generate embeddings using Sentence Transformers | Must |
-| FR-12 | Store and search embeddings using FAISS | Must |
+| FR-12 | Store and search embeddings using Qdrant | Must |
 | FR-13 | Support natural-language semantic search | Must |
 | FR-14 | Return grounded answers with citations to source documents | Must |
 | FR-15 | Support multi-turn conversational context | Should |
@@ -133,11 +143,11 @@ flowchart TB
 | FR-18 | Support asset-centric views aggregating all related knowledge | Should |
 | FR-19 | Traverse relationships to answer connected questions | Should |
 
-### 3.5 AI Agents & Reasoning
+### 3.5 RAG Reasoning
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| FR-20 | Orchestrate multi-step reasoning using LangGraph | Must |
+| FR-20 | Orchestrate retrieval, reranking, prompt construction, generation, and grounding through the Copilot/RAG service | Must |
 | FR-21 | Combine vector retrieval and graph traversal in one answer | Must |
 | FR-22 | Verify and self-check answers before responding | Should |
 | FR-23 | Decline or flag when evidence is insufficient | Must |
@@ -161,7 +171,7 @@ flowchart LR
     B --> D["Build Knowledge Graph"]
     C --> E["RAG Retrieval"]
     D --> E
-    E --> F["LangGraph Agent"]
+    E --> F["Copilot / RAG Service"]
     F --> G["Cited Answer in Copilot UI"]
 ```
 

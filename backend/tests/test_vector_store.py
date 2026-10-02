@@ -4,9 +4,15 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
+from app.api.deps import get_vector_store
 from app.services.vector_store import (
+    EMBEDDING_MODEL_METADATA_KEY,
+    VECTOR_DIMENSION,
+    VECTOR_DIMENSION_METADATA_KEY,
     QdrantVectorStore,
+    VectorStoreConfigurationError,
     VectorStoreConnectionError,
     VectorStoreOperationError,
 )
@@ -16,6 +22,15 @@ from app.services.vector_store import (
 def mock_qdrant_client() -> MagicMock:
     client = MagicMock()
     client.get_collections.return_value = MagicMock(collections=[])
+    client.get_collection.return_value = MagicMock(
+        config=MagicMock(
+            metadata={
+                EMBEDDING_MODEL_METADATA_KEY: "all-MiniLM-L6-v2",
+                VECTOR_DIMENSION_METADATA_KEY: VECTOR_DIMENSION,
+            },
+            params=MagicMock(vectors=MagicMock(size=VECTOR_DIMENSION)),
+        ),
+    )
     client.search.return_value = []
     client.query_points.return_value = MagicMock(points=[])
     client.count.return_value = MagicMock(count=0)
@@ -51,6 +66,17 @@ class TestConnect:
             await store.connect()
 
 
+def test_vector_dependency_returns_503_when_startup_disabled_retrieval():
+    request = MagicMock()
+    request.app.state.qdrant_store = None
+
+    with pytest.raises(HTTPException) as exc_info:
+        get_vector_store(request)
+
+    assert exc_info.value.status_code == 503
+    assert "startup diagnostics" in exc_info.value.detail
+
+
 @pytest.mark.asyncio
 class TestHealthCheck:
     async def test_health_check_returns_dict(
@@ -84,6 +110,11 @@ class TestCollectionManagement:
         mock_qdrant_client.get_collections.return_value = MagicMock(collections=[])
         await store.create_collection()
         mock_qdrant_client.create_collection.assert_called_once()
+        assert (
+            mock_qdrant_client.create_collection.call_args.kwargs["metadata"]
+            [EMBEDDING_MODEL_METADATA_KEY]
+            == "all-MiniLM-L6-v2"
+        )
 
     async def test_create_collection_skips_if_exists(
         self,
@@ -97,6 +128,65 @@ class TestCollectionManagement:
         )
         await store.create_collection()
         mock_qdrant_client.create_collection.assert_not_called()
+        mock_qdrant_client.get_collection.assert_called_once()
+
+    async def test_existing_collection_without_metadata_is_rejected(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        existing = MagicMock(name="collection")
+        existing.name = "document_chunks"
+        mock_qdrant_client.get_collections.return_value = MagicMock(
+            collections=[existing],
+        )
+        mock_qdrant_client.get_collection.return_value.config.metadata = None
+
+        with pytest.raises(VectorStoreConfigurationError, match="metadata is missing"):
+            await store.create_collection()
+
+    async def test_embedding_model_mismatch_is_rejected(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        existing = MagicMock(name="collection")
+        existing.name = "document_chunks"
+        mock_qdrant_client.get_collections.return_value = MagicMock(
+            collections=[existing],
+        )
+        mock_qdrant_client.get_collection.return_value.config.metadata[
+            EMBEDDING_MODEL_METADATA_KEY
+        ] = "different-model"
+
+        with pytest.raises(VectorStoreConfigurationError, match="different-model"):
+            await store.create_collection()
+
+    async def test_actual_collection_dimension_mismatch_is_rejected(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        existing = MagicMock(name="collection")
+        existing.name = "document_chunks"
+        mock_qdrant_client.get_collections.return_value = MagicMock(
+            collections=[existing],
+        )
+        mock_qdrant_client.get_collection.return_value.config.params.vectors.size = 768
+
+        with pytest.raises(VectorStoreConfigurationError, match="collection dimension"):
+            await store.create_collection()
+
+    async def test_stamp_embedding_metadata_uses_native_collection_metadata(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        await store.stamp_embedding_metadata()
+
+        metadata = mock_qdrant_client.update_collection.call_args.kwargs["metadata"]
+        assert metadata[EMBEDDING_MODEL_METADATA_KEY] == "all-MiniLM-L6-v2"
+        assert metadata[VECTOR_DIMENSION_METADATA_KEY] == VECTOR_DIMENSION
 
     async def test_delete_collection(
         self,

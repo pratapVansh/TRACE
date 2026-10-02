@@ -61,8 +61,12 @@ _qdrant_retry_policy = RetryPolicy(
     max_delay_seconds=30.0,
 )
 
-VECTOR_DIMENSION = 384  # all-MiniLM-L6-v2
+VECTOR_DIMENSION = settings.embedding_vector_dimension
 QDRANT_UPSERT_BATCH_SIZE = 64
+EMBEDDING_METADATA_SCHEMA_VERSION = 1
+EMBEDDING_MODEL_METADATA_KEY = "trace_embedding_model"
+VECTOR_DIMENSION_METADATA_KEY = "trace_vector_dimension"
+METADATA_SCHEMA_VERSION_KEY = "trace_embedding_metadata_schema"
 
 
 class VectorStoreError(Exception):
@@ -71,6 +75,10 @@ class VectorStoreError(Exception):
 
 class VectorStoreConnectionError(VectorStoreError):
     """Raised when the vector store cannot be reached."""
+
+
+class VectorStoreConfigurationError(VectorStoreError):
+    """Raised when stored vectors are incompatible with the running embedder."""
 
 
 class VectorStoreOperationError(VectorStoreError):
@@ -225,6 +233,95 @@ async def _get_client() -> QdrantClient:
 
 class QdrantVectorStore(VectorStore):
 
+    @staticmethod
+    def expected_embedding_metadata() -> dict:
+        """Metadata that identifies the vector space used by this process."""
+        return {
+            EMBEDDING_MODEL_METADATA_KEY: settings.embedding_model_name,
+            VECTOR_DIMENSION_METADATA_KEY: VECTOR_DIMENSION,
+            METADATA_SCHEMA_VERSION_KEY: EMBEDDING_METADATA_SCHEMA_VERSION,
+        }
+
+    @staticmethod
+    def _collection_vector_dimension(collection_info) -> int | None:
+        vectors = collection_info.config.params.vectors
+        # TRACE uses one unnamed dense vector. Refuse named/multi-vector
+        # collections instead of guessing which vector belongs to embeddings.
+        if isinstance(vectors, dict):
+            return None
+        size = getattr(vectors, "size", None)
+        return int(size) if size is not None else None
+
+    async def get_embedding_metadata(self) -> tuple[dict, int | None]:
+        """Return native collection metadata and the configured vector size."""
+        client = await _get_client()
+        try:
+            info = retry_sync(
+                client.get_collection,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant get_collection",
+                collection_name=settings.qdrant_collection_name,
+            )
+        except Exception as exc:
+            raise VectorStoreOperationError(
+                f"Failed to inspect collection '{settings.qdrant_collection_name}'"
+            ) from exc
+        return dict(info.config.metadata or {}), self._collection_vector_dimension(info)
+
+    async def verify_embedding_compatibility(self) -> None:
+        """Refuse a collection created by an unknown or different embedder."""
+        metadata, actual_dimension = await self.get_embedding_metadata()
+        expected = self.expected_embedding_metadata()
+        actual_model = metadata.get(EMBEDDING_MODEL_METADATA_KEY)
+        metadata_dimension = metadata.get(VECTOR_DIMENSION_METADATA_KEY)
+
+        problems: list[str] = []
+        if actual_model is None:
+            problems.append("embedding model metadata is missing")
+        elif actual_model != expected[EMBEDDING_MODEL_METADATA_KEY]:
+            problems.append(
+                f"model is {actual_model!r}, expected "
+                f"{expected[EMBEDDING_MODEL_METADATA_KEY]!r}"
+            )
+        if metadata_dimension is None:
+            problems.append("vector dimension metadata is missing")
+        elif metadata_dimension != expected[VECTOR_DIMENSION_METADATA_KEY]:
+            problems.append(
+                f"metadata dimension is {metadata_dimension!r}, expected "
+                f"{expected[VECTOR_DIMENSION_METADATA_KEY]}"
+            )
+        if actual_dimension != expected[VECTOR_DIMENSION_METADATA_KEY]:
+            problems.append(
+                f"collection dimension is {actual_dimension!r}, expected "
+                f"{expected[VECTOR_DIMENSION_METADATA_KEY]}"
+            )
+
+        if problems:
+            raise VectorStoreConfigurationError(
+                "Qdrant embedding compatibility check failed for collection "
+                f"'{settings.qdrant_collection_name}': {'; '.join(problems)}. "
+                "Run 'python scripts/manage_vector_index.py status' and follow "
+                "the documented stamp or reindex procedure."
+            )
+
+    async def stamp_embedding_metadata(self) -> None:
+        """Write compatibility metadata after an operator validates old vectors."""
+        client = await _get_client()
+        try:
+            retry_sync(
+                client.update_collection,
+                _qdrant_retry_policy,
+                _is_qdrant_retryable,
+                "Qdrant stamp embedding metadata",
+                collection_name=settings.qdrant_collection_name,
+                metadata=self.expected_embedding_metadata(),
+            )
+        except Exception as exc:
+            raise VectorStoreOperationError(
+                f"Failed to stamp collection '{settings.qdrant_collection_name}'"
+            ) from exc
+
     async def connect(self) -> None:
         try:
             client = await _get_client()
@@ -266,8 +363,12 @@ class QdrantVectorStore(VectorStore):
                     exact=True,
                 )
                 vector_count = count_result.count
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "Qdrant health count failed for collection '%s': %s",
+                    settings.qdrant_collection_name,
+                    exc,
+                )
 
         return {
             "connected": True,
@@ -279,8 +380,10 @@ class QdrantVectorStore(VectorStore):
     async def create_collection(self) -> None:
         client = await _get_client()
         if await self.collection_exists():
+            await self.verify_embedding_compatibility()
             logger.info(
-                "Collection '%s' already exists", settings.qdrant_collection_name
+                "Collection '%s' exists and embedding metadata is compatible",
+                settings.qdrant_collection_name,
             )
             return
 
@@ -295,6 +398,7 @@ class QdrantVectorStore(VectorStore):
                     size=VECTOR_DIMENSION,
                     distance=Distance.COSINE,
                 ),
+                metadata=self.expected_embedding_metadata(),
             )
             logger.info(
                 "Collection '%s' created (dim=%d, distance=cosine)",

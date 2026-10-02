@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -36,14 +37,46 @@ class DocumentProcessingQueueService:
 
     async def run_cycle(self) -> int:
         """Process a batch of pending ingestion jobs."""
-        jobs = await self._document_repository.list_pending_ingestion_jobs(
+        await self._recover_stale_jobs()
+        jobs = await self._document_repository.claim_pending_ingestion_jobs(
             limit=settings.processing_queue_batch_size,
         )
+        # Release row locks before long OCR/embedding work. The committed
+        # processing state is the durable worker lease.
+        await self._session.commit()
         processed = 0
         for job in jobs:
             await self._process_job(job.id)
             processed += 1
         return processed
+
+    async def _recover_stale_jobs(self) -> None:
+        now = datetime.now(UTC)
+        stale_before = now - timedelta(
+            seconds=settings.processing_job_stale_after_seconds,
+        )
+        recovered = await self._document_repository.recover_stale_ingestion_jobs(
+            stale_before=stale_before,
+            recovered_at=now,
+        )
+        if not recovered:
+            return
+        for job in recovered:
+            document_status = (
+                PROCESSING_TO_DOCUMENT_STATUS[ProcessingStatus.FAILED.value]
+                if job.status == ProcessingStatus.FAILED.value
+                else "queued"
+            )
+            await self._document_repository.update_document(
+                job.document_id,
+                status=document_status,
+            )
+        await self._session.commit()
+        logger.warning(
+            "Recovered %d stale ingestion job(s); %d exhausted retries",
+            len(recovered),
+            sum(j.status == ProcessingStatus.FAILED.value for j in recovered),
+        )
 
     async def get_processing_status(self, document_id: UUID):
         from app.services.document_exceptions import DocumentNotFoundError
@@ -76,10 +109,23 @@ class DocumentProcessingQueueService:
 
     async def _process_job(self, job_id: UUID) -> None:
         try:
-            await self._processing_service.process_document(job_id)
+            await asyncio.wait_for(
+                self._processing_service.process_document(job_id),
+                timeout=settings.processing_document_timeout_seconds,
+            )
         except Exception as exc:
             logger.exception("Background processing failed for job_id=%s", job_id)
-            await self._maybe_schedule_retry(job_id, str(exc))
+            if isinstance(exc, TimeoutError):
+                # wait_for cancels process_document mid-transaction; unlike its
+                # ordinary Exception path, cancellation bypasses its rollback.
+                await self._session.rollback()
+            message = (
+                "Processing timed out after "
+                f"{settings.processing_document_timeout_seconds:.0f}s"
+                if isinstance(exc, TimeoutError)
+                else str(exc)
+            )
+            await self._maybe_schedule_retry(job_id, message)
 
     async def _maybe_schedule_retry(self, job_id: UUID, error: str) -> None:
         job = await self._document_repository.get_ingestion_job_by_id(job_id)

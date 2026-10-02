@@ -13,6 +13,7 @@ from app.api.authorization import require_permission
 from app.api.deps import get_graph_query_optional, get_ranking_service, get_vector_store
 from app.core.authorization import PERMISSIONS
 from app.core.config import settings
+from app.core.logging import logger
 from app.middleware.rate_limit import RateLimiter
 from app.schemas.auth import UserMeResponse
 from app.schemas.vector import (
@@ -148,8 +149,12 @@ async def search(
                             "confidence": ent.confidence,
                             "source_document": ent.source_document,
                         })
-            except Exception:
-                pass  # graph enrichment is best-effort
+            except Exception as exc:
+                logger.warning(
+                    "Graph search enrichment failed (best-effort): %s",
+                    exc,
+                    exc_info=True,
+                )
 
         items.append(SearchResultItem(
             score=r["score"],

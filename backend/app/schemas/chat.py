@@ -55,7 +55,7 @@ class MessageResponse(BaseModel):
     content: str
     citations: list[dict] | None = None
     tool_outputs: list[dict] | None = None
-    sources: list[str] = []
+    sources: list[str] = Field(default_factory=list)
     created_at: float
 
 
@@ -96,8 +96,8 @@ class SnapshotData(BaseModel):
 
 
 class SaveSnapshotRequest(BaseModel):
-    turn_index: int
-    role: str
+    turn_index: int = Field(ge=0)
+    role: str = Field(min_length=1, max_length=32)
     data: SnapshotData
 
 
@@ -130,7 +130,7 @@ class ClearConversationResponse(BaseModel):
 class AddMessageRequest(BaseModel):
     conversation_id: str
     role: str = Field(pattern=r"^(user|assistant)$")
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=100_000)
     citations: list[dict] | None = None
     tool_outputs: list[dict] | None = None
 

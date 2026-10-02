@@ -20,7 +20,10 @@ def mock_session() -> AsyncMock:
 
 @pytest.fixture
 def mock_repository() -> AsyncMock:
-    return AsyncMock()
+    repository = AsyncMock()
+    repository.recover_stale_ingestion_jobs.return_value = []
+    repository.claim_pending_ingestion_jobs.return_value = []
+    return repository
 
 
 @pytest.fixture
@@ -84,12 +87,13 @@ async def test_run_cycle_processes_pending_jobs(
             stage=ProcessingStage.QUEUED.value,
         ),
     ]
-    mock_repository.list_pending_ingestion_jobs.return_value = jobs
+    mock_repository.claim_pending_ingestion_jobs.return_value = jobs
 
     processed = await queue_service.run_cycle()
 
     assert processed == 2
     assert mock_processing_service.process_document.await_count == 2
+    mock_repository.claim_pending_ingestion_jobs.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -109,7 +113,7 @@ async def test_run_cycle_schedules_retry_after_failure(
         retry_count=0,
         max_retries=3,
     )
-    mock_repository.list_pending_ingestion_jobs.return_value = [job]
+    mock_repository.claim_pending_ingestion_jobs.return_value = [job]
     mock_repository.get_ingestion_job_by_id.return_value = job
     mock_processing_service.process_document.side_effect = RuntimeError("temporary failure")
 
@@ -117,7 +121,7 @@ async def test_run_cycle_schedules_retry_after_failure(
 
     mock_repository.schedule_ingestion_job_retry.assert_awaited_once()
     mock_repository.update_document.assert_awaited_with(document_id, status="queued")
-    mock_session.commit.assert_awaited_once()
+    assert mock_session.commit.await_count >= 2
 
 
 @pytest.mark.asyncio
@@ -134,13 +138,72 @@ async def test_run_cycle_does_not_retry_after_max_retries(
         retry_count=3,
         max_retries=3,
     )
-    mock_repository.list_pending_ingestion_jobs.return_value = [job]
+    mock_repository.claim_pending_ingestion_jobs.return_value = [job]
     mock_repository.get_ingestion_job_by_id.return_value = job
     mock_processing_service.process_document.side_effect = RuntimeError("still failing")
 
     await queue_service.run_cycle()
 
     mock_repository.schedule_ingestion_job_retry.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_document_timeout_is_retried_with_clear_error(
+    queue_service: DocumentProcessingQueueService,
+    mock_repository: AsyncMock,
+    mock_processing_service: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    job = IngestionJob(
+        id=uuid.uuid4(),
+        document_id=uuid.uuid4(),
+        status=ProcessingStatus.PROCESSING.value,
+        stage=ProcessingStage.PROCESSING.value,
+        retry_count=0,
+        max_retries=3,
+    )
+    mock_repository.claim_pending_ingestion_jobs.return_value = [job]
+    mock_repository.get_ingestion_job_by_id.return_value = job
+
+    async def never_finishes(_job_id):
+        import asyncio
+        await asyncio.Event().wait()
+
+    mock_processing_service.process_document.side_effect = never_finishes
+    monkeypatch.setattr(
+        "app.services.document_processing_queue.settings.processing_document_timeout_seconds",
+        0.01,
+    )
+
+    await queue_service.run_cycle()
+
+    retry = mock_repository.schedule_ingestion_job_retry.await_args.kwargs
+    assert "timed out after" in retry["error"]
+
+
+@pytest.mark.asyncio
+async def test_stale_claims_are_recovered_before_new_claims(
+    queue_service: DocumentProcessingQueueService,
+    mock_repository: AsyncMock,
+    mock_session: AsyncMock,
+) -> None:
+    stale = IngestionJob(
+        id=uuid.uuid4(),
+        document_id=uuid.uuid4(),
+        status=ProcessingStatus.PENDING.value,
+        stage=ProcessingStage.QUEUED.value,
+        retry_count=1,
+        max_retries=3,
+    )
+    mock_repository.recover_stale_ingestion_jobs.return_value = [stale]
+
+    await queue_service.run_cycle()
+
+    mock_repository.update_document.assert_awaited_with(
+        stale.document_id,
+        status="queued",
+    )
+    assert mock_session.commit.await_count >= 2
 
 
 @pytest.mark.asyncio

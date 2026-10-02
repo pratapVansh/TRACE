@@ -4,14 +4,14 @@
 
 > An AI-powered Industrial Knowledge Intelligence Platform that transforms scattered, unstructured industrial documents into a unified, searchable **Industrial Knowledge Brain** — with semantic search, knowledge graphs, and grounded, cited answers.
 
-[![Status](https://img.shields.io/badge/status-milestone--3--4--5--active-blue)]()
+[![Status](https://img.shields.io/badge/status-production--hardening-blue)]()
 [![License](https://img.shields.io/badge/license-proprietary-lightgrey)]()
 
 ---
 
 ## Overview
 
-TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection reports, OEM manuals, safety manuals, spreadsheets, scanned images, and email threads — then transforms them into a single intelligence layer using OCR, document parsing, embedding vectors, and a knowledge graph. Engineers, operators, and inspectors can ask natural-language questions and receive grounded answers with citations, asset insights, and compliance-aware reasoning.
+TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection reports, OEM manuals, safety manuals, spreadsheets, text files, and scanned images — then transforms them into a single intelligence layer using OCR, document parsing, embedding vectors, and a knowledge graph. Engineers, operators, and inspectors can ask natural-language questions and receive grounded answers with citations and graph context.
 
 ---
 
@@ -32,10 +32,9 @@ TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection re
 | **Enterprise UI** | Dark industrial theme, responsive layout, skeleton loaders, protected pages | ✅ |
 | **Answer grounding** | Every answer's sentences scored against the passages actually cited — reported as grounded / hedged / unsupported counts | ✅ |
 | **Observability** | Retrieval latency, memory hit rates, citation coverage, Prometheus metrics | ✅ |
-| **Audit Logging** | Actions are recorded to the `audit_logs` table by `AuditService`. No read API exists yet, so the trail cannot be viewed — the Audit Logs page renders empty. | 🚧 |
+| **Audit Logging** | Actions are recorded by `AuditService`, exposed through `GET /api/audit-logs`, and rendered by the permission-gated Audit Logs page | ✅ |
 | **Rate Limiting** | Per-endpoint rate limiting for auth, upload, chat, search, RAG | ✅ |
 | **Long-Term Memory** | User-specific memory with embedding, importance scoring, and consolidation | ✅ |
-| **Investigation Records** | Root Cause Analysis persistence with confidence tracking | ✅ |
 
 ---
 
@@ -55,11 +54,11 @@ flowchart TB
     end
 
     subgraph AI["AI Layer"]
-        ORCH["AI Orchestrator"]
+        CHAT["Chat / RAG Orchestrator"]
         RAG["Hybrid RAG Service"]
         RET["Hybrid Retriever<br/>(Vector + Graph)"]
         EMB["Sentence Transformers"]
-        LLM["Groq LLM<br/>(Llama 3.3 70B)"]
+        LLM["Groq LLM<br/>(openai/gpt-oss-120b)"]
     end
 
     subgraph Data["Data & Knowledge Stores"]
@@ -73,11 +72,10 @@ flowchart TB
     GW --> AUTH
     GW --> DOC
     GW --> PROC
-    GW --> ORCH
+    GW --> CHAT
     GW --> RAG
-    ORCH --> AGENTS
-    AGENTS -->|Tool Calls| RET
-    AGENTS --> LLM
+    CHAT --> RET
+    CHAT --> LLM
     RET --> VEC
     RET --> NEO
     RAG --> RET
@@ -87,7 +85,7 @@ flowchart TB
     PROC --> FS
     PROC --> VEC
     PROC --> NEO
-    ORCH --> PG
+    CHAT --> PG
 ```
 
 ---
@@ -128,7 +126,7 @@ flowchart TB
 | **Sentence Transformers** | Embedding generation (`all-MiniLM-L6-v2`) |
 | **Qdrant** | Vector similarity search |
 | **Neo4j** | Knowledge graph (entities, relationships, asset hierarchy) |
-| **Groq** | LLM inference (Llama 3.3 70B) |
+| **Groq** | LLM inference (`openai/gpt-oss-120b`) |
 | **Tesseract (pytesseract)** | OCR for scanned documents |
 | **PyMuPDF** | PDF text extraction |
 | **python-docx / python-pptx / openpyxl** | Office document parsing |
@@ -139,7 +137,7 @@ flowchart TB
 | Technology | Purpose |
 | --- | --- |
 | **PostgreSQL 15+** | Primary database |
-| **Docker** | Containerized deployment (planned) |
+| **Docker / Compose** | Reproducible backend, PostgreSQL, Qdrant, and Neo4j development stack |
 | **OpenTelemetry** | Distributed tracing (optional) |
 | **Vault** | Secret management (optional) |
 
@@ -393,7 +391,7 @@ docker run -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
 | `GET/POST/PATCH/DELETE /api/documents/*` | 6 | Document CRUD, upload, download |
 | `GET /api/documents/{id}/processing-status` | 1 | Document processing status |
 | `GET/POST/PATCH /api/admin/users/*` | 5 | Admin user management |
-| `GET /api/search` | 1 | Semantic, keyword, hybrid, ranked search |
+| `POST /api/search` | 1 | Semantic, keyword, hybrid, ranked search |
 | `POST /api/rag/*` | 3 | RAG retrieve, query, graph-enhanced query |
 | `POST /api/chat/*` | 14 | Chat, stream, conversations, snapshots |
 | `GET/POST/PATCH/DELETE /api/graph/*` | 9 | Graph health, entities, neighbors, paths |
@@ -412,7 +410,7 @@ Full API specification is available at `/docs` (Swagger) when the backend is run
 
 ## Database Overview
 
-### PostgreSQL Models (13 tables)
+### PostgreSQL Models (14 tables)
 
 | Table | Purpose |
 | --- | --- |
@@ -430,7 +428,6 @@ Full API specification is available at `/docs` (Swagger) when the backend is run
 | `messages` | Individual chat messages with citations |
 | `conversation_snapshots` | Working memory snapshots per turn |
 | `memories` | Long-term user memories with embeddings |
-| `investigations` | Root cause analysis investigation records |
 
 ### Neo4j Knowledge Graph
 
@@ -522,7 +519,7 @@ flowchart TD
 - **Rate Limiting**: Configurable per-endpoint rate limiting
 - **Enterprise UI**: Dark industrial theme, responsive layout, permission-gated pages
 
-### Not yet built
+### Deliberately not part of the current product
 
 These were scaffolded, found to have no backend behind them, and removed rather
 than left as empty pages and fabricated results. Recorded here so the intent
@@ -565,10 +562,10 @@ least-privilege DB role, and an outbound host allowlist respectively.
 
 ### In Progress / Next
 
-- RAG pipeline refinements and retrieval accuracy improvements
-- Testing coverage expansion
-- Deployment and CI/CD configuration
-- Performance optimization at scale
+- GCP/HTTPS deployment of the verified Compose backend and separately hosted frontend
+- Evaluate graph/retrieval changes before enabling any of the existing feature flags
+- Clear the known non-blocking frontend ESLint backlog
+- Performance and horizontal-scaling work after the current single-host deployment
 
 ---
 
@@ -583,9 +580,9 @@ Based on existing project structure and planned documentation:
 | **Compliance Module** | Deeper regulatory compliance checking |
 | **Asset Hierarchy** | Rich asset tree browsing and management |
 | **Notifications** | Alert system for document processing and compliance events |
-| **Deployment** | Docker compose, CI/CD pipelines |
+| **Deployment** | HTTPS deployment of the existing Compose backend and a separately hosted frontend |
 | **Performance** | Caching, query optimization, horizontal scaling |
-| **Evaluation** | Automated RAG evaluation against a golden question set |
+| **Evaluation** | Extend the existing automated golden-set RAG evaluation as the corpus grows |
 
 ---
 
@@ -611,6 +608,7 @@ Based on existing project structure and planned documentation:
 | [`docs/15_AI_DEVELOPMENT_RULES.md`](docs/15_AI_DEVELOPMENT_RULES.md) | AI engineering rules |
 | [`docs/16_TESTING_STRATEGY.md`](docs/16_TESTING_STRATEGY.md) | Testing strategy |
 | [`docs/17_PRESENTATION_GUIDE.md`](docs/17_PRESENTATION_GUIDE.md) | Demo and presentation guide |
+| [`docs/18_OPERATIONS_RUNBOOK.md`](docs/18_OPERATIONS_RUNBOOK.md) | Docker operations, backup/restore, and embedding reindexing |
 
 ---
 
@@ -635,7 +633,6 @@ Proprietary — All rights reserved.
 ## Acknowledgements
 
 - Problem Statement 8 — Industrial Knowledge Intelligence (challenge brief)
-- [LangGraph](https://langchain-ai.github.io/langgraph/) — Agent orchestration framework
 - [LangChain](https://python.langchain.com/) — LLM tooling and integrations
 - [Neo4j](https://neo4j.com/) — Graph database
 - [Qdrant](https://qdrant.tech/) — Vector search engine

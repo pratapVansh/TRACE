@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.services.memory_service import MemoryService
 from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.chat import (
+    AddMessageResponse,
     ArchiveConversationResponse,
     ArchiveListResponse,
     ChatResponse,
@@ -112,12 +113,6 @@ class ChatService:
             logger.error("No database session — cannot persist conversation turn")
             return
         try:
-            existing = await self._repo.get_messages(conversation_id)
-            for m in existing:
-                if m.role == "user" and m.content == question:
-                    logger.warning("Duplicate user message detected for conv=%s — skipping", conversation_id)
-                    return
-
             await self._repo.add_message(
                 conversation_id=conversation_id, role="user", content=question,
             )
@@ -222,6 +217,30 @@ class ChatService:
 
         return combined_context
 
+    async def _consolidate_memory(
+        self,
+        *,
+        conversation_id: uuid.UUID,
+        user_id: uuid.UUID,
+        question: str,
+        answer: str,
+    ) -> None:
+        """Persist optional long-term memory in its own transaction."""
+        if self._memory_service is None or self._session is None:
+            return
+        try:
+            await self._memory_service.consolidate_conversation(
+                conversation_text=f"User: {question}\nAssistant: {answer}",
+                user_id=str(user_id),
+                conversation_id=str(conversation_id),
+            )
+            await self._session.commit()
+        except Exception:
+            # The conversation turn is committed before this optional work, so
+            # rollback cannot discard chat history already returned to a user.
+            await self._session.rollback()
+            logger.warning("Memory consolidation failed (non-fatal)", exc_info=True)
+
     async def chat(
         self,
         user_id: str,
@@ -279,17 +298,12 @@ class ChatService:
             citations=[c.model_dump() for c in rag_response.citations],
         )
 
-        # Memory consolidation: promote important facts to long-term memory
-        if self._memory_service is not None:
-            try:
-                conv_text = f"User: {question}\nAssistant: {rag_response.answer}"
-                await self._memory_service.consolidate_conversation(
-                    conversation_text=conv_text,
-                    user_id=str(conv.user_id),
-                    conversation_id=str(conv.id),
-                )
-            except Exception:
-                logger.warning("Memory consolidation failed (non-fatal)", exc_info=True)
+        await self._consolidate_memory(
+            conversation_id=conv.id,
+            user_id=conv.user_id,
+            question=question,
+            answer=rag_response.answer,
+        )
 
         # User graph: extract user knowledge from the question into Neo4j
         if self._user_graph is not None:
@@ -390,17 +404,12 @@ class ChatService:
                     citations=citations_data,
                 )
 
-                # Memory consolidation for streamed chat
-                if self._memory_service is not None:
-                    try:
-                        conv_text = f"User: {question}\nAssistant: {full_answer}"
-                        await self._memory_service.consolidate_conversation(
-                            conversation_text=conv_text,
-                            user_id=str(conv.user_id),
-                            conversation_id=str(conv.id),
-                        )
-                    except Exception:
-                        logger.warning("Memory consolidation failed (non-fatal)", exc_info=True)
+                await self._consolidate_memory(
+                    conversation_id=conv.id,
+                    user_id=conv.user_id,
+                    question=question,
+                    answer=full_answer,
+                )
 
                 # User graph: extract user knowledge from the question into Neo4j
                 if self._user_graph is not None:
@@ -435,7 +444,7 @@ class ChatService:
         content: str,
         citations: list[dict] | None = None,
         tool_outputs: list[dict] | None = None,
-    ) -> MessageResponse:
+    ) -> AddMessageResponse:
         uid = uuid.UUID(user_id)
         cid = uuid.UUID(conversation_id)
         conv = await self._repo.get_conversation(cid, user_id=uid)
@@ -455,8 +464,9 @@ class ChatService:
             msg.tool_outputs = tool_outputs
         if self._session is not None:
             await self._session.commit()
-        return MessageResponse(
+        return AddMessageResponse(
             id=str(msg.id),
+            conversation_id=str(msg.conversation_id),
             role=msg.role,
             content=msg.content,
             citations=msg.citations,
@@ -469,6 +479,8 @@ class ChatService:
     ) -> ConversationItem:
         uid = uuid.UUID(user_id)
         conv = await self._repo.create_conversation(user_id=uid, title=title)
+        if self._session is not None:
+            await self._session.commit()
         return ConversationItem(
             id=str(conv.id),
             title=conv.title or "New Conversation",
@@ -483,8 +495,8 @@ class ChatService:
     ) -> ConversationItem | None:
         uid = uuid.UUID(user_id)
         cid = uuid.UUID(conversation_id)
-        conv = await self._repo.get_conversation(cid)
-        if not conv or conv.user_id != uid:
+        conv = await self._repo.get_conversation(cid, user_id=uid)
+        if not conv:
             return None
         
         # Count messages manually or by fetching them
@@ -494,7 +506,8 @@ class ChatService:
             title=conv.title or "New Conversation",
             status=conv.status,
             message_count=len(messages),
-            updated_at=conv.updated_at,
+            created_at=conv.created_at.timestamp(),
+            updated_at=conv.updated_at.timestamp(),
         )
 
     async def list_conversations(

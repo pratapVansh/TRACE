@@ -2,6 +2,14 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current verification baseline (3 October 2026).** The backend suite is established and
+> the current commit passed the full GitHub backend job; the last exact local CI-equivalent
+> container measurement on 3 October was 1149 passed, 0 failed, 0 skipped. Frontend has
+> 61 passing Vitest tests, clean TypeScript, and a verified production build; ESLint remains
+> non-blocking with 42 findings. The deterministic Stage 5 retrieval harness gates five
+> stored `passage2` metrics in CI and runs nightly. It checks recorded results plus config
+> drift, not fresh retrieval, because CI does not yet seed the evaluation corpus.
+
 ---
 
 ## Table of Contents
@@ -75,7 +83,7 @@ flowchart TB
 | `ai/embeddings/` | Vector dimension, normalization |
 | `ai/extractors/` | Tag extraction, entity recognition |
 | `ai/retrievers/` | Score calculation, filtering, dedup |
-| `ai/agents/` | State transitions, output schema |
+| RAG services | Retrieval, prompting, grounding, output schema |
 | `backend/services/` | Business logic, error handling | AuthService manually verified ✅ |
 | `backend/repositories/` | Query correctness | Auth repos manually verified ✅ |
 | `backend/core/security/` | JWT creation, validation, hashing | ✅ Implemented |
@@ -84,7 +92,7 @@ flowchart TB
 
 | Rule | Description |
 | --- | --- |
-| Isolated | No external dependencies (DB, Neo4j, FAISS) |
+| Isolated | No external dependencies (DB, Neo4j, Qdrant) |
 | Fast | Each test < 100ms |
 | Deterministic | Same input → same output |
 | Named clearly | `test_chunker_splits_on_section_header` |
@@ -121,7 +129,7 @@ flowchart LR
 | Auth/security | ≥ 95% |
 | Services | ≥ 80% |
 | Repositories | ≥ 80% |
-| Agents | ≥ 70% (integration-heavy) |
+| RAG/AI services | ≥ 70% (integration-heavy) |
 
 ---
 
@@ -267,7 +275,7 @@ Every prompt change must pass regression testing before deployment.
 | Output schema | JSON parses correctly every time |
 | Citation presence | Every answered query has citations |
 | Decline behavior | Out-of-corpus queries are declined |
-| Role adherence | Agent stays in domain (maintenance agent doesn't answer compliance) |
+| Scope adherence | Copilot does not invent unsupported domain state |
 | Context adherence | Answer only uses provided context |
 | Multi-turn | Follow-up questions maintain context |
 
@@ -294,7 +302,7 @@ flowchart TD
 | Semantic search | < 1s p95 | Search endpoint |
 | Copilot answer (full) | < 5s p95 | Chat endpoint (including LLM) |
 | Document ingestion (10-page PDF) | < 60s | End-to-end pipeline |
-| FAISS search (100K vectors) | < 100ms | Vector search latency |
+| Qdrant search | Measure at representative corpus size | Vector/hybrid search latency |
 | Neo4j traversal (2-hop) | < 200ms | Graph query latency |
 | Dashboard load | < 2s | Page load time |
 
@@ -321,7 +329,7 @@ flowchart LR
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Slow search | FAISS index too large / unsharded | Shard index |
+| Slow search | Qdrant payload/index configuration or reranking | Profile candidate retrieval and reranker separately |
 | Slow chat | LLM latency | Stream tokens; cache common queries |
 | Slow ingestion | OCR bottleneck | Parallelize pages; GPU OCR |
 | Slow dashboard | N+1 queries | Add caching; optimize queries |
@@ -355,7 +363,7 @@ sequenceDiagram
     participant Worker as Ingestion Worker
     participant AI as AI Layer
     participant DB as PostgreSQL
-    participant VEC as FAISS
+    participant VEC as Qdrant
     participant NEO as Neo4j
 
     Test->>API: Upload document
@@ -369,7 +377,7 @@ sequenceDiagram
     AI->>VEC: Vector search
     AI-->>API: Results
     Test->>API: Chat question
-    API->>AI: Agent run
+    API->>AI: RAG request
     AI->>VEC: Retrieve context
     AI->>NEO: Graph facts
     AI-->>API: Grounded answer + citations
@@ -381,7 +389,7 @@ sequenceDiagram
 | Component | Test setup |
 | --- | --- |
 | PostgreSQL | Test database (separate schema) |
-| FAISS | In-memory index (rebuilt per test suite) |
+| Qdrant | Disposable service container / isolated collection |
 | Neo4j | Test instance or embedded |
 | Object store | Local temp directory |
 | LLM | Mock or lightweight local model for CI |
@@ -413,10 +421,11 @@ sequenceDiagram
 
 ---
 
-## 10. Testing Performed to Date (Milestones 1–2)
+## 10. Testing Performed to Date
 
-Manual and ad-hoc verification performed during Milestones 1 and 2. Automated test suites
-described in sections 3–8 remain **planned** for CI integration.
+The tables below are retained as early-project history. Current automated coverage spans
+authentication, documents, processors/OCR, retrieval/RAG, graph, chat/conversations,
+dashboard, audit logs, evaluation metrics/gates, startup degradation, and frontend helpers.
 
 ### Backend
 
@@ -451,17 +460,18 @@ described in sections 3–8 remain **planned** for CI integration.
 
 | Gap | Planned resolution |
 | --- | --- |
-| No pytest suite committed yet | Add API tests per section 4 |
+| RBAC boundary coverage is incomplete | Add focused role/permission tests |
 | TestClient async/event-loop issues on Windows | Use httpx async client or direct service tests |
 | No E2E browser tests | Add Playwright after Milestone 3 |
-| RAG / AI evaluation | Sections 5–6 apply when AI pipeline is built |
+| Fresh retrieval is not reproduced in CI | Seed a compact evaluation corpus before changing the gate model |
 
 ---
 
-## 11. CI Integration (Future)
+## 11. CI Integration
 
-> CI/CD pipelines will be configured **after** the working prototype is complete and the
-> demo is successful. This section defines what will be automated.
+> `.github/workflows/ci.yml` runs backend tests with PostgreSQL/Qdrant/Neo4j services and
+> frontend typecheck/tests/lint. `.github/workflows/eval.yml` applies stored retrieval floors
+> and a configuration-drift guard on relevant changes and nightly.
 
 | Stage | Tests run | Block on failure |
 | --- | --- | --- |

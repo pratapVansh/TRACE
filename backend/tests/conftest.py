@@ -1,6 +1,7 @@
 import os
 
 os.environ.setdefault("PROCESSING_QUEUE_WORKER_ENABLED", "false")
+os.environ.setdefault("MEMORY_CLEANUP_ENABLED", "false")
 
 import uuid
 from datetime import UTC, datetime

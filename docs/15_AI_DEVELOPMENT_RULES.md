@@ -26,7 +26,9 @@
 ## 1. Overview
 
 These rules govern all AI development in TRACE. They are **mandatory engineering standards**,
-not suggestions. Every agent, retriever, prompt, and pipeline must comply.
+not suggestions. Every retriever, prompt, RAG service, and processing pipeline must comply.
+References below to specialist agents describe the removed historical design; the current
+system enforces these rules through the single Copilot/RAG path and its grounding layer.
 
 > TRACE is an industrial operating system, not a chatbot. These rules ensure it behaves
 > accordingly.
@@ -59,7 +61,7 @@ flowchart LR
 | R-06 | **Decline when uncertain** | A declined answer is better than a wrong one |
 | R-07 | **Context-only generation** | LLM must not use parametric/world knowledge |
 | R-08 | **Structured output always** | JSON schema, never free-form for production |
-| R-09 | **Agent specialization** | Route to domain agents, not one generic prompt |
+| R-09 | **Service boundaries** | Keep retrieval, prompting, generation, and grounding explicit and testable |
 | R-10 | **Fail safely and visibly** | Errors must be clear, never silent failures |
 
 ---
@@ -114,7 +116,7 @@ flowchart LR
 | Retrieval-first | No generation without retrieved context | Block LLM call if retrieval returns empty |
 | Context-only prompt | System prompt forbids external knowledge | Explicit instruction in every prompt |
 | Structured output | JSON schema with required citation fields | Pydantic validation on LLM output |
-| Self-verification | Agent checks claims against sources | Verify step in LangGraph state machine |
+| Self-verification | Evidence classifier checks answer sentences against cited passages | Grounding step after generation |
 | Confidence gating | Low-confidence answers blocked | Threshold check before release |
 | Decline protocol | Explicit insufficient-evidence response | Template response, not fabrication |
 | Human feedback | Thumbs down triggers review | Feedback stored and reviewed |
@@ -242,17 +244,17 @@ flowchart LR
 
 ---
 
-## 8. Agent Behavior Rules
+## 8. RAG Service Behavior Rules
 
 | # | Rule | Description |
 | --- | --- | --- |
-| A-01 | One agent per domain | Route to specialist, not generic |
-| A-02 | Shared verification step | All agents pass through grounding check |
-| A-03 | Unified output schema | Same JSON structure from every agent |
-| A-04 | Agent cannot override decline | Router cannot force answer when agent declines |
+| A-01 | One production answer path | Chat and RAG endpoints share measured retrieval behavior |
+| A-02 | Shared verification step | Generated answers pass through grounding classification |
+| A-03 | Unified output schema | Chat consumers receive consistent answer/citation metadata |
+| A-04 | Retrieval cannot override decline | Insufficient evidence must remain visible to the caller |
 | A-05 | Max 3 retrieval loops | Prevent infinite retrieve-retry cycles |
-| A-06 | Timeout per agent run | 30 seconds max; fail gracefully |
-| A-07 | Log agent selection | Record which agent handled each query |
+| A-06 | Timeout external calls | Bound retrieval/reranking/LLM calls and fail gracefully |
+| A-07 | Log retrieval mode | Record the configuration and evidence used for each query |
 | A-08 | Asset context respected | When asset is active, scope all retrieval |
 
 ```mermaid
@@ -317,7 +319,7 @@ Every AI interaction **must** be logged with full traceability.
 | S-03 | No cross-user memory | Session memory isolated per user |
 | S-04 | Prompt injection defense | Sanitize user input; never execute user content as instructions |
 | S-05 | Output sanitization | Strip any system prompt leakage from responses |
-| S-06 | Embedding data stays local | FAISS index on-premises |
+| S-06 | Embedding data stays controlled | Qdrant endpoint and credentials are deployment configuration |
 
 ---
 
@@ -347,7 +349,7 @@ Every AI interaction **must** be logged with full traceability.
 | C-04 | Graceful degradation | If Neo4j down, fall back to vector-only |
 | C-05 | Idempotent ingestion | Re-ingesting same document does not duplicate |
 | C-06 | Type-safe schemas | Pydantic models for all AI inputs/outputs |
-| C-07 | No direct LLM calls from routes | Always through agent service |
+| C-07 | No direct LLM calls from routes | Always through chat/RAG services and the provider abstraction |
 
 ---
 

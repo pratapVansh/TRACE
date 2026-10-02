@@ -2,6 +2,14 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Implemented schema note (2 October 2026).** PostgreSQL currently owns roles, users,
+> refresh tokens, documents and versions, extracted text, chunks, ingestion/processing jobs,
+> audit logs, conversations/messages/snapshots, and long-term memories. Qdrant stores vector
+> payloads; Neo4j stores extracted entities/relationships; source files use local storage.
+> The asset, maintenance, inspection, incident, and compliance schemas described below are
+> design proposals and were not migrated. Migration `018_drop_orphan_investigations`
+> removes the unused zero-row table left after its model, service, and API were removed.
+
 ---
 
 ## Table of Contents
@@ -25,9 +33,9 @@ PostgreSQL is the **system of record** for structured data in TRACE: users and r
 documents and their metadata, ingestion jobs, extracted chunks (references), assets,
 maintenance and inspection records, compliance items, conversations, and audit logs.
 
-Vector embeddings live in **FAISS** and the relationship graph lives in **Neo4j**;
+Vector embeddings live in **Qdrant** and the relationship graph lives in **Neo4j**;
 PostgreSQL stores the canonical identifiers and metadata that tie all stores together. Each
-chunk and asset has a stable UUID that is referenced from FAISS and Neo4j.
+chunk and graph entity has a stable identifier referenced across stores.
 
 > Convention: all primary keys are `UUID`, all timestamps are `TIMESTAMPTZ`, and soft
 > deletes use a nullable `deleted_at` column.
@@ -43,7 +51,7 @@ chunk and asset has a stable UUID that is referenced from FAISS and Neo4j.
 | **Referential integrity** | Foreign keys with explicit `ON DELETE` behavior |
 | **Auditability** | `created_at`, `updated_at`, and dedicated audit log |
 | **Soft deletes** | `deleted_at` preserves history where needed |
-| **Cross-store linkage** | UUIDs shared with FAISS and Neo4j |
+| **Cross-store linkage** | UUIDs shared with Qdrant and Neo4j |
 | **Enumerations** | Status fields use Postgres `ENUM` types |
 
 ---
@@ -199,11 +207,11 @@ flowchart LR
 | is_latest | BOOLEAN | DEFAULT false |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
 
-**`chunks`** (canonical reference for FAISS vectors)
+**`document_chunks`** (canonical relational reference for Qdrant points)
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| id | UUID PK | also the FAISS vector id |
+| id | UUID PK | linked to the Qdrant point/payload |
 | document_version_id | UUID FK → document_versions.id | ON DELETE CASCADE |
 | chunk_index | INTEGER | order within document |
 | content | TEXT | extracted text |
@@ -342,6 +350,8 @@ flowchart LR
 | id | UUID PK | |
 | user_id | UUID FK → users.id | ON DELETE CASCADE |
 | title | VARCHAR(255) | |
+| status | VARCHAR(20) | active or archived |
+| metadata_ | JSONB | client session metadata |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
 | updated_at | TIMESTAMPTZ | DEFAULT now() |
 
@@ -351,20 +361,32 @@ flowchart LR
 | --- | --- | --- |
 | id | UUID PK | |
 | conversation_id | UUID FK → conversations.id | ON DELETE CASCADE |
-| role | message_role_enum | user, assistant, system |
+| role | VARCHAR(32) | user or assistant in the public API |
 | content | TEXT | |
-| token_count | INTEGER | |
+| citations | JSONB | cited document/chunk payloads |
+| tool_outputs | JSONB | optional stored tool results |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
 
-**`citations`**
+**`conversation_snapshots`**
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | id | UUID PK | |
-| message_id | UUID FK → messages.id | ON DELETE CASCADE |
-| chunk_id | UUID FK → chunks.id | ON DELETE SET NULL |
-| score | NUMERIC(5,4) | relevance score |
+| conversation_id | UUID FK → conversations.id | ON DELETE CASCADE |
+| turn_index | INTEGER | unique with conversation_id |
+| role | VARCHAR(32) | snapshot producer |
+| working_memory | JSONB | optional bounded state |
+| tool_outputs | JSONB | optional tool state |
+| agent_results | JSONB | legacy-compatible optional payload |
+| timeline | JSONB | optional execution timeline |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
+
+**`memories`**
+
+Long-term memories are user-owned PostgreSQL rows. Automatically extracted
+rows also reference their source conversation with `ON DELETE CASCADE`; manual
+rows may leave `conversation_id` null. `expires_at` drives expiry, and inactive
+rows are purged after the configured grace period.
 
 ### 5.6 Audit
 
@@ -461,7 +483,7 @@ flowchart LR
 | Audit trail | Every query/upload/delete recorded in `audit_logs` |
 | Citations | Persisted per message for full answer provenance |
 | Versioning | `document_versions` retains full revision history |
-| Cross-store integrity | Chunk/asset UUIDs reconciled with FAISS & Neo4j |
+| Cross-store integrity | Document/chunk identifiers reconciled with Qdrant and Neo4j |
 
 ---
 
@@ -471,5 +493,5 @@ flowchart LR
 - PostgreSQL Documentation — https://www.postgresql.org/docs/
 - PostgreSQL JSONB & GIN Indexes — https://www.postgresql.org/docs/current/datatype-json.html
 - Neo4j — https://neo4j.com/docs/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/
 - ISO 55000 — Asset Management.

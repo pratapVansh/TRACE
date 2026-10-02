@@ -2,6 +2,14 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current-demo correction (2 October 2026).** Demonstrate only the implemented document
+> intelligence product: authentication, dashboard, ingestion, search, knowledge graph,
+> grounded Copilot/citations, audit logs, and administration. Do not claim seven agents,
+> an asset registry, maintenance workflows, compliance status, notification workflows,
+> investigation/RCA persistence, P&ID topology extraction, or FAISS. The production path is
+> Qdrant + Neo4j hybrid retrieval, cross-encoder reranking, and Groq
+> `openai/gpt-oss-120b`.
+
 ---
 
 ## Table of Contents
@@ -30,7 +38,7 @@ PDF chatbot — and that every answer is grounded, cited, and auditable.
 | --- | --- |
 | Problem | Industrial knowledge is fragmented and undiscoverable |
 | Solution | TRACE unifies it into one searchable Industrial Knowledge Brain |
-| Differentiation | Grounded, cited, agentic — not ChatGPT for PDFs |
+| Differentiation | Grounded, cited, graph-enhanced retrieval — not a single-PDF chatbot |
 | Impact | Hours of search → seconds; safety and compliance proactive |
 
 ---
@@ -186,8 +194,8 @@ Show evidence document link.
 
 > "TRACE transforms fragmented industrial documents into one trustworthy knowledge brain.
 > Every answer is grounded in source documents with citations. Every query is logged for
-> audit. Specialized AI agents handle maintenance, compliance, incidents, and
-> recommendations — not one generic chatbot.
+> audit. Its measured retrieval pipeline combines document passages and graph facts rather
+> than claiming unsupported domain workflows.
 >
 > The result: engineers find answers in seconds instead of hours, safety information is
 > proactive, and institutional knowledge is preserved forever.
@@ -236,7 +244,7 @@ Use these phrases during the demo to reinforce key messages:
 | "Click the citation — it opens the exact page" | When showing citations |
 | "Confidence score tells you how reliable the answer is" | When showing confidence badge |
 | "It declines rather than hallucinate" | During decline demo |
-| "Seven specialized AI agents, not one generic prompt" | When explaining architecture |
+| "Measured hybrid retrieval, reranking, and grounding" | When explaining architecture |
 | "Knowledge graph connects assets, procedures, and incidents" | Graph section |
 | "Full audit trail for compliance" | Compliance section |
 | "Hours of search reduced to seconds" | Closing |
@@ -249,7 +257,7 @@ Use these phrases during the demo to reinforce key messages:
 | "ChatGPT answers from memory" | "TRACE answers from YOUR documents" |
 | "No citations" | "Every claim cited to source + page" |
 | "Hallucinates when unsure" | "Declines when evidence is insufficient" |
-| "One generic model" | "Seven specialized industrial agents" |
+| "Ungrounded generic chat" | "Corpus retrieval, citations, refusal behavior, and grounding" |
 | "No audit trail" | "Every query logged for compliance" |
 | "No asset awareness" | "Asset-centric knowledge views" |
 
@@ -271,8 +279,8 @@ Use this simplified explanation for judges (avoid jargon):
 
 ```mermaid
 flowchart TB
-    Q["Your Question"] --> AGENT["AI Agent plans & routes"]
-    AGENT --> SEARCH["Search 3 stores"]
+    Q["Your Question"] --> AGENT["Chat/RAG service resolves context"]
+    AGENT --> SEARCH["Hybrid retrieval"]
     SEARCH --> VEC["Document vectors"]
     SEARCH --> GRAPH["Knowledge graph"]
     SEARCH --> META["Metadata"]
@@ -284,7 +292,11 @@ flowchart TB
     VERIFY --> ANS["Answer + Citations + Confidence"]
 ```
 
-### The 7 agents (if asked)
+### Removed agent framework (if asked)
+
+The earlier seven-agent design was removed after execution testing. It was not connected to
+the production Copilot and did not provide reliable maintenance, compliance, RCA, or report
+workflows. The current answer path is the explicit hybrid-RAG service described above.
 
 | Agent | One-line description |
 | --- | --- |
@@ -303,8 +315,7 @@ flowchart TB
 | RAG | "Search your documents first, then generate an answer from what was found" |
 | Knowledge Graph | "A map of how assets, documents, and events are connected" |
 | Embeddings | "Converting text into numbers so similar content can be found" |
-| FAISS | "A fast search engine for those number representations" |
-| LangGraph | "Orchestrates multi-step AI reasoning like a workflow" |
+| Qdrant | "The vector and keyword store used to retrieve relevant document passages" |
 | Confidence score | "How sure TRACE is that the answer is correct" |
 | OCR | "Reading text from scanned documents and images" |
 
@@ -317,7 +328,7 @@ flowchart TB
 | Question | Answer |
 | --- | --- |
 | "How is this different from ChatGPT?" | ChatGPT answers from its training data. TRACE answers only from your ingested documents, with citations. It declines when it doesn't have evidence. |
-| "Is this just a PDF chatbot?" | No. TRACE ingests all industrial document types, builds a knowledge graph, uses 7 specialized agents, and provides asset-centric views, compliance tracking, and maintenance intelligence. |
+| "Is this just a PDF chatbot?" | No. TRACE ingests multiple industrial formats, performs OCR, indexes passages, builds a knowledge graph, and returns grounded answers with source citations. |
 | "Who is the target user?" | Maintenance engineers, plant operators, inspectors, compliance officers, and safety officers in heavy-asset industries. |
 | "What's the business value?" | Reduces search time from hours to seconds, prevents knowledge loss, improves safety, and supports compliance audits. |
 
@@ -327,7 +338,7 @@ flowchart TB
 | --- | --- |
 | "What LLM do you use?" | Configurable — supports self-hosted models for data privacy. The LLM is the synthesis engine, not the knowledge source. |
 | "How do you prevent hallucination?" | Five layers: retrieval-first, context-only prompts, structured output, self-verification, and confidence gating. TRACE declines rather than guess. |
-| "How does the knowledge graph work?" | Neo4j stores entities (assets, documents, incidents) and relationships (governs, caused_by, complies_with). Agents traverse the graph for relationship-aware answers. |
+| "How does the knowledge graph work?" | Neo4j stores extracted entities and relationships. The hybrid retriever can add relevant graph facts to document evidence. |
 | "Can it handle engineering drawings?" | Yes — OCR for tags/labels, symbol recognition for P&IDs, and diagram topology extraction. |
 | "How do you handle document updates?" | Version tracking in PostgreSQL. Re-ingestion updates vectors and graph. Latest version is always used. |
 | "What about data privacy?" | Self-hosted architecture. Documents and embeddings stay on-premises. No data sent to external APIs in production. |
@@ -360,7 +371,7 @@ flowchart TB
 
 | # | Check | Status |
 | --- | --- | --- |
-| 1 | All services running (PostgreSQL, Neo4j, FAISS, backend, frontend) | ☐ |
+| 1 | All services running (PostgreSQL, Neo4j, Qdrant, backend, frontend) | ☐ |
 | 2 | Demo corpus ingested (10+ documents) | ☐ |
 | 3 | Demo assets seeded (P-101, V-203, T-501) | ☐ |
 | 4 | All 5 demo queries return grounded answers | ☐ |

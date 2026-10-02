@@ -22,19 +22,19 @@
 
 ## 1. Overview
 
-The Neo4j knowledge graph is TRACE's **relationship engine**. While FAISS handles semantic
+The Neo4j knowledge graph is TRACE's **relationship engine**. While Qdrant handles semantic
 similarity ("find text like this"), the graph handles structural reasoning ("what is connected
 to P-101, and how?"). Together they enable TRACE to answer questions that no single document
 can answer alone.
 
 ```mermaid
 flowchart LR
-    VEC["FAISS: What text is similar?"] --> HYBRID["Hybrid Answer"]
+    VEC["Qdrant: What text is similar?"] --> HYBRID["Hybrid Answer"]
     NEO["Neo4j: What is connected?"] --> HYBRID
     HYBRID --> ANS["Grounded, Relational Answer"]
 ```
 
-| Capability | Vector (FAISS) | Graph (Neo4j) |
+| Capability | Vector (Qdrant) | Graph (Neo4j) |
 | --- | --- | --- |
 | Semantic similarity | Yes | No |
 | Relationship traversal | No | Yes |
@@ -250,7 +250,7 @@ flowchart TB
 
 ## 6. Cypher Queries
 
-Common Cypher patterns used by TRACE agents and the API.
+Common Cypher patterns used by TRACE retrieval services and the API.
 
 ### Asset neighborhood
 

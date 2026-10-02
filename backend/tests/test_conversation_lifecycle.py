@@ -594,12 +594,12 @@ class TestBrowserCloseReopen:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Duplicate message guard
+# Repeated questions
 # ═══════════════════════════════════════════════════════════════
 
 
-class TestDuplicateMessageGuard:
-    async def test_duplicate_user_message_is_skipped(self):
+class TestRepeatedQuestions:
+    async def test_repeated_user_question_is_preserved_as_a_new_turn(self):
         user_id = uuid.uuid4()
         conv_id = uuid.uuid4()
         conv = _make_conv(user_id, conv_id)
@@ -633,11 +633,11 @@ class TestDuplicateMessageGuard:
         await svc.chat(user_id=str(user_id), question="Hello", conversation_id=str(conv_id))
         first_count = add_count
 
-        # Simulate network retry, same question
+        # Repeating a question is valid history. Without an explicit
+        # idempotency key, content equality cannot prove a network retry.
         await svc.chat(user_id=str(user_id), question="Hello", conversation_id=str(conv_id))
 
-        # The duplicate should be detected and skipped
-        assert add_count == first_count, "Duplicate message was NOT skipped"
+        assert add_count == first_count * 2
 
 
 # ═══════════════════════════════════════════════════════════════

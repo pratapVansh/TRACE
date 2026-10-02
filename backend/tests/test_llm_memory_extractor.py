@@ -266,6 +266,27 @@ class TestMemoryServiceLLMConsolidation:
         assert len(results) == 1
         assert results[0].title == "P-101 Spec"
         mock_repo.create.assert_awaited_once()
+        payload = mock_repo.create.call_args.args[0]
+        assert payload.expires_at is not None
+
+    async def test_consolidation_keeps_provenance_within_one_conversation(
+        self, svc, mock_repo
+    ):
+        mem = self._make_mem_model()
+        mock_repo.create.return_value = mem
+        conversation_id = "10000000-0000-0000-0000-000000000001"
+
+        await svc.consolidate_conversation(
+            conversation_text="User: My P-101 is a centrifugal pump.\nAssistant: Noted.",
+            user_id="00000000-0000-0000-0000-000000000001",
+            conversation_id=conversation_id,
+        )
+
+        payload = mock_repo.create.call_args.args[0]
+        assert payload.conversation_id == conversation_id
+        assert mock_repo.search_by_keyword.call_args.kwargs["conversation_id"] == uuid.UUID(
+            conversation_id
+        )
 
     async def test_consolidate_with_existing_merges(self, svc, mock_repo):
         existing = self._make_mem_model(
@@ -291,7 +312,7 @@ class TestMemoryServiceLLMConsolidation:
         mock_repo.update.assert_called()
         # First update call has the blended importance
         first_call = mock_repo.update.call_args_list[0]
-        update_payload = first_call[0][1]
+        update_payload = first_call[0][2]
         assert update_payload.importance is not None
         assert 0.5 < update_payload.importance < 0.85
 
@@ -368,14 +389,22 @@ class TestMemoryServiceNewMethods:
             importance=0.9,
             confidence=0.8,
         )
-        result = await svc.resolve_conflict(str(existing.id), ext)
+        result = await svc.resolve_conflict(
+            str(existing.id),
+            "550e8400-e29b-41d4-a716-446655440000",
+            ext,
+        )
         assert result is not None
         assert mock_repo.update.call_count >= 1
 
     async def test_resolve_conflict_no_existing(self, svc, mock_repo):
         mock_repo.get.return_value = None
         ext = MemoryExtraction(title="T", summary="S", content="C")
-        result = await svc.resolve_conflict(str(uuid.uuid4()), ext)
+        result = await svc.resolve_conflict(
+            str(uuid.uuid4()),
+            "550e8400-e29b-41d4-a716-446655440000",
+            ext,
+        )
         assert result is None
 
 

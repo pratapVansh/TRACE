@@ -27,6 +27,8 @@ env/
 
 # Test and lint caches.
 **/.pytest_cache/
+**/.test-tmp/
+**/.focused-test-tmp/
 **/.mypy_cache/
 **/.ruff_cache/
 **/htmlcov/

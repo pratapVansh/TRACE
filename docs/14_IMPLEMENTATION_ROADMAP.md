@@ -2,6 +2,13 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Historical plan, superseded by the repository-root `ROADMAP.md`.** The 20-day plan below
+> records the original proposal; it is not current status. Ingestion, OCR, Qdrant RAG,
+> Neo4j, Copilot, dashboard, administration, audit logs, evaluation, Docker, and CI were
+> completed. The proposed seven-agent framework and the asset, maintenance, compliance, and
+> notification domains were deliberately removed or never implemented. Current work is
+> production hardening, embedding-model version safety, and deployment readiness.
+
 ---
 
 ## Table of Contents
@@ -32,7 +39,9 @@ then ingestion and intelligence, then domain features, then polish and demo prep
 | --- | --- | --- |
 | **Milestone 1** | Project scaffolding, health API, PostgreSQL, frontend ↔ backend | ✅ **COMPLETE** |
 | **Milestone 2** | Authentication (backend + frontend), dashboard shell | ✅ **COMPLETE** |
-| **Milestone 3+** | Ingestion, RAG, graph, Copilot, domain modules | ☐ Planned |
+| **Milestone 3** | Ingestion, OCR, Qdrant RAG, graph, Copilot, admin/audit UI | ✅ **COMPLETE** |
+| **Milestone 4** | Evaluation, Docker development stack, CI | ✅ **COMPLETE** |
+| **Removed scope** | Seven-agent framework and unsupported domain modules | Deliberately not shipped |
 
 ```mermaid
 gantt

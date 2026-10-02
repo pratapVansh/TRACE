@@ -291,6 +291,78 @@ class DocumentRepository:
         )
         return list(result.scalars().all())
 
+    async def claim_pending_ingestion_jobs(
+        self,
+        *,
+        limit: int = 100,
+        claimed_at: datetime | None = None,
+    ) -> list[IngestionJob]:
+        """Atomically claim due jobs so concurrent workers cannot duplicate work."""
+        now = claimed_at or datetime.now(UTC)
+        candidates = (
+            select(IngestionJob.id)
+            .where(
+                IngestionJob.status == ProcessingStatus.PENDING.value,
+                or_(
+                    IngestionJob.next_retry_at.is_(None),
+                    IngestionJob.next_retry_at <= now,
+                ),
+            )
+            .order_by(IngestionJob.created_at.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        result = await self._session.execute(
+            update(IngestionJob)
+            .where(IngestionJob.id.in_(candidates))
+            .values(
+                status=ProcessingStatus.PROCESSING.value,
+                stage=ProcessingStage.PROCESSING.value,
+                started_at=now,
+                next_retry_at=None,
+            )
+            .returning(IngestionJob),
+        )
+        return list(result.scalars().all())
+
+    async def recover_stale_ingestion_jobs(
+        self,
+        *,
+        stale_before: datetime,
+        recovered_at: datetime | None = None,
+    ) -> list[IngestionJob]:
+        """Recover jobs abandoned after a worker crash or forced shutdown."""
+        now = recovered_at or datetime.now(UTC)
+        result = await self._session.execute(
+            select(IngestionJob)
+            .where(
+                IngestionJob.status == ProcessingStatus.PROCESSING.value,
+                IngestionJob.started_at.is_not(None),
+                IngestionJob.started_at < stale_before,
+            )
+            .with_for_update(skip_locked=True),
+        )
+        jobs = list(result.scalars().all())
+        for job in jobs:
+            job.retry_count += 1
+            job.error = (
+                "Worker lease expired before processing completed; "
+                f"recovered at {now.isoformat()}"
+            )
+            job.started_at = None
+            if job.retry_count > job.max_retries:
+                job.status = ProcessingStatus.FAILED.value
+                job.stage = ProcessingStage.FAILED.value
+                job.finished_at = now
+                job.next_retry_at = None
+            else:
+                job.status = ProcessingStatus.PENDING.value
+                job.stage = ProcessingStage.QUEUED.value
+                job.finished_at = None
+                job.next_retry_at = now
+        await self._session.flush()
+        return jobs
+
     async def count_unfinished_ingestion_jobs(self) -> int:
         """Ingestion jobs that have not reached a terminal state.
 

@@ -30,34 +30,35 @@ TRACE exposes a **REST API** via FastAPI. All endpoints (except auth login/refre
 and health) require a valid JWT access token. Copilot chat additionally supports **Server-Sent Events (SSE)**
 for streaming responses.
 
-### Implementation status (Milestones 1–2)
+### Implementation status (2 October 2026)
 
-| Endpoint | Status |
+| Endpoint family | Status |
 | --- | --- |
 | `GET /api/health` | ✅ Implemented |
-| `POST /api/auth/register` | ✅ Implemented |
-| `POST /api/auth/login` | ✅ Implemented |
-| `POST /api/auth/refresh` | ✅ Implemented (refresh token rotation) |
-| `POST /api/auth/logout` | ✅ Implemented |
-| `GET /api/auth/me` | ✅ Implemented |
-| All other endpoints below | ☐ Planned |
+| `/api/auth/*` | ✅ Register, login, refresh rotation, logout, current user |
+| `/api/documents/*`, `/api/processing/*`, `/api/chunks/*` | ✅ Document CRUD, download, ingestion status/control and chunk reads |
+| `/api/search`, `/api/rag/*`, `/api/chat/*` | ✅ Search, retrieval/query, SSE chat, conversations and snapshots |
+| `/api/graph/*` | ✅ Health, entities, search, neighbors, path, schema and statistics |
+| `/api/admin/users/*`, `/api/audit-logs` | ✅ User administration and audit-log reads |
+| `/api/dashboard`, `/api/metrics*`, `/api/observability/dashboard` | ✅ Dashboard and operational telemetry |
+| Assets, maintenance, compliance, notifications, investigations | Not implemented product domains |
 
-> **Note:** The running API uses base path `/api`. The target specification uses `/api/v1`;
-> versioning will be introduced without breaking current clients during early development.
+> The running and documented base path is `/api`. FastAPI's generated OpenAPI document and
+> `/docs` UI are authoritative for exact request/response schemas. Sections describing absent
+> domains below are retained only as explicitly labelled product proposals.
 
 | Property | Value |
 | --- | --- |
 | Base URL (implemented) | `/api` |
-| Base URL (target) | `/api/v1` |
 | Format | JSON (`application/json`) |
 | Auth | Bearer JWT in `Authorization` header |
-| Streaming | SSE (`text/event-stream`) for `/chat` *(planned)* |
+| Streaming | SSE (`text/event-stream`) for `POST /api/chat/stream` |
 | IDs | UUID v4 |
 | Timestamps | ISO 8601 UTC (`TIMESTAMPTZ`) |
 
 ```mermaid
 flowchart LR
-    FE["Frontend"] -->|REST + SSE| API["/api/v1"]
+    FE["Frontend"] -->|REST + SSE| API["/api"]
     API --> AUTH["Authentication"]
     API --> DOCS["Documents"]
     API --> ASSETS["Assets"]
@@ -110,21 +111,17 @@ Error responses use a consistent envelope (see [Error Reference](#14-error-refer
 
 | Role (implemented, seeded) | Scope |
 | --- | --- |
-| `Admin` | Full access including admin routes *(when implemented)* |
-| `Engineer` | Documents, assets, chat, maintenance *(when implemented)* |
-| `Operator` | Read + chat *(when implemented)* |
+| `SuperAdmin` | Full platform and user-administration access |
+| `Admin` | Administrative access subject to the server permission matrix |
+| `Engineer` | Document, search, graph, and Copilot capabilities granted by the permission matrix |
+| `Operator` | Operational read/search/chat capabilities granted by the permission matrix |
 | `Viewer` | Read-only; default role for self-registration |
-
-| Role (planned, extended RBAC) | Scope |
-| --- | --- |
-| `inspector` | Read + inspections + compliance |
-| `compliance_officer` | Read + compliance + audit |
 
 ---
 
 ## 3. Authentication
 
-Base path: `/api/auth` *(implemented)* · `/api/v1/auth` *(target)*
+Base path: `/api/auth`
 
 > ✅ **Implemented** — All auth endpoints below are live except where noted as target-only.
 
@@ -330,6 +327,11 @@ Return the authenticated user's profile.
 ---
 
 ## 4. Documents
+
+> **Implemented, but the examples below predate the final route surface.** Current routes
+> are `GET/POST /api/documents`, `GET/PATCH/DELETE /api/documents/{document_id}`,
+> download, processing-status, chunks, and chunk-status endpoints. There is no batch route,
+> `/status`, or `/content` route under the paths shown below; use generated OpenAPI schemas.
 
 > ☐ **Planned** — Not yet implemented.
 
@@ -558,7 +560,7 @@ Soft-delete a document.
 
 ---
 
-## 5. Assets
+## 5. Assets — proposal, not implemented
 
 Base path: `/api/v1/assets`
 
@@ -732,6 +734,10 @@ Same schema as `GET /assets/{asset_id}`.
 
 ## 6. Knowledge Graph
 
+> Implemented routes are under `/api/graph`: health, entities, entity detail, search,
+> single/batch neighbors, shortest path, schema, and statistics. The asset-centric routes
+> sketched below were not implemented because TRACE has no first-class asset registry.
+
 Base path: `/api/v1/graph`
 
 ### GET `/graph/asset/{asset_id}`
@@ -841,6 +847,10 @@ Search graph nodes by label or property.
 ---
 
 ## 7. AI Chat
+
+> Implemented chat routes include `/api/chat`, `/api/chat/stream`, messages, sessions,
+> conversation CRUD/archive/restore, message history, and snapshots. Feedback is not an
+> implemented endpoint.
 
 Base path: `/api/v1/chat`
 
@@ -1054,7 +1064,7 @@ Semantic search across the knowledge base.
 
 ---
 
-## 9. Maintenance
+## 9. Maintenance — proposal, not implemented
 
 Base path: `/api/v1/maintenance`
 
@@ -1151,7 +1161,7 @@ Get upcoming and overdue maintenance.
 
 ---
 
-## 10. Compliance
+## 10. Compliance — proposal, not implemented
 
 Base path: `/api/v1/compliance`
 
@@ -1265,7 +1275,7 @@ Get compliance item detail with evidence.
 
 ---
 
-## 11. Notifications
+## 11. Notifications — proposal, not implemented
 
 Base path: `/api/v1/notifications`
 
@@ -1341,6 +1351,10 @@ Mark all notifications as read.
 ---
 
 ## 12. Admin
+
+> Implemented administration consists of `/api/admin/users` and its password, role, and
+> status mutations plus `GET /api/audit-logs`. The proposed ingestion endpoint and the
+> older `/api/admin/audit-logs` path below are not implemented.
 
 Base path: `/api/v1/admin`
 
@@ -1436,6 +1450,9 @@ Query audit logs.
 ---
 
 ## 13. Health & System
+
+> `GET /api/health` is implemented. Separate `/health/ready` and `/health/live` routes are
+> not implemented; the health payload reports component degradation.
 
 ### GET `/health` ✅
 

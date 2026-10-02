@@ -146,13 +146,12 @@ class TestRankedSearch:
         mock_vector_store.search.side_effect = VectorStoreOperationError("fail")
         mock_vector_store.fulltext_search.side_effect = VectorStoreOperationError("fail")
 
-        results = await service.ranked_search(
-            query_vector=[0.1] * 384,
-            query_text="test",
-            top_k=10,
-        )
-
-        assert results == []
+        with pytest.raises(VectorStoreOperationError, match="neither vector nor keyword"):
+            await service.ranked_search(
+                query_vector=[0.1] * 384,
+                query_text="test",
+                top_k=10,
+            )
 
     async def test_ranked_search_uses_custom_weights(
         self,

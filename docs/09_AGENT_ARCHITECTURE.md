@@ -2,6 +2,13 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Historical design — not implemented.** The agent framework described below was built,
+> execution-tested, and then removed. It was disconnected from the production Copilot,
+> contained non-functional or unsafe tools, and did not produce the advertised maintenance,
+> compliance, RCA, or reporting workflows. TRACE now uses the explicit RAG architecture in
+> `08_AI_ARCHITECTURE.md` and `10_RAG_PIPELINE.md`. This file is retained only as design
+> history and must not be used to describe current capabilities.
+
 ---
 
 ## Table of Contents

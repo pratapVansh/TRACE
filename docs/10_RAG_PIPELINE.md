@@ -2,6 +2,12 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current implementation (2 October 2026).** Production uses Qdrant rather than FAISS,
+> 256-token chunks with 40-token overlap, up to two passages per document, the
+> `cross-encoder/ms-marco-MiniLM-L-6-v2` reranker, Neo4j graph facts, and Groq
+> `openai/gpt-oss-120b`. The flow is implemented by application services, not LangGraph.
+> The validated `passage2` evaluation is the source of truth for retrieval quality.
+
 ---
 
 ## Table of Contents
@@ -70,7 +76,7 @@ flowchart TB
 | Cleaning | Ingestion | — |
 | Chunking | Ingestion | PostgreSQL `chunks` |
 | Metadata | Ingestion | PostgreSQL, Neo4j |
-| Embeddings | Ingestion | FAISS |
+| Embeddings | Ingestion | Qdrant |
 | Retrieval | Query | — |
 | Prompt Construction | Query | — |
 | Answer Generation | Query | PostgreSQL `messages` |
@@ -268,8 +274,8 @@ flowchart LR
     BATCH --> ST["Sentence Transformers"]
     ST --> VEC["768-dim vectors"]
     VEC --> NORM["L2 normalize"]
-    NORM --> FAISS["Add to FAISS index"]
-    FAISS --> MAP["Map chunk UUID → vector ID"]
+    NORM --> QDRANT["Upsert into Qdrant"]
+    QDRANT --> MAP["Persist chunk UUID in point payload"]
     MAP --> PG["Update PostgreSQL"]
 ```
 
@@ -280,7 +286,7 @@ flowchart LR
 | Output | Fixed-dimension vector (384 or 768) |
 | Normalization | L2-normalized for cosine similarity |
 | Batch size | 32–128 chunks per batch |
-| Index update | Incremental add to FAISS on ingestion |
+| Index update | Incremental upsert to Qdrant on ingestion |
 | Caching | Content-hash keyed; skip re-embedding identical text |
 
 | Embedding input format | Example |
@@ -297,7 +303,7 @@ At query time, the retriever finds the most relevant chunks using hybrid search.
 ```mermaid
 flowchart TB
     Q["User Question"] --> EMBQ["Embed query"]
-    EMBQ --> VS["Vector search - FAISS top-K"]
+    EMBQ --> VS["Vector search - Qdrant top-K"]
     Q --> GS["Graph search - Neo4j"]
     Q --> MF["Metadata filter - PostgreSQL"]
     VS --> FUSE["Result fusion"]
@@ -311,7 +317,7 @@ flowchart TB
 | Step | Detail |
 | --- | --- |
 | Query embedding | Same Sentence Transformer model as ingestion |
-| Vector search | FAISS top-K (K=20–50) by cosine similarity |
+| Vector search | Qdrant candidates by cosine similarity and keyword/full-text matching |
 | Graph search | Neo4j traversal for asset-linked documents |
 | Metadata filter | Pre-filter by doc_type, asset, date range |
 | Fusion | Merge results, deduplicate overlapping chunks |
@@ -445,24 +451,24 @@ sequenceDiagram
     participant User
     participant UI as Copilot UI
     participant API as FastAPI
-    participant Agent as LangGraph Agent
-    participant FAISS
+    participant Agent as Chat / RAG Service
+    participant Qdrant
     participant Neo4j
     participant LLM
 
     Note over User,LLM: Ingestion Path
     User->>API: Upload document
     API->>API: OCR → Clean → Chunk → Metadata
-    API->>FAISS: Store embeddings
+    API->>Qdrant: Store embeddings
     API->>Neo4j: Update graph
 
     Note over User,LLM: Query Path
     User->>UI: Ask question
     UI->>API: POST /chat
-    API->>Agent: Start agent run
-    Agent->>FAISS: Vector search
+    API->>Agent: Start RAG request
+    Agent->>Qdrant: Vector / hybrid search
     Agent->>Neo4j: Graph search
-    FAISS-->>Agent: Top-K chunks
+    Qdrant-->>Agent: Candidate chunks
     Neo4j-->>Agent: Graph facts
     Agent->>Agent: Assemble prompt
     Agent->>LLM: Generate answer
@@ -483,4 +489,4 @@ sequenceDiagram
 - [`12_DOCUMENT_PIPELINE.md`](12_DOCUMENT_PIPELINE.md)
 - Lewis, P. et al. *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*, NeurIPS 2020.
 - Sentence Transformers — https://www.sbert.net/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/

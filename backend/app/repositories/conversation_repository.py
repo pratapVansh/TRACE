@@ -283,6 +283,7 @@ class ConversationRepository:
             .on_conflict_do_update(
                 index_elements=["conversation_id", "turn_index"],
                 set_={
+                    "role": role,
                     "working_memory": working_memory,
                     "tool_outputs": tool_outputs,
                     "agent_results": agent_results,

@@ -15,7 +15,7 @@ though the code under test commits.
 """
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -390,6 +390,68 @@ async def test_a_failing_job_below_the_ceiling_is_retried_not_failed(
     assert retried.status != ProcessingStatus.FAILED.value
     assert retried.next_retry_at is not None
     assert retried.finished_at is None
+
+
+async def test_pending_job_is_claimed_atomically_in_postgres(
+    db_session: AsyncSession,
+    actor: UserMeResponse,
+) -> None:
+    """Exercise the real UPDATE/RETURNING + SKIP LOCKED claim statement."""
+    repository = DocumentRepository(db_session)
+    # Keep this assertion independent of any developer data in the database;
+    # the fixture's outer transaction rolls the update back after the test.
+    await db_session.execute(
+        text("UPDATE ingestion_jobs SET status = 'completed' WHERE status = 'pending'")
+    )
+    document = await repository.create_document(
+        title="Atomic claim probe",
+        original_filename="atomic-claim.txt",
+        doc_type="document",
+        status="queued",
+        uploaded_by=actor.id,
+    )
+    job = await repository.create_ingestion_job(
+        document_id=document.id,
+        status=ProcessingStatus.PENDING.value,
+        stage=ProcessingStage.QUEUED.value,
+    )
+
+    claimed = await repository.claim_pending_ingestion_jobs(limit=1)
+
+    assert [item.id for item in claimed] == [job.id]
+    assert claimed[0].status == ProcessingStatus.PROCESSING.value
+    assert claimed[0].started_at is not None
+
+
+async def test_stale_processing_lease_returns_to_retry_ladder(
+    db_session: AsyncSession,
+    actor: UserMeResponse,
+) -> None:
+    repository = DocumentRepository(db_session)
+    document = await repository.create_document(
+        title="Stale lease probe",
+        original_filename="stale-lease.txt",
+        doc_type="document",
+        status="processing",
+        uploaded_by=actor.id,
+    )
+    job = await repository.create_ingestion_job(
+        document_id=document.id,
+        status=ProcessingStatus.PROCESSING.value,
+        stage=ProcessingStage.PROCESSING.value,
+        max_retries=3,
+    )
+    old = datetime.now(UTC) - timedelta(hours=2)
+    await repository.update_ingestion_job(job.id, started_at=old)
+
+    recovered = await repository.recover_stale_ingestion_jobs(
+        stale_before=datetime.now(UTC) - timedelta(hours=1),
+    )
+
+    ours = next(item for item in recovered if item.id == job.id)
+    assert ours.status == ProcessingStatus.PENDING.value
+    assert ours.retry_count == 1
+    assert ours.next_retry_at is not None
 
 
 async def test_document_version_columns_survive_the_upload_commit(

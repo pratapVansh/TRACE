@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Text, text
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,7 @@ _CONV_STATUS_ARCHIVED = "archived"
 
 class Conversation(Base, TimestampMixin):
     __tablename__ = "conversations"
+    __table_args__ = (Index("ix_conversations_status", "status"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -82,6 +83,13 @@ class ConversationSnapshot(Base, CreatedAtMixin):
     """
 
     __tablename__ = "conversation_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "conversation_id",
+            "turn_index",
+            name="uq_conversation_snapshots_conversation_turn",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

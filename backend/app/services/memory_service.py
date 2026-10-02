@@ -1,15 +1,15 @@
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Sequence
+from datetime import datetime, timedelta, timezone
+from typing import Any, Awaitable, Callable
 
 from app.ai.base import LLMProvider
+from app.core.config import settings
 from app.repositories.memory_repository import MemoryRepository
 from app.schemas.memory import (
     MemoryCreate,
     MemoryResponse,
     MemorySearchResult,
-    MemoryStatus,
     MemoryType,
     MemoryUpdate,
 )
@@ -42,24 +42,30 @@ class MemoryService:
     async def recall(
         self,
         memory_id: str,
+        user_id: str,
     ) -> MemoryResponse | None:
-        uid = uuid.UUID(memory_id)
-        mem = await self._repo.get(uid)
+        memory_uuid = uuid.UUID(memory_id)
+        user_uuid = uuid.UUID(user_id)
+        mem = await self._repo.get(memory_uuid, user_uuid)
         if mem is None:
             return None
-        await self._repo.touch(uid)
+        await self._repo.touch(memory_uuid, user_uuid)
         return self._to_response(mem)
 
     async def update_memory(
         self,
         memory_id: str,
+        user_id: str,
         payload: MemoryUpdate,
     ) -> MemoryResponse | None:
-        uid = uuid.UUID(memory_id)
+        memory_uuid = uuid.UUID(memory_id)
+        user_uuid = uuid.UUID(user_id)
         embedding = None
         if payload.content is not None:
             embedding = await self._generate_embedding(payload.content)
-        mem = await self._repo.update(uid, payload, embedding=embedding)
+        mem = await self._repo.update(
+            memory_uuid, user_uuid, payload, embedding=embedding
+        )
         if mem is None:
             return None
         return self._to_response(mem)
@@ -68,6 +74,7 @@ class MemoryService:
         self,
         target_id: str,
         source_ids: list[str],
+        user_id: str,
         new_content: str,
         new_title: str | None = None,
         new_summary: str | None = None,
@@ -76,8 +83,9 @@ class MemoryService:
     ) -> MemoryResponse | None:
         target_uuid = uuid.UUID(target_id)
         source_uuids = [uuid.UUID(s) for s in source_ids]
+        user_uuid = uuid.UUID(user_id)
         mem = await self._repo.merge(
-            target_uuid, source_uuids,
+            target_uuid, source_uuids, user_uuid,
             new_content=new_content,
             new_title=new_title,
             new_summary=new_summary,
@@ -89,16 +97,17 @@ class MemoryService:
         embedding = await self._generate_embedding(new_content)
         await self._repo.update(
             target_uuid,
+            user_uuid,
             MemoryUpdate(content=new_content),
             embedding=embedding,
         )
         return self._to_response(mem)
 
-    async def forget(self, memory_id: str) -> bool:
-        return await self._repo.delete(uuid.UUID(memory_id))
+    async def forget(self, memory_id: str, user_id: str) -> bool:
+        return await self._repo.delete(uuid.UUID(memory_id), uuid.UUID(user_id))
 
-    async def archive_memory(self, memory_id: str) -> bool:
-        return await self._repo.archive(uuid.UUID(memory_id))
+    async def archive_memory(self, memory_id: str, user_id: str) -> bool:
+        return await self._repo.archive(uuid.UUID(memory_id), uuid.UUID(user_id))
 
     async def expire_stale(self) -> int:
         return await self._repo.expire_batch()
@@ -106,13 +115,13 @@ class MemoryService:
     async def search(
         self,
         query: str,
-        user_id: str | None = None,
+        user_id: str,
         type_filter: str | None = None,
         limit: int = 10,
     ) -> list[MemorySearchResult]:
         embedding = await self._generate_embedding(query)
 
-        uid = uuid.UUID(user_id) if user_id else None
+        uid = uuid.UUID(user_id)
 
         if embedding is not None:
             memories = await self._repo.search_by_embedding(
@@ -147,18 +156,18 @@ class MemoryService:
                 entities=mem.entities,
                 created_at=mem.created_at,
             ))
-            await self._repo.touch(mem.id)
+            await self._repo.touch(mem.id, uid)
 
         return results
 
     async def search_by_entity(
         self,
         entity_name: str,
-        user_id: str | None = None,
+        user_id: str,
         limit: int = 10,
     ) -> list[MemorySearchResult]:
         """Search memories by entity name."""
-        uid = uuid.UUID(user_id) if user_id else None
+        uid = uuid.UUID(user_id)
         memories = await self._repo.search_by_entity(
             entity_name, user_id=uid, limit=limit,
         )
@@ -184,12 +193,14 @@ class MemoryService:
     async def resolve_conflict(
         self,
         existing_id: str,
+        user_id: str,
         new_extraction: MemoryExtraction,
     ) -> MemoryResponse | None:
         """Resolve a conflict between an existing memory and a new extraction.
         Updates confidence, importance, and appends new content."""
-        uid = uuid.UUID(existing_id)
-        existing = await self._repo.get(uid)
+        memory_uuid = uuid.UUID(existing_id)
+        user_uuid = uuid.UUID(user_id)
+        existing = await self._repo.get(memory_uuid, user_uuid)
         if existing is None:
             return None
 
@@ -206,12 +217,17 @@ class MemoryService:
             content=existing.content + "\n---\n" + new_extraction.content,
             summary=new_extraction.summary or existing.summary,
         )
-        mem = await self._repo.update(uid, payload)
+        mem = await self._repo.update(memory_uuid, user_uuid, payload)
         if mem is None:
             return None
 
         new_emb = await self._generate_embedding(mem.content)
-        await self._repo.update(uid, MemoryUpdate(content=mem.content), embedding=new_emb)
+        await self._repo.update(
+            memory_uuid,
+            user_uuid,
+            MemoryUpdate(content=mem.content),
+            embedding=new_emb,
+        )
         return self._to_response(mem)
 
     async def consolidate_conversation(
@@ -234,6 +250,7 @@ class MemoryService:
 
         memories: list[MemoryResponse] = []
         uid = uuid.UUID(user_id)
+        conversation_uuid = uuid.UUID(conversation_id) if conversation_id else None
         source = f"conversation:{conversation_id}" if conversation_id else "auto:consolidation"
 
         for ext in extractions:
@@ -242,6 +259,7 @@ class MemoryService:
 
             payload = MemoryCreate(
                 user_id=user_id,
+                conversation_id=conversation_id,
                 type=type_val,
                 title=ext.title,
                 content=ext.content,
@@ -252,18 +270,25 @@ class MemoryService:
                 category=ext.category,
                 entities=ext.entities or None,
                 relationships=ext.relationships or None,
+                expires_at=(
+                    datetime.now(timezone.utc)
+                    + timedelta(days=settings.memory_retention_days)
+                    if settings.memory_retention_days > 0
+                    else None
+                ),
             )
 
             existing = await self._repo.search_by_keyword(
                 ext.title[:60],
                 user_id=uid,
+                conversation_id=conversation_uuid,
                 type_filter=type_val,
                 limit=3,
             )
 
             if existing:
                 target = existing[0]
-                merged = await self.resolve_conflict(str(target.id), ext)
+                merged = await self.resolve_conflict(str(target.id), user_id, ext)
                 if merged:
                     memories.append(merged)
             else:
@@ -290,6 +315,9 @@ class MemoryService:
     def _to_response(mem: Any) -> MemoryResponse:
         return MemoryResponse(
             memory_id=str(mem.id),
+            conversation_id=(
+                str(mem.conversation_id) if mem.conversation_id else None
+            ),
             type=mem.type,
             title=mem.title,
             content=mem.content,

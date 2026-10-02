@@ -77,6 +77,7 @@ async def backfill(*, force: bool = False) -> int:
     print(f"Found {len(documents)} active documents")
 
     processed = 0
+    failures: list[str] = []
     for document in documents:
         name = document.original_filename
         doc_id = document.id
@@ -171,9 +172,15 @@ async def backfill(*, force: bool = False) -> int:
             except Exception as exc:
                 await session.rollback()
                 print(f" => FAILED: {exc}")
+                failures.append(f"{name}: {exc}")
                 continue
 
     print(f"\nDone. Processed {processed} document(s)")
+    if failures:
+        details = "\n".join(f"- {failure}" for failure in failures)
+        raise RuntimeError(
+            f"Backfill failed for {len(failures)} document(s):\n{details}"
+        )
     return processed
 
 

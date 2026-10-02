@@ -1,0 +1,5 @@
+TRACE Stage 4 production-hardening verification record.
+
+Pump P-9901 is located in Area Z9. P-9901 feeds TK-9902. SOP-9903 describes the maintenance of P-9901. The required verification marker is TRACE-E2E-20261002-P9901.
+
+If bearing overheating is observed on P-9901, stop the pump, isolate electrical power, verify zero energy, inspect lubrication, and follow SOP-9903 before restart.

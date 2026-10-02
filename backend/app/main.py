@@ -19,8 +19,12 @@ from app.middleware.security_headers import setup_security_headers_middleware
 from app.graph.base import GraphStoreConnectionError, GraphStoreConfigurationError
 from app.graph.neo4j_graph_store import Neo4jGraphStore
 from app.services import reranker_service
-from app.services.vector_store import QdrantVectorStore, VectorStoreConnectionError
+from app.services.vector_store import (
+    QdrantVectorStore,
+    VectorStoreError,
+)
 from app.tasks.document_processing_worker import run_document_processing_worker
+from app.tasks.memory_cleanup_worker import run_memory_cleanup_worker
 
 
 @asynccontextmanager
@@ -47,12 +51,12 @@ async def lifespan(app: FastAPI):
             await qdrant_store.create_fulltext_index()
             qdrant_ok = True
             logger.info("Qdrant initialized successfully")
-        except VectorStoreConnectionError as exc:
-            logger.warning("Qdrant unavailable at startup: %s", exc)
+        except VectorStoreError as exc:
+            logger.error("Qdrant retrieval disabled at startup: %s", exc)
     else:
         logger.info("Qdrant not configured — skipping vector store initialization")
     app.state.qdrant_connected = qdrant_ok
-    app.state.qdrant_store = qdrant_store
+    app.state.qdrant_store = qdrant_store if qdrant_ok else None
 
     # Load the reranker before serving traffic. Lazily, this costs seconds
     # from a warm cache and minutes when the weights still need downloading,
@@ -125,9 +129,16 @@ async def lifespan(app: FastAPI):
 
     doc_worker_stop_event = asyncio.Event()
     doc_worker_task = None
+    memory_worker_stop_event = asyncio.Event()
+    memory_worker_task = None
 
     if settings.processing_queue_worker_enabled and db_ok:
         doc_worker_task = asyncio.create_task(run_document_processing_worker(doc_worker_stop_event))
+
+    if settings.memory_cleanup_enabled and db_ok:
+        memory_worker_task = asyncio.create_task(
+            run_memory_cleanup_worker(memory_worker_stop_event)
+        )
 
 
     yield
@@ -136,8 +147,20 @@ async def lifespan(app: FastAPI):
         doc_worker_stop_event.set()
         try:
             await asyncio.wait_for(doc_worker_task, timeout=5.0)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
-            pass
+        except asyncio.TimeoutError:
+            logger.warning("Document worker did not stop within 5 seconds; cancelling")
+            doc_worker_task.cancel()
+        except asyncio.CancelledError:
+            logger.info("Document worker task was cancelled during shutdown")
+    if memory_worker_task is not None:
+        memory_worker_stop_event.set()
+        try:
+            await asyncio.wait_for(memory_worker_task, timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Memory cleanup worker did not stop within 5 seconds; cancelling")
+            memory_worker_task.cancel()
+        except asyncio.CancelledError:
+            logger.info("Memory cleanup worker task was cancelled during shutdown")
     if neo4j_store is not None:
         await neo4j_store.close()
     await close_database_connection()

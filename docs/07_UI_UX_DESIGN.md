@@ -2,6 +2,11 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current UI scope (2 October 2026).** The implemented dark industrial UI covers login,
+> registration, dashboard, documents/upload, search, Copilot, knowledge graph, audit logs,
+> and user administration. Asset, maintenance, compliance, notification, and settings
+> screens in this document are design proposals, not live pages.
+
 ---
 
 ## Table of Contents

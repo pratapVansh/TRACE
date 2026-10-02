@@ -2,6 +2,12 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current implementation (2 October 2026).** The live pipeline is the
+> `app/services/processing_factory.py` processor chain, persists job state in PostgreSQL,
+> writes chunks and embeddings to PostgreSQL/Qdrant, and writes graph entities and
+> relationships to Neo4j. The parallel legacy `app/processing/processors/` implementation
+> is not the upload path. Qdrant, not FAISS, is the vector store.
+
 ---
 
 ## Table of Contents
@@ -78,7 +84,7 @@ flowchart TB
 
     CHUNK --> EMB["Embedding Generation"]
     NER --> GRAPH["Knowledge Graph Update"]
-    EMB --> INDEX["FAISS Index Update"]
+    EMB --> INDEX["Qdrant Upsert"]
     META --> PG["PostgreSQL Update"]
     GRAPH --> NEO["Neo4j Update"]
 ```
@@ -90,7 +96,7 @@ flowchart TB
 | Parse / OCR | Type-specific | — |
 | Extract content | All types | — |
 | Chunk | All types | PostgreSQL |
-| Embed | All types | FAISS |
+| Embed | All types | Qdrant |
 | Entity recognition | All types | Neo4j |
 | Metadata | All types | PostgreSQL |
 
@@ -445,8 +451,8 @@ flowchart LR
     BATCH --> ST["Sentence Transformers"]
     ST --> VEC["Vectors"]
     VEC --> NORM["L2 normalize"]
-    NORM --> FAISS["Add to FAISS index"]
-    FAISS --> MAP["Map chunk UUID → index ID"]
+    NORM --> QDRANT["Upsert to Qdrant"]
+    QDRANT --> MAP["Persist chunk UUID in payload"]
     MAP --> DONE["Pipeline complete"]
 ```
 
@@ -456,8 +462,8 @@ flowchart LR
 | Input format | `"[{section}] {chunk_text}"` with section context |
 | Batch size | 32–128 chunks |
 | Normalization | L2-normalized |
-| Index type | FAISS IVF or HNSW |
-| ID mapping | Chunk UUID = FAISS vector ID |
+| Index type | Qdrant cosine collection with payload indexes |
+| ID mapping | Chunk UUID stored as the Qdrant point identifier/payload linkage |
 | Incremental | New chunks added without full rebuild |
 
 | Pipeline completion | Status update |
@@ -510,7 +516,7 @@ sequenceDiagram
     participant EMB as Embedding Service
     participant PG as PostgreSQL
     participant NEO as Neo4j
-    participant FAISS
+    participant Qdrant
 
     User->>API: Upload document
     API->>PG: Create document + job (queued)
@@ -529,7 +535,7 @@ sequenceDiagram
     Worker->>PG: Store chunks + metadata
     Worker->>NEO: Upsert graph nodes & edges
     Worker->>EMB: Generate embeddings
-    EMB->>FAISS: Add vectors
+    EMB->>Qdrant: Upsert vectors and payloads
     Worker->>PG: Update job status = succeeded
     Worker-->>API: Job complete
     API-->>User: Document searchable
@@ -548,5 +554,5 @@ sequenceDiagram
 - ISA-5.1 — Instrumentation Symbols and Identification.
 - Tesseract OCR — https://github.com/tesseract-ocr/tesseract
 - Sentence Transformers — https://www.sbert.net/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/
 - Neo4j — https://neo4j.com/docs/

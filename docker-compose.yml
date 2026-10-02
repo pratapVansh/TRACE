@@ -71,6 +71,25 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # One-shot, idempotent first-user bootstrap. The values are read by Compose
+  # from the project-root .env (not from env_file, which only configures the
+  # container). Existing installations are never reset on restart: the script
+  # exits successfully as soon as any SuperAdmin exists.
+  bootstrap:
+    image: trace-backend:dev
+    env_file:
+      - .env.docker
+    environment:
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:?Set SUPER_ADMIN_EMAIL in the project .env}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:?Set SUPER_ADMIN_PASSWORD in the project .env}
+      SUPER_ADMIN_FULL_NAME: ${SUPER_ADMIN_FULL_NAME:?Set SUPER_ADMIN_FULL_NAME in the project .env}
+    command: ["python", "scripts/create_super_admin.py"]
+    working_dir: /app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   backend:
     build: *backend-build
     image: trace-backend:dev
@@ -91,6 +110,8 @@ services:
       migrate:
         # Start only after `alembic upgrade head` has exited 0. A non-zero exit
         # keeps the API down instead of serving against a stale schema.
+        condition: service_completed_successfully
+      bootstrap:
         condition: service_completed_successfully
     restart: unless-stopped
 

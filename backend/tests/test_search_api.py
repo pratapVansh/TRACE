@@ -95,7 +95,14 @@ def api_client(
     viewer_user: UserMeResponse,
     mock_vector_store: AsyncMock,
     mock_ranking_service: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
 ):
+    # API tests exercise routing/modes, not Hugging Face model loading. Keeping
+    # this local also makes the suite deterministic in offline CI.
+    monkeypatch.setattr(
+        "app.api.routes.search._encode_batch_async",
+        AsyncMock(return_value=[[0.1] * 384]),
+    )
     app.dependency_overrides[get_current_user] = lambda: viewer_user
     app.dependency_overrides[get_vector_store] = lambda: mock_vector_store
     app.dependency_overrides[get_ranking_service] = lambda: mock_ranking_service

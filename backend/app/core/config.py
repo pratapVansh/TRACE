@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     chunk_overlap: int = 40
     chunk_min_size: int = 50
     embedding_model_name: str = "all-MiniLM-L6-v2"
+    # Change together with embedding_model_name during a deliberate migration.
+    embedding_vector_dimension: int = 384
     embedding_batch_size: int = 32
     embedding_retry_attempts: int = 3
 
@@ -144,7 +146,7 @@ class Settings(BaseSettings):
     # LLM / AI Copilot (Milestone 8)
     groq_api_key: str = ""
     llm_provider: str = "groq"
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     groq_timeout_seconds: int = 60
     groq_max_retries: int = 3
     # Output ceiling for one answer. On a reasoning model this covers the
@@ -159,6 +161,16 @@ class Settings(BaseSettings):
     # forcing a full re-run for no measured gain. See `_generate_answer`.
     llm_answer_max_tokens: int = 1024
     llm_answer_retry_max_tokens: int = 3072
+
+    # Persistent Copilot memory. Extracted memories remain queryable for the
+    # retention window, are then marked expired, and are physically removed
+    # after the additional grace period. Set retention to 0 only when an
+    # external retention policy owns expiry.
+    memory_retention_days: int = 365
+    memory_inactive_purge_days: int = 30
+    memory_cleanup_enabled: bool = True
+    memory_cleanup_interval_seconds: int = 3600
+    memory_cleanup_batch_size: int = 500
 
     # Retrieval (Milestone 8.1)
     retrieval_top_k: int = 15
@@ -274,24 +286,18 @@ class Settings(BaseSettings):
         root.mkdir(parents=True, exist_ok=True)
         return root
 
-    # Background document processing queue.
-    #
-    # ⚠ Single-process only. ``main.py`` starts one worker task per process and
-    # ``list_pending_ingestion_jobs`` is a plain SELECT — no ``FOR UPDATE
-    # SKIP LOCKED``, no atomic status claim — so two processes polling the same
-    # queue both select the same pending jobs and ingest each document twice:
-    # duplicate chunks, duplicate embeddings, duplicate graph writes.
-    #
-    # Nothing enforces the single process. It holds today only because the
-    # container runs ``uvicorn app.main:app`` with no ``--workers`` flag, which
-    # defaults to 1. Adding ``--workers N`` for request throughput would
-    # silently enable the double-ingestion path. Before scaling out, either set
-    # this to False on every replica but one, or give the queue a real claim
-    # protocol.
+    # Background document processing queue. PostgreSQL claims due jobs with
+    # FOR UPDATE SKIP LOCKED and a committed processing lease, so multiple
+    # workers cannot select the same row. Abandoned leases are recovered below.
     processing_queue_worker_enabled: bool = True
     processing_queue_poll_interval_seconds: float = 2.0
     processing_queue_batch_size: int = 5
     processing_queue_max_retries: int = 3
+    # Bound one whole document, including OCR and downstream indexing.
+    processing_document_timeout_seconds: float = 1800.0
+    # A worker crash leaves its claim in "processing". This lease must be
+    # longer than the per-document timeout so another worker can recover it.
+    processing_job_stale_after_seconds: float = 2100.0
 
     @property
     def cors_origins(self) -> list[str]:

@@ -27,10 +27,12 @@ The backend is a **FastAPI** application acting as the gateway and orchestration
 between the frontend, the AI layer, and the data stores. It is **async-first**, layered, and
 dependency-injected, exposing a typed REST API with streaming (SSE) for Copilot responses.
 
-> **Implementation status (Milestones 1–2):** Health check, JWT authentication (register,
-> login, refresh with rotation, logout, `/auth/me`), User/Role/RefreshToken models,
-> repositories, `AuthService`, and `core/security/` package are **implemented**. Document,
-> search, chat, asset, graph, compliance, and admin routes remain **planned**.
+> **Implementation status (2 October 2026):** Authentication/RBAC, document ingestion and
+> processing, search, RAG, streaming chat, conversation persistence, graph queries,
+> dashboard, admin users, audit-log reads, metrics, and observability are implemented.
+> Asset registry, maintenance, compliance-state, notification, investigation, and the former
+> multi-agent framework are not implemented product domains. Migration 018 removes the
+> unused investigations table left by that former framework.
 
 | Property | Value |
 | --- | --- |
@@ -40,8 +42,8 @@ dependency-injected, exposing a typed REST API with streaming (SSE) for Copilot 
 | Persistence | PostgreSQL via SQLAlchemy 2 async |
 | API prefix | `/api` (versioned `/api/v1` planned) |
 | Auth | JWT access + refresh tokens, bcrypt passwords |
-| AI integration | LangGraph / LangChain in service layer *(planned)* |
-| Streaming | Server-Sent Events for chat *(planned)* |
+| AI integration | Explicit hybrid retrieval/RAG services plus Groq `openai/gpt-oss-120b` |
+| Streaming | Server-Sent Events for chat |
 
 ---
 
@@ -52,10 +54,10 @@ flowchart TB
     R["Routers (HTTP layer)"] --> SVC["Services (business logic)"]
     SVC --> REPO["Repositories (data access)"]
     REPO --> DB[("PostgreSQL")]
-    SVC --> AI["AI Layer - LangGraph/LangChain"]
-    AI --> VEC[("FAISS")]
+    SVC --> AI["Hybrid RAG / LLM Layer"]
+    AI --> VEC[("Qdrant")]
     AI --> NEO[("Neo4j")]
-    SVC --> OBJ[("Object Store")]
+    SVC --> OBJ[("Local File Storage")]
     SVC --> CACHE[("Cache")]
     SVC --> QUEUE[["Task Queue"]]
 ```
@@ -117,7 +119,7 @@ backend/
 └── tests/
 ```
 
-### Planned (full product)
+### Historical target structure (not the implemented tree)
 
 ```text
 backend/
@@ -159,7 +161,7 @@ backend/
 │   │   ├── logging_middleware.py
 │   │   └── error_middleware.py
 │   ├── tasks/                   # Background task definitions
-│   └── ai/                      # LangGraph graphs, tools, retrievers
+│   └── ai/                      # Historical agent-framework proposal; removed
 └── tests/
 ```
 
@@ -178,7 +180,7 @@ backend/
 | `/auth/logout` | POST | Revoke refresh token | User | ✅ |
 | `/auth/me` | GET | Current user profile | User | ✅ |
 
-### Planned endpoints
+### Additional implemented and intentionally absent endpoint families
 
 ```mermaid
 flowchart LR
@@ -240,12 +242,12 @@ sequenceDiagram
 | Service | Responsibility | Status |
 | --- | --- | --- |
 | `AuthService` | Register, login, refresh (rotation), logout, current user | ✅ Implemented |
-| `IngestionService` | Orchestrate OCR → parse → extract → chunk → embed → index; create jobs | Planned |
-| `RetrievalService` | Hybrid retrieval (FAISS vectors + Neo4j graph + metadata filters) | Planned |
-| `AgentService` | Execute LangGraph reasoning, stream tokens, attach citations | Planned |
-| `GraphService` | Read/write Neo4j relationships, asset neighborhoods | Planned |
-| `AssetService` | Asset CRUD, aggregated history | Planned |
-| `ComplianceService` | Compliance items, status, evidence linking | Planned |
+| Document processing services | OCR → parse → extract → chunk → embed → Qdrant/Neo4j indexing | ✅ Implemented |
+| Retrieval/RAG services | Qdrant + Neo4j retrieval, reranking, prompting, generation, grounding | ✅ Implemented |
+| ChatService | Conversation-aware answers, SSE streaming, citations and snapshots | ✅ Implemented |
+| Graph services | Neo4j entity/relationship ingestion and graph queries | ✅ Implemented |
+| AssetService | Asset CRUD and aggregated history | Not implemented; graph entities are not an asset registry |
+| ComplianceService | Compliance state and evidence workflow | Not implemented |
 
 ### AuthService (implemented)
 
@@ -259,11 +261,11 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    ChatRoute["/chat"] --> AgentService
-    AgentService --> RetrievalService
-    RetrievalService --> FAISS[("FAISS")]
+    ChatRoute["/chat"] --> ChatService
+    ChatService --> RetrievalService
+    RetrievalService --> Qdrant[("Qdrant")]
     RetrievalService --> Neo4j[("Neo4j")]
-    AgentService --> LLM["LLM"]
+    ChatService --> LLM["Groq openai/gpt-oss-120b"]
     DocsRoute["/documents"] --> IngestionService
     IngestionService --> Queue[["Task Queue"]]
 ```
@@ -427,7 +429,7 @@ flowchart TB
     Parse --> Extract["Extract entities/tags"]
     Extract --> Chunk["Chunk"]
     Chunk --> Embed["Embed"]
-    Embed --> Index["FAISS index"]
+    Embed --> Index["Qdrant collection"]
     Extract --> Graph["Neo4j upsert"]
     W --> Status["Update job status + events"]
 ```
@@ -437,7 +439,7 @@ flowchart TB
 | Document ingestion | Upload | Searchable, graph-linked document |
 | Re-embedding | Model change | Updated vectors |
 | Graph rebuild | Bulk import | Refreshed relationships |
-| Index maintenance | Schedule | Optimized FAISS index |
+| Index maintenance | Explicit backfill/reindex command | Consistent Qdrant collection |
 | Cleanup | Schedule | Purge soft-deleted artifacts |
 
 | Aspect | Approach |
@@ -459,7 +461,7 @@ flowchart TB
 | Metrics | Request latency, error rate, queue depth, retrieval timings |
 | Tracing | Correlation id propagated across services |
 | Health checks | Liveness/readiness endpoints |
-| AI observability | Token usage, retrieval scores, agent step traces |
+| AI observability | Token usage, retrieval scores, request traces |
 
 ```mermaid
 flowchart LR
@@ -480,7 +482,5 @@ flowchart LR
 - [`05_FRONTEND_ARCHITECTURE.md`](05_FRONTEND_ARCHITECTURE.md)
 - FastAPI — https://fastapi.tiangolo.com/
 - Pydantic — https://docs.pydantic.dev/
-- LangGraph — https://langchain-ai.github.io/langgraph/
-- LangChain — https://python.langchain.com/
 - Neo4j — https://neo4j.com/docs/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/

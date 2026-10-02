@@ -2,6 +2,12 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Implemented architecture (2 October 2026).** The live system is Next.js → FastAPI →
+> PostgreSQL/Qdrant/Neo4j/local file storage, with an in-process ingestion worker and a
+> single hybrid RAG/Copilot orchestration path. The former LangGraph multi-agent framework
+> was removed and is not part of the architecture. Docker Compose provides PostgreSQL and
+> the backend in the base file, with Qdrant and Neo4j in the local-development overlay.
+
 ---
 
 ## Table of Contents
@@ -30,8 +36,8 @@ and horizontal scaling.
 | --- | --- | --- |
 | Experience | Next.js, TypeScript, Tailwind, shadcn/ui | Copilot UI, search, dashboards |
 | API / Orchestration | FastAPI | Gateway, auth, routing, orchestration |
-| AI / Intelligence | LangGraph, LangChain, Sentence Transformers | Agents, RAG, embeddings |
-| Knowledge Stores | PostgreSQL, FAISS, Neo4j | Metadata, vectors, graph |
+| AI / Intelligence | Hybrid RAG services, Sentence Transformers, Groq `openai/gpt-oss-120b` | Retrieval, reranking, grounding, generation |
+| Knowledge Stores | PostgreSQL, Qdrant, Neo4j, local filesystem | Metadata, vectors, graph, source files |
 | Ingestion | OCR, Document Intelligence, Parsers | Convert documents into knowledge |
 
 ---
@@ -52,17 +58,17 @@ flowchart TB
     end
 
     subgraph AI["AI & Intelligence Tier"]
-        LG["LangGraph Agents"]
-        LC["LangChain Tools & Retrievers"]
+        LG["Chat / RAG Service"]
+        LC["Hybrid Retriever + Reranker"]
         EMB["Sentence Transformers"]
         LLM["LLM Provider"]
     end
 
     subgraph KS["Knowledge Stores Tier"]
         PG[("PostgreSQL")]
-        VEC[("FAISS Vector Index")]
+        VEC[("Qdrant Vector Store")]
         NEO[("Neo4j Knowledge Graph")]
-        OBJ[("Object Storage - Raw Files")]
+        OBJ[("Local Filesystem - Raw Files")]
     end
 
     subgraph ING["Ingestion Tier"]
@@ -124,22 +130,22 @@ flowchart LR
         R6["Admin Router"]
         S1["Ingestion Service"]
         S2["Retrieval Service"]
-        S3["Agent Service"]
+        S3["Chat / RAG Service"]
         S4["Graph Service"]
         REPO["Repositories"]
     end
 
     subgraph AILayer["AI Layer"]
-        A1["LangGraph Orchestrator"]
+        A1["Chat Orchestrator"]
         A2["Retriever Tools"]
         A3["Embedding Service"]
     end
 
     subgraph Stores
         PG[("PostgreSQL")]
-        VEC[("FAISS")]
+        VEC[("Qdrant")]
         NEO[("Neo4j")]
-        OBJ[("Object Store")]
+        OBJ[("Local File Storage")]
     end
 
     C1 --> R4
@@ -176,7 +182,7 @@ flowchart LR
 | Graph Router | Knowledge graph queries & asset views |
 | Ingestion Service | Orchestrates OCR → parse → extract → chunk → index |
 | Retrieval Service | Vector + graph retrieval for RAG |
-| Agent Service | Runs LangGraph reasoning workflows |
+| Chat / RAG Service | Resolves conversation context, retrieves/reranks evidence, calls the LLM, and classifies grounding |
 | Graph Service | Reads/writes Neo4j relationships |
 | Repositories | Data access abstraction over PostgreSQL |
 
@@ -189,10 +195,10 @@ flowchart LR
     FE["Frontend"] -->|HTTPS / REST + SSE| API["FastAPI Gateway"]
     API -->|SQL| PG[("PostgreSQL")]
     API -->|In-proc / RPC| AI["AI Layer"]
-    AI -->|Vector search| VEC[("FAISS")]
+    AI -->|Vector search| VEC[("Qdrant")]
     AI -->|Cypher| NEO[("Neo4j")]
-    API -->|S3 API| OBJ[("Object Store")]
-    API -->|Enqueue| Q[["Background Task Queue"]]
+    API -->|Filesystem API| OBJ[("Local Storage")]
+    API -->|PostgreSQL ingestion jobs| Q[["Ingestion Queue"]]
     Q -->|Process| WORK["Ingestion Workers"]
     WORK --> AI
     WORK --> PG
@@ -203,10 +209,10 @@ flowchart LR
 | Frontend ↔ API | HTTPS REST + Server-Sent Events | Requests & streaming answers |
 | API ↔ PostgreSQL | SQL (async driver) | Metadata, audit, jobs |
 | API ↔ AI Layer | In-process / internal call | Orchestration |
-| AI ↔ FAISS | Library API | Vector similarity search |
+| AI ↔ Qdrant | HTTP API | Vector, keyword, and hybrid search |
 | AI ↔ Neo4j | Bolt / Cypher | Graph traversal |
-| API ↔ Object Store | S3-compatible API | Raw file storage |
-| API ↔ Workers | Async task queue | Background ingestion |
+| API ↔ Local Storage | Filesystem backend protocol | Raw file storage |
+| API ↔ Worker | PostgreSQL-backed polling queue | Background ingestion |
 
 ### Streaming answer sequence
 
@@ -214,7 +220,7 @@ flowchart LR
 sequenceDiagram
     participant FE as Frontend
     participant API as FastAPI
-    participant AG as LangGraph Agent
+    participant AG as Chat / RAG Service
     participant RT as Retriever
     FE->>API: POST /chat (question)
     API->>AG: start run
@@ -259,7 +265,7 @@ flowchart LR
     ENT --> NEO[("Neo4j Graph")]
     PARSE --> CHK["Chunking"]
     CHK --> EMB["Embeddings"]
-    EMB --> VEC[("FAISS Index")]
+    EMB --> VEC[("Qdrant Collection")]
     VEC --> RET["Retrieval"]
     NEO --> RET
     META --> RET
@@ -273,7 +279,7 @@ flowchart LR
 | Parse | Text | Structured content | PostgreSQL |
 | Extract | Structured content | Entities, tags | Neo4j |
 | Chunk | Structured content | Chunks | — |
-| Embed | Chunks | Vectors | FAISS |
+| Embed | Chunks | Vectors | Qdrant |
 | Retrieve | Query | Context + sources | — |
 
 ---
@@ -282,9 +288,9 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Q["User Question"] --> PLAN["Agent: Plan / Decompose"]
+    Q["User Question"] --> PLAN["Resolve conversation query"]
     PLAN --> ROUTE{"Route"}
-    ROUTE -->|Semantic| VR["Vector Retrieval - FAISS"]
+    ROUTE -->|Semantic| VR["Vector Retrieval - Qdrant"]
     ROUTE -->|Relational| GR["Graph Retrieval - Neo4j"]
     ROUTE -->|Metadata| MR["Metadata - PostgreSQL"]
     VR --> CTX["Assemble Context"]
@@ -296,7 +302,7 @@ flowchart TD
     VERIFY -->|Insufficient| PLAN
 ```
 
-### LangGraph state machine
+### Implemented RAG sequence
 
 ```mermaid
 stateDiagram-v2
@@ -312,7 +318,7 @@ stateDiagram-v2
 | Step | Description |
 | --- | --- |
 | Plan | Decompose question, decide retrieval strategy |
-| Retrieve | Pull from FAISS, Neo4j, and/or PostgreSQL |
+| Retrieve | Pull from Qdrant and Neo4j, with PostgreSQL metadata |
 | Synthesize | Generate answer grounded in retrieved context |
 | Verify | Check claims against sources; loop if weak |
 | Respond | Return answer with citations or flag uncertainty |
@@ -327,11 +333,11 @@ stateDiagram-v2
 | Styling | Tailwind + shadcn/ui | Rapid, consistent, accessible components | MUI, Chakra |
 | Backend | FastAPI | Async, high performance, Python AI ecosystem | Flask, Django, Node |
 | Relational DB | PostgreSQL | Robust, JSONB, full-text, mature | MySQL |
-| Vector store | FAISS | Fast, local, no external dependency | pgvector, Pinecone |
+| Vector store | Qdrant | Vector and full-text search with filterable payloads | pgvector, FAISS |
 | Graph DB | Neo4j | Native graph traversal, Cypher | ArangoDB, JanusGraph |
 | Embeddings | Sentence Transformers | Strong semantic quality, self-hosted | OpenAI embeddings |
-| Agent orchestration | LangGraph | Stateful, controllable multi-step flows | Plain LangChain, custom |
-| LLM tooling | LangChain | Mature retriever/tool abstractions | LlamaIndex |
+| RAG orchestration | Application services | Explicit, testable retrieval and generation flow | Agent frameworks |
+| LLM provider | Groq (`openai/gpt-oss-120b`) | Streaming inference with a narrow provider abstraction | Other hosted providers |
 
 ### Decision drivers
 
@@ -361,7 +367,7 @@ flowchart TB
     QUEUE --> W2["Ingestion Worker"]
     API1 --> PGRW[("PostgreSQL Primary")]
     PGRW --> PGRO[("Read Replicas")]
-    API1 --> VECS["FAISS Shards"]
+    API1 --> VECS["Qdrant"]
     API1 --> NEOC["Neo4j Cluster"]
 ```
 
@@ -370,7 +376,7 @@ flowchart TB
 | Stateless API/AI | Horizontal scaling behind a load balancer |
 | Ingestion | Async workers scaled by queue depth |
 | PostgreSQL | Primary + read replicas, connection pooling |
-| FAISS | Index sharding / partitioning by corpus |
+| Qdrant | Collection/index tuning and managed scaling when justified |
 | Neo4j | Clustering for read scaling |
 | Caching | Cache embeddings, hot queries, and graph reads |
 | Backpressure | Queue-based throttling for ingestion spikes |
@@ -378,7 +384,7 @@ flowchart TB
 | Bottleneck | Mitigation |
 | --- | --- |
 | Embedding throughput | Batch embedding, GPU workers, caching |
-| Large corpus retrieval | Sharded FAISS + metadata pre-filtering |
+| Large corpus retrieval | Qdrant payload filters and index tuning |
 | Heavy graph queries | Query tuning, indexes, caching |
 | LLM latency | Streaming responses, response caching |
 
@@ -388,10 +394,8 @@ flowchart TB
 
 - [`01_PROBLEM_STATEMENT.md`](01_PROBLEM_STATEMENT.md)
 - [`02_PRODUCT_REQUIREMENTS.md`](02_PRODUCT_REQUIREMENTS.md)
-- LangGraph — https://langchain-ai.github.io/langgraph/
-- LangChain — https://python.langchain.com/
 - Neo4j — https://neo4j.com/docs/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/
 - Sentence Transformers — https://www.sbert.net/
 - FastAPI — https://fastapi.tiangolo.com/
 - Next.js — https://nextjs.org/docs

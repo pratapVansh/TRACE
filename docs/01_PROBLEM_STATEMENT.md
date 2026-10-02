@@ -2,6 +2,11 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Scope note (2 October 2026).** This document preserves the challenge vision. The
+> implemented TRACE product uses Qdrant + Neo4j hybrid RAG and a single Copilot service;
+> the LangGraph multi-agent, asset-registry, maintenance-workflow, and compliance-state
+> concepts below are problem-space aspirations, not current functionality.
+
 ---
 
 ## Table of Contents

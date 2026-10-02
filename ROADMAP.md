@@ -1,21 +1,16 @@
 # TRACE — Roadmap
 
-**Branch:** `main` · **Last verified:** 19 September 2026 — **Stage 6 has run on GitHub.
-The eval and frontend jobs are green; the backend job found a real repository bug.**
+**Branch:** `main` · **Last verified:** 3 October 2026 — **production-hardening phase complete.**
 
-Run `35382694525` on `8e42d40`: **Retrieval floors ✅, Frontend checks ✅, Backend tests ❌**
-— the backend job exited **4** (a pytest *usage* error) after 4 seconds, with every step
-before it green. Root cause, reproduced in a Linux container built from `git archive HEAD`:
-a bare `storage/` line in `.gitignore` matches a directory of that name **at any depth**,
-so it had silently excluded `backend/app/core/storage/` — four source files that
-`app/api/deps.py` imports. **No clean clone of this repository could import the
-application.** `backend/.dockerignore` already documented that exact hazard; `.gitignore`
-never got the same treatment.
-
-The ignore rule is fixed. The four files still have to be **committed** before the backend
-job can go green — the fix only makes them trackable. With them present, the exact CI
-command passes in a CI-equivalent Linux environment: **1120 passed, 0 failed, 0 skipped,
-exit 0**, coverage 67%. See *Stage 6*.
+Run `35421499365` on `a3a2bba`: **Frontend checks ✅, Backend tests ✅**. The four
+`backend/app/core/storage/` files missed by the first clean checkout were committed in
+`a3a2bba`; the full GitHub run completed successfully. The nightly retrieval-floor workflow
+also passed on 2 October (`36991367216`). The stored `passage2` run still matches the
+shipped configuration and meets all five floors. The hardened backend image now reports
+**1149 passed, 0 failed, 0 skipped**; frontend remains **61 tests passing**, clean under
+`tsc --noEmit`, and a production `next build` was verified locally
+on 2 October. ESLint remains deliberately non-blocking at **42 findings (23 errors,
+19 warnings)**. See *Stage 6*.
 
 ---
 
@@ -68,16 +63,14 @@ platform. This is settled — see *Decisions already made*.
 | Frontend | Next.js 16.2.9, React 19.2, Tailwind v4 |
 | Vector store | Qdrant — `all-MiniLM-L6-v2`, 384-dim, cosine. **Local dev now runs Qdrant v1.18.3 in Docker**; the Qdrant Cloud URL is parked (commented out) in `.env` |
 | Knowledge graph | Neo4j 5.26 community — **local dev runs it in Docker** (`docker-compose.local.yml`); the Aura instance is gone |
-| LLM | Groq — `openai/gpt-oss-120b` (`.env`; the `llama-3.3-70b-versatile` default in `config.py` is overridden) |
+| LLM | Groq — `openai/gpt-oss-120b` (runtime and checked-in defaults) |
 | Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
 | OCR | Tesseract + OpenCV preprocessing |
 
 ### Verified current state
 
-Code figures were re-checked against the tree on 10 September 2026, after the
-containerization commit (`e647562`); tests, Docker and live services on
-13 September 2026. Nothing here is taken from the README —
-the README is stale in four places, listed under *Known debt*.
+Historical code figures below were measured in September. Current tests, Docker,
+documentation, migrations, and live services were re-checked on 3 October 2026.
 
 | Fact | Value | How checked |
 | --- | --- | --- |
@@ -86,20 +79,20 @@ the README is stale in four places, listed under *Known debt*.
 | `backend/app` | 197 files, **24,805** lines (17 Sep) | `find backend/app -name "*.py"` |
 | `main.py` | 261 lines | `wc -l` |
 | Files over 500 lines | 6 | `find … -exec wc -l` (was 7) |
-| `except: … pass` blocks | **9** (re-counted 17 Sep; the 10 here was wrong — *Known debt* said 9 and was right) | `grep -A1` over `backend/app` |
-| Migrations | 19 files, single head `017_investigations` | `alembic heads` |
-| Backend tests | **1120 passed, 0 failed, 0 skipped, 2m27s** (19 Sep, under the exact CI command — `--timeout=120 --cov=app` — and with `GROQ_API_KEY=""` to match a runner; 12 gate tests added). Earlier on 18 Sep: 1108 passed in 5m06s after the F05 alias fix. An intermediate run the same evening, before those 3 tests existed, was **1105 passed in 2m42s**; the spread is warm-cache variance, not flakiness. ⚠️ With Docker **stopped** the same suite is unusable — 5 failures in `test_health_degradation.py` and roughly 18 tests in 15 minutes. Earlier: 1080 on 16 Sep, 1061 on 14 Sep, 1011 on 13 Sep | `pytest -q -rs` |
-| Frontend tests | 61 passed, 6 files — **re-verified 17 Sep** | `npx vitest run` |
-| Frontend typecheck | clean — **re-verified 17 Sep** | `npx tsc --noEmit` |
+| `except: … pass` blocks | **5**, all in abstract tracing or the confirmed-dead legacy processor tree; live ranking, search enrichment, vector health, and shutdown paths now log or raise | `rg -U` over `backend/app` |
+| Migrations | 20 files, single head `018_drop_orphan_investigations` | `alembic heads` |
+| Backend tests | **1149 passed, 0 failed, 0 skipped, 2m10s** in the model-baked Linux backend container on 3 Oct. The host coverage run reached 1140 passes but its Hugging Face client was blocked by the managed network; the same 18 model/Qdrant integration tests passed in-container. | `pytest -q -rs` |
+| Frontend tests | 61 passed, 6 files — **re-verified 2 Oct** | `npx vitest run` |
+| Frontend typecheck | clean — **re-verified 2 Oct** | `npx tsc --noEmit` |
 | Frontend routes | 12 | `find frontend/app -name page.tsx` |
 | eslint | 42 problems (23 errors, 19 warnings) | `npx eslint .` |
 | Pinned direct deps | 37 (all `==`) — `pytest-timeout`, `pytest-cov` and `PyYAML` added for stage 6 | `grep -c "==" backend/requirements.txt` |
 | Lockfile | `backend/requirements.lock.txt`, 138 lines | present |
 | API routers mounted | 17 under `/api` | `main.py` `include_router` calls |
-| Docker | **backend image built 10 Sep and full stack run once**; Neo4j + Qdrant containers in daily use since 13 Sep | `docker image inspect trace-backend:dev`, `docker ps -a` |
+| Docker | **full stack rebuilt and production flow verified 3 Oct**; migrate/bootstrap one-shots succeeded and all runtime services are healthy | Compose build, logs, health, black-box E2E |
 | Frontend container | **none** | no `frontend/Dockerfile`; not a compose service |
-| CI | **two workflows, run once on GitHub** — `eval.yml` ✅ and the frontend half of `ci.yml` ✅; the backend half ❌ on the `.gitignore` defect below, fixed but needing a commit | run `35382694525` |
-| `pytest-timeout` | **installed, 2.4.0**, CI runs at a 120s per-test cap | `pytest --timeout=60` → 1120 passed |
+| CI | **two workflows active** — full CI is green on the current commit; the scheduled retrieval-floor workflow remains green through 2 October 2026 | runs `35421499365`, `36991367216` |
+| `pytest-timeout` | **installed, 2.4.0**, CI runs at a 120s per-test cap | CI configuration verified; container suite 1149 passed |
 
 **The health-test failures were the dead graph, and are gone — but there are five of
 them, not two.** Measured 18 September 2026 with the Docker daemon stopped:
@@ -139,10 +132,9 @@ Both datastores run as Docker containers that must be started before any evaluat
 (`docker start trace-qdrant-1 trace-neo4j-1`); the eval runner connects to them on
 `127.0.0.1` from the host, not from inside the compose network.
 
-The `017_investigations` migration is retained as applied history; the
-`investigations` table it created is now unused and its model, schemas and
-service are gone. `alembic revision --autogenerate` will therefore propose
-dropping the table — take that as a separate, deliberate migration.
+The `017_investigations` migration remains immutable history. Migration
+`018_drop_orphan_investigations` now removes its table after a repository-wide
+consumer search and the live database both confirmed it was unused and held zero rows.
 
 ---
 
@@ -300,12 +292,23 @@ full under *Known debt*:
       `copilot-page-content.tsx` sets a visible `snapshotWarning`; the sibling
       `listConversations()` catch sets `sidebarError`. No `.catch(() => {})`
       remains anywhere in the Copilot.
-- [ ] **README status markers still not updated** — Audit Logging is marked 🚧
+- [x] **README status markers updated** — audit-log read/UI support, current Groq model,
+      Docker status, and the removed investigation/agent scope are now stated accurately.
       with text that is now false. Rolled into the README fix below.
 
 ---
 
-## Stage 4 — Containerize for development 🟡 built and run once, exit criterion not verified
+## Stage 4 — Containerize for development ✅ verified 3 October 2026
+
+**Final verification:** the real five-service stack was rebuilt from the current tree.
+Migration `018_drop_orphan_investigations` applied, the idempotent bootstrap completed,
+all health components were green, and `scripts/verify_stage4_e2e.py` passed health →
+SuperAdmin login → upload → processing/indexing → hybrid search → graph entity retrieval →
+graph RAG → Copilot citations → audit-log visibility → cleanup. The rebuilt stack reused
+the named volumes and Qdrant retained its corpus. The Linux image then ran **1149 backend
+tests with 0 failures and 0 skips**; the 18 model/Qdrant integration tests passed against
+the baked offline model. The frontend remains intentionally outside Compose for the planned
+separate hosting target.
 
 **Written 7 September 2026** in `e647562`. Every artefact the stage asked for
 exists, and the Dockerfile is unusually careful about the failure modes that
@@ -358,21 +361,14 @@ the exit criterion below — restart persistence and the in-container test run.
       `${NEO4J_PASSWORD:-…}`, which interpolated the root `.env` password.
       *Committed in `6d57238`* — the earlier "uncommitted" note here was wrong
       (verified 18 September against `git show HEAD:docker-compose.local.yml`).
-- [ ] **Bootstrap a user.** Nothing in compose creates the SuperAdmin.
-      `backend/scripts/create_super_admin.py` reads `SUPER_ADMIN_EMAIL` /
-      `_PASSWORD` / `_FULL_NAME`, none of which are in `.env.docker` — a fresh
-      stack comes up with no account to log in with. Add the three variables
-      plus a one-shot `seed` service, or document the `docker compose exec`
-      call in the README.
-- [ ] **Verify the exit criterion end to end:** `/api/health` returns `ok` with
-      all five components green; a document uploaded before
-      `docker compose restart` is still downloadable after it; `pytest -q -rs`
-      inside the container reports the 8 previously-skipped integration tests as
-      run rather than skipped.
-- [ ] **Decide about the frontend.** There is no `frontend/Dockerfile` and the
-      frontend is not a compose service, so `docker compose up` yields a backend
-      with no UI. Defensible if Vercel stays the stage 8 target — but say so in
-      the README instead of leaving it to be discovered.
+- [x] **Bootstrap a user.** Compose now has an idempotent one-shot `bootstrap`
+      service gated behind migrations. Normal starts never reset an existing account;
+      the script also has an explicit guarded reconciliation mode for operator use.
+- [x] **Verify the exit criterion end to end.** All health components, the complete
+      document-to-answer path, citations and audit reads passed. The container suite
+      reports 1149 passed with no skips.
+- [x] **Decide about the frontend.** It remains a separately hosted Next.js application;
+      the README now states that Compose provides the backend/data stack only.
 
 ---
 
@@ -1100,7 +1096,7 @@ none were regenerated. All 200 are now cached, so every table in the report rebu
 
 ---
 
-## Stage 6 — CI 🟡 first run done; eval + frontend green, backend red on a repository bug now fixed
+## Stage 6 — CI ✅ complete
 
 **Built 19 September 2026**, committed and pushed as `8e42d40`, and **run on GitHub the
 same day.** Files: `.github/workflows/ci.yml`, `.github/workflows/eval.yml` and
@@ -1162,9 +1158,9 @@ files are now trackable, and `backend/storage/` is still ignored.
 command against real Postgres, Qdrant and Neo4j: **1120 passed, 0 failed, 0 skipped,
 3m28s, exit 0**, coverage 67% — the same result as on Windows.
 
-> ⚠️ **Not yet green on GitHub.** The `.gitignore` fix only makes the files *trackable*;
-> they still have to be added and committed. Until `backend/app/core/storage/` is in the
-> repository, the backend job fails exactly as above.
+> **Closed 19 September 2026.** Commit `a3a2bba` added the four storage source files and
+> corrected the ignore rule. GitHub run `35421499365` completed with both frontend and
+> backend jobs green.
 
 ### Measured, on this machine, with the containers up
 
@@ -1271,9 +1267,8 @@ installed in the local venv.
       service containers and Linux dependencies were all fine on the first attempt. What
       failed was a four-year-old class of bug in `.gitignore` that only a clean checkout
       could expose.
-- [ ] **Commit `backend/app/core/storage/`** (4 files) and re-run. This is the one thing
-      standing between the backend job and green, and it is the only remaining step whose
-      result has not been observed on a runner.
+- [x] **Commit `backend/app/core/storage/` and re-run.** Done in `a3a2bba`; full CI run
+      `35421499365` is green.
 - [ ] **Decide whether the eval workflow should block merges** or only report until it has
       a few runs of history.
 - [ ] **Consider a "clean checkout imports" smoke check.** The failure above is cheap to
@@ -1281,24 +1276,22 @@ installed in the local venv.
       a clean environment — and would have named the missing module without running 1120
       tests. Not scheduled; the backend job now covers it implicitly.
 
-**Exit criterion** — *partially met.* A deliberately introduced retrieval regression fails
+**Exit criterion** — *met.* A deliberately introduced retrieval regression fails
 the eval workflow ✅ (demonstrated with the Stage 5 baseline, twice: in the workflow and in
 a unit test; the workflow itself ran green on GitHub). The previously-skipped integration
 tests report as run ✅ (0 skipped — locally on Windows, and in the Linux container with the
-same service containers CI provides). **Both jobs green on a runner ⏳ — the frontend job is
-already green on GitHub and the backend passes the identical command in a CI-equivalent
-Linux environment, but it has not yet been observed green on GitHub because the fix needs
-`backend/app/core/storage/` committed first.**
+same service containers CI provides). **Both jobs are green on a runner** in run
+`35421499365`.
 
 ---
 
-## Stage 7 — Embedding model versioning ⏳ not started
+## Stage 7 — Embedding model versioning ✅ complete 2 October 2026
 
 **Effort: half a day.**
 
-**Confirmed still open:** `QdrantVectorStore.create_collection` writes only
-`VectorParams(size, distance)` — no model name, no dimension metadata, nothing
-to compare against `settings.embedding_model_name` at startup.
+Qdrant collections now carry native metadata for the embedding model, vector
+dimension, and TRACE metadata schema. Existing collections are verified during
+startup before retrieval is enabled.
 
 **What.** Record which embedding model produced the vectors in Qdrant, and
 refuse to serve retrieval when the running model disagrees.
@@ -1314,19 +1307,24 @@ danger arrives with the improvement attempt, not before it.
 
 **Steps.**
 
-- [ ] Store model name and vector dimension in the Qdrant collection metadata at
+- [x] Store model name and vector dimension in the Qdrant collection metadata at
       creation time.
-- [ ] Compare against `settings.embedding_model_name`
-      (`backend/app/core/config.py:93`) on startup. On mismatch, refuse to serve
+- [x] Compare against `settings.embedding_model_name` and
+      `settings.embedding_vector_dimension` on startup. On mismatch, refuse to serve
       retrieval and log loudly — a refusal is recoverable, a silently wrong
       answer is not.
-- [ ] Make reindexing an explicit, documented, tested command rather than tribal
+- [x] Make reindexing an explicit, documented, tested command rather than tribal
       knowledge about which script to run.
 
-**Exit criterion.** Pointing `embedding_model_name` at a different model on a
-populated collection makes the app refuse retrieval with a clear log line
-instead of returning results; the documented reindex command restores service; a
-test covers the mismatch path.
+**Result.** Model, metadata-dimension, physical-dimension, and missing-metadata
+mismatches are covered by focused tests. Startup disables vector retrieval and the
+dependency returns 503 rather than querying an unknown vector space. The guarded
+`scripts/manage_vector_index.py` command provides `status`, a non-destructive
+`stamp-existing` adoption path, and an explicitly confirmed `reindex` path that clears
+stored old-space embeddings and regenerates them through the normal pipeline. The live
+legacy collection was dimension-checked and stamped as `all-MiniLM-L6-v2` / 384 without
+re-embedding; `status` then reported compatibility OK. Full procedure and restore ordering
+are in `docs/18_OPERATIONS_RUNBOOK.md`.
 
 ---
 
@@ -1658,34 +1656,20 @@ retrieval run, then an answer run before it ships. **This is the strongest
 remaining graph lead**, because unlike `graph_v2` and `graph_provenance` it adds
 facts that are currently missing rather than reordering ones already present.
 
-**Deployment: the ingestion queue has no claim protocol.**
-`list_pending_ingestion_jobs` is a plain `SELECT … WHERE status='pending'
-LIMIT n` — no `FOR UPDATE SKIP LOCKED`, no atomic status claim — and `main.py`
-starts one worker task per process. Two processes polling the same queue both
-select the same jobs and ingest each document twice: duplicate chunks,
-duplicate embeddings, duplicate graph writes.
+**Ingestion queue claim protocol. ✅ Resolved 2 October 2026.** Due jobs are
+selected with `FOR UPDATE SKIP LOCKED` and moved to a committed processing lease
+in the same statement. Concurrent workers cannot claim one row. A real-Postgres
+integration test exercises the `UPDATE … RETURNING` statement.
 
-It is latent today only because the container runs `uvicorn app.main:app` with
-no `--workers` flag, which defaults to 1. **Nothing enforces that.** Adding
-`--workers N` for request throughput at deploy time silently enables double
-ingestion. *Documented in `config.py` beside
-`processing_queue_worker_enabled`; not fixed*, because a correct claim protocol
-is a change to the ingestion state machine and wants its own test pass. Before
-scaling out: disable the worker on every replica but one, or build the claim.
-
-**No per-document processing timeout, and no page cap.** 🟡 **Half fixed
-17 September 2026.** The expensive half — OCR — is now bounded by `ocr_max_pages`
+**Per-document processing timeout and page cap. ✅ Resolved 2 October 2026.**
+The expensive OCR half remains bounded by `ocr_max_pages`
 (see the OCR entry under *Resolved* for the profile that sets the number), and a
 failing page no longer destroys the document.
 
-**Still open:** there is still no *general* per-document timeout. Nothing bounds
-a pathological non-OCR document — a `.docx` with an enormous table, a PDF whose
-text layer explodes on extraction — and the queue still drains **serially on a
-single worker**, so any such document blocks the ones behind it. *Deferred
-because:* a wall-clock timeout makes a slow-but-legitimate document fail after
-3 retries, which is a policy decision, and unlike OCR there is no measured cost
-profile to set the budget from. A page cap worked for OCR precisely because
-cost there is linear in a quantity known before the work starts.
+The whole document pipeline is now bounded at 1800 seconds. Timeout cancellation
+rolls back partial transactional work and enters the retry ladder. Processing
+leases older than 2100 seconds are recovered after worker crashes; exhausted
+leases become failed instead of remaining permanently stuck.
 
 **`search_entities` is a full label scan on the RAG hot path.** It matches with
 `toLower(n.name) CONTAINS toLower(t)`, which no RANGE index can serve. The live
@@ -1785,17 +1769,18 @@ TK-4546" yields a relationship; "Pump P-4545 feeds Tank TK-4546" and
 created junk entities named "caused by" and "failure caused". *Deferred
 because:* improving extraction without a golden set is guesswork.
 
-**The README is stale in four places.** Verified against the tree on
+**README stale in four places. ✅ Resolved 2 October 2026.** Verified against the tree on
 10 September 2026: (1) Audit Logging is marked 🚧 with "No read API exists yet,
 so the trail cannot be viewed" — `GET /api/audit-logs` exists and the page is
 wired to it; (2) **Investigation Records is marked ✅** — the model, service and
 schemas were deleted with the agent framework, and only an orphaned table
-remains; (3) Docker is listed as "Containerized deployment (planned)" and under
+remained; (3) Docker was listed as "Containerized deployment (planned)" and under
 a future-work heading — a Dockerfile and two compose files are committed;
 (4) the LLM is described as Llama 3.3 70B while `.env` runs
-`openai/gpt-oss-120b`. *Deferred because:* it is documentation, and stage 4.5
-plus stage 4's remaining items will change what the correct text is. Fix it in
-one pass afterwards, not four.
+`openai/gpt-oss-120b`. README and the architecture/API/product documents now
+describe the implemented product, Compose/bootstrap behavior, audit reads,
+current model, and validated CI/RAG state. Migration 018 removed the confirmed-empty
+orphan table.
 
 **The retrieval probe is not reproducible — superseded.** The five probe runs were
 never scripted. *Resolved by stage 5:* `python -m eval.run retrieval` is the
@@ -1883,17 +1868,28 @@ sentence against the chunk it cites. *Deferred because:* it adds a second
 model to the serving path, and stage 5's harness is what would tell us whether
 the added latency buys enough accuracy to be worth it.
 
-**RBAC has no test file** despite being the security boundary of the whole
-application — `backend/tests/` contains no rbac, permission or role test module.
-*Deferred because:* it is a contained, well-understood gap that adds no risk of
-regression while untouched; stage 6 makes adding it enforceable.
+**RBAC permission coverage. ✅ Resolved 2 October 2026.**
+`test_rbac_permissions.py` pins the complete five-role matrix, unknown/case-mismatched
+role denial, high-value allow/deny boundaries, and the FastAPI permission dependency.
 
-**9 `except: … pass` blocks in `backend/app`** — down from 26; the agent
-framework held 17 of them. What remains is in `pdf_processor.py` (3),
-`ranking_service.py` (2), and one each in `main.py`, `tracing.py`,
-`docx_processor.py` and `vector_store.py`. Each is a place a failure becomes
-invisible. *Deferred because:* they need to be read individually, and stage 5's
-harness will surface which ones actually hide wrong answers.
+**Swallowed live-path exceptions. ✅ Resolved 2 October 2026.** Ranked retrieval
+logs one-arm degradation and raises when both arms fail; Qdrant health count and graph
+enrichment failures are logged; worker shutdown timeout is visible and cancels the task.
+Five literal `pass` blocks remain only in the abstract no-op tracer and the confirmed-dead
+legacy processor tree. The vector backfill also exits non-zero after any document failure.
+
+**Conversation and long-term-memory durability. ✅ Resolved 3 October 2026.**
+PostgreSQL now enforces one snapshot per conversation turn, user and conversation
+foreign keys cascade intentionally, extracted memories carry an explicit source
+conversation, metadata writes use the mapped JSONB attribute, and every successful
+consolidation is committed in its own request transaction. Repository reads and
+mutations require the owning user. Extracted memory expires after 365 days by default;
+an in-process maintenance worker marks it expired and purges inactive rows after a
+30-day grace period in configurable 500-row batches. Regression coverage crosses separate database sessions and checks
+snapshot upsert, ownership isolation, metadata round-trip, and conversation-delete
+cascades. Final verification: **1,153 backend tests passed** in the rebuilt container,
+Alembic upgraded to `019_memory_integrity`, and the live Stage 4 health → login → upload
+→ processing → search → graph retrieval → Copilot/citations → audit-log flow passed.
 
 **Local disk storage blocks horizontal scaling.** `core/storage/` already has
 the seam — `StorageBackend` is a Protocol with `local_storage.py` as the only
@@ -1907,9 +1903,9 @@ abstraction is already in place for the day it is not.
 load-bearing. *Deferred because:* telling the two apart requires reading all of
 them, and none of them break anything by existing.
 
-**No backup or restore procedure** for Postgres, Qdrant or Neo4j. *Deferred
-because:* the demo corpus is regenerable from `demo_dataset/` and the deployment
-is temporary by design.
+**Backup and restore procedure. ✅ Resolved 2 October 2026.**
+`docs/18_OPERATIONS_RUNBOOK.md` covers a quiesced four-store backup, isolated restore
+drills, embedding compatibility checks, and the Stage 4 black-box acceptance test.
 
 **No error tracking or log shipping.** *Deferred because:* a single VM with
 `docker compose logs` is adequate at this scale; see the production monitoring

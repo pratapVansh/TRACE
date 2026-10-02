@@ -154,7 +154,10 @@ def get_vector_store(request: Request) -> VectorStore:
     store: VectorStore | None = getattr(request.app.state, "qdrant_store", None)
     if store is not None:
         return store
-    return QdrantVectorStore()
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Vector retrieval is unavailable; check Qdrant startup diagnostics",
+    )
 
 
 async def get_document_service(

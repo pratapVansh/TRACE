@@ -2,6 +2,13 @@
 
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
+> **Current implementation (2 October 2026).** TRACE uses a single explicit hybrid-RAG
+> path: query understanding → Qdrant/Neo4j retrieval → cross-encoder reranking → prompt
+> construction → Groq `openai/gpt-oss-120b` → lexical evidence classification. The former
+> LangGraph multi-agent framework was removed after execution testing and is not a deferred
+> runtime component. Conversation persistence and per-user long-term memory live in
+> PostgreSQL.
+
 ---
 
 ## Table of Contents
@@ -78,15 +85,15 @@ flowchart TB
     end
 
     subgraph Intelligence["AI Intelligence Layer"]
-        LG["LangGraph Orchestrator"]
-        AG["Specialized Agents"]
-        LC["LangChain Tools"]
+        LG["Chat / RAG Orchestrator"]
+        AG["Retrieval / Prompt / Grounding Services"]
+        LC["Hybrid Retriever + Reranker"]
         EMB["Sentence Transformers"]
         LLM["LLM Provider"]
     end
 
     subgraph Stores["Knowledge Stores"]
-        VEC[("FAISS Vector Index")]
+        VEC[("Qdrant Vector Store")]
         NEO[("Neo4j Knowledge Graph")]
         PG[("PostgreSQL Metadata")]
     end
@@ -113,10 +120,10 @@ flowchart TB
 
 | Component | Technology | Role |
 | --- | --- | --- |
-| Orchestration | LangGraph | Stateful multi-step agent workflows |
-| Tooling | LangChain | Retrievers, chains, tool bindings |
+| Orchestration | Application RAG services | Explicit, testable retrieval and generation flow |
+| Retrieval tooling | Application services | Query understanding, fusion, reranking, deduplication |
 | Embeddings | Sentence Transformers | Semantic vector generation |
-| Vector search | FAISS | Similarity retrieval at scale |
+| Vector search | Qdrant | Vector, keyword, and filtered retrieval |
 | Graph reasoning | Neo4j | Asset/procedure/incident relationships |
 | Metadata | PostgreSQL | Document, chunk, audit references |
 | Generation | LLM | Synthesis grounded in retrieved context |
@@ -177,8 +184,8 @@ similarity search beyond keyword matching.
 ```mermaid
 flowchart LR
     CHK["Text Chunks"] --> ST["Sentence Transformers"]
-    ST --> VEC["768-dim Vectors"]
-    VEC --> IDX["FAISS Index"]
+    ST --> VEC["384-dim Vectors"]
+    VEC --> IDX["Qdrant Collection"]
     Q["Query"] --> ST2["Same Model"]
     ST2 --> QV["Query Vector"]
     QV --> IDX
@@ -212,7 +219,7 @@ traversal, and metadata filtering.
 ```mermaid
 flowchart TB
     Q["Query"] --> ROUTE{"Retrieval Router"}
-    ROUTE -->|Semantic| VS["Vector Search - FAISS"]
+    ROUTE -->|Semantic| VS["Vector Search - Qdrant"]
     ROUTE -->|Relational| GS["Graph Search - Neo4j"]
     ROUTE -->|Structured| MF["Metadata Filter - PostgreSQL"]
     VS --> MERGE["Result Fusion & Reranking"]
@@ -223,7 +230,7 @@ flowchart TB
 
 | Retrieval mode | Source | Use case |
 | --- | --- | --- |
-| Semantic | FAISS | "What is the procedure for pump maintenance?" |
+| Semantic | Qdrant | "What is the procedure for pump maintenance?" |
 | Graph | Neo4j | "What incidents are linked to P-101?" |
 | Metadata | PostgreSQL | "All inspection reports from 2024" |
 | Hybrid | All three | "Safety steps for P-101 considering past incidents" |
@@ -242,12 +249,12 @@ flowchart TB
 
 ## 7. Vector Database
 
-FAISS serves as TRACE's **vector database** — a high-performance, in-process similarity index
-optimized for industrial-scale corpora.
+Qdrant serves as TRACE's **vector database**, storing document chunk embeddings and
+filterable payloads and providing the full-text index used by hybrid retrieval.
 
 ```mermaid
 flowchart LR
-    subgraph Index["FAISS Index"]
+    subgraph Index["Qdrant Collection"]
         ID["Chunk UUID → Vector mapping"]
         IDX["IVF / HNSW Index Structure"]
     end
@@ -259,20 +266,20 @@ flowchart LR
 
 | Property | Design |
 | --- | --- |
-| Engine | FAISS (Facebook AI Similarity Search) |
-| Index type | IVF or HNSW depending on corpus size |
+| Engine | Qdrant |
+| Index type | Cosine vector collection plus payload/full-text indexes |
 | ID mapping | Chunk UUID (shared with PostgreSQL) |
 | Sharding | Partition by document type or facility |
-| Persistence | Index serialized to disk; rebuilt on demand |
-| Updates | Incremental add on ingestion; rebuild on major changes |
+| Persistence | Qdrant volume/cloud collection |
+| Updates | Incremental upsert/delete on document ingestion lifecycle |
 
-### FAISS vs alternatives
+### Vector-store decision
 
 | Option | Pros | Cons | TRACE choice |
 | --- | --- | --- | --- |
-| FAISS | Fast, self-hosted, no dependency | Manual persistence | **Selected** |
+| FAISS | Fast, self-hosted, no service | Manual persistence and filtering | Not used |
 | pgvector | SQL-native, transactional | Slower at scale | Future option |
-| Pinecone | Managed, scalable | External dependency, data egress | Not selected |
+| Qdrant | Filtering, keyword indexes, persistent service | Additional service | **Selected** |
 
 ---
 
@@ -380,36 +387,37 @@ flowchart LR
 
 ## 11. Memory
 
-TRACE memory is **structured and operational** — not open-ended conversation history.
+TRACE keeps conversation history and extracted long-term memory in PostgreSQL.
+Neither Redis nor process memory is a persistent memory store.
 
 ```mermaid
 flowchart TB
-    subgraph ShortTerm["Short-Term Memory (Session)"]
-        CONV["Conversation turns"]
-        ASSET["Active asset context"]
-        FILT["Active filters"]
+    subgraph Request["Bounded Request Context"]
+        CONV["Recent conversation turns"]
+        EVIDENCE["Previous citations"]
+        SNAP["Latest snapshot"]
     end
     subgraph LongTerm["Long-Term Memory (Persistent)"]
-        PG[("PostgreSQL: conversations, messages, citations")]
-        NEO[("Neo4j: entity relationships")]
-        VEC[("FAISS: document embeddings")]
+        PG[("PostgreSQL: conversations, messages, snapshots, memories")]
+        NEO[("Neo4j: document graph + user-scoped facts")]
+        VEC[("Qdrant: document embeddings")]
     end
-    subgraph Working["Working Memory (Agent State)"]
-        PLAN["Current plan steps"]
+    subgraph Retrieval["Per-Request Retrieval"]
         RET["Retrieved context buffer"]
-        VERIFY["Verification results"]
+        GRAPH["Graph facts"]
     end
-    ShortTerm --> Working
-    LongTerm --> Working
+    Request --> Retrieval
+    LongTerm --> Retrieval
 ```
 
 | Memory type | Scope | Storage | TTL |
 | --- | --- | --- | --- |
-| Session memory | Current conversation | In-memory / Redis | Session duration |
-| Asset context | Active asset being viewed | Session state | Until navigation |
-| Conversation history | Past Q&A with citations | PostgreSQL | Persistent |
-| Agent working memory | Plan, retrieval, verification | LangGraph state | Per request |
-| Knowledge memory | All ingested documents | FAISS + Neo4j + PG | Permanent |
+| Conversation history | One user and conversation | PostgreSQL | Until explicit conversation deletion |
+| Conversation snapshot | One user and conversation turn | PostgreSQL | Cascades with conversation deletion |
+| Extracted memory | One user; optionally one source conversation | PostgreSQL | 365 days by default, then expiry and purge |
+| User graph facts | One user | Neo4j | Durable user-level context |
+| Request context | Query, retrieval results, grounding metadata | Typed service objects | Per request |
+| Knowledge memory | All ingested documents | Qdrant + Neo4j + PostgreSQL | Permanent |
 
 ### Memory rules
 
@@ -417,9 +425,10 @@ flowchart TB
 | --- | --- |
 | No parametric memory | LLM weights are not the knowledge store |
 | Session isolation | Users cannot see other users' sessions |
-| Asset scoping | When viewing an asset, retrieval is pre-filtered |
 | History for continuity | Multi-turn questions use prior turns as context |
-| No memory of declined answers | Failed/low-confidence attempts are not cached as facts |
+| Derived cleanup | Deleting a conversation cascades its messages, snapshots, and extracted memories |
+| User graph lifetime | Conversation deletion does not remove user-level Neo4j facts; those require explicit user-memory cleanup |
+| Bounded long-term retention | Extracted memories expire and a background worker purges inactive rows |
 
 ---
 
@@ -473,8 +482,7 @@ but unverified answer.
 - [`11_KNOWLEDGE_GRAPH.md`](11_KNOWLEDGE_GRAPH.md)
 - [`12_DOCUMENT_PIPELINE.md`](12_DOCUMENT_PIPELINE.md)
 - Lewis, P. et al. *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*, NeurIPS 2020.
-- LangGraph — https://langchain-ai.github.io/langgraph/
 - LangChain — https://python.langchain.com/
 - Sentence Transformers — https://www.sbert.net/
-- FAISS — https://faiss.ai/
+- Qdrant — https://qdrant.tech/documentation/
 - Neo4j — https://neo4j.com/docs/
