@@ -26,7 +26,7 @@ TRACE ingests engineering drawings, P&IDs, SOPs, maintenance logs, inspection re
 | **Hybrid RAG** | Retrieval-Augmented Generation combining vector similarity + graph facts | ✅ |
 | **AI Copilot Chat** | Conversational UI with streaming responses, citations, conversation history, and snapshots | ✅ |
 | **Role-Based Access Control** | SuperAdmin, Admin, Engineer, Operator, Viewer with fine-grained permissions | ✅ |
-| **JWT Authentication** | Register, login, refresh with rotation, logout, protected routes | ✅ |
+| **JWT Authentication** | Private login, refresh with rotation, logout, protected routes | ✅ |
 | **Admin User Management** | Create, update roles, reset passwords, activate/deactivate users | ✅ |
 | **Executive Dashboard** | KPIs, document counts, graph stats, recent activity, compliance overview | ✅ |
 | **Enterprise UI** | Dark industrial theme, responsive layout, skeleton loaders, protected pages | ✅ |
@@ -186,7 +186,7 @@ TRACE/
 │   │   ├── operations/             # Audit log viewer, shared table/badge/stat
 │   │   ├── administration/         # Admin user management
 │   │   ├── layout/                 # Sidebar, topbar, auth shell
-│   │   ├── auth/                   # Login, register forms
+│   │   ├── auth/                   # Login and route guards
 │   │   └── ui/                     # shadcn/ui primitives
 │   ├── lib/                        # API clients, auth, utilities
 │   ├── hooks/                      # Custom React hooks
@@ -338,7 +338,14 @@ cd backend
 python scripts/create_super_admin.py
 ```
 
-This creates the first SuperAdmin user. Registration via the API always creates **Viewer**-role users.
+This creates the first SuperAdmin user. TRACE has no public registration endpoint;
+subsequent accounts are created by a SuperAdmin or Admin in **Administration → Users**.
+Viewer remains available as the least-privileged, administrator-assigned role.
+
+For an installation upgraded from a version that allowed self-registration, review
+**Administration → Users** and deactivate any account that was not explicitly approved.
+Existing users are not automatically disabled because TRACE cannot reliably distinguish
+historical self-registered Viewers from administrator-created Viewers.
 
 ---
 
@@ -387,7 +394,7 @@ docker run -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:5
 | Prefix | Routes | Description |
 | --- | --- | --- |
 | `GET /api/health` | 1 | Service health check |
-| `POST /api/auth/*` | 5 | Register, login, refresh, logout, me |
+| `GET/POST /api/auth/*` | 4 | Login, refresh, logout, current user |
 | `GET/POST/PATCH/DELETE /api/documents/*` | 6 | Document CRUD, upload, download |
 | `GET /api/documents/{id}/processing-status` | 1 | Document processing status |
 | `GET/POST/PATCH /api/admin/users/*` | 5 | Admin user management |
@@ -501,7 +508,7 @@ flowchart TD
 
 ### Implemented
 
-- **User Authentication**: Full JWT auth with registration, login, refresh token rotation, logout
+- **User Authentication**: Private JWT login, refresh token rotation, logout
 - **Role-Based Access**: 5 roles with granular permissions across all modules
 - **User Management**: Admin CRUD, role assignment, password reset, status management
 - **Document Management**: Upload, versioning, download, update, soft-delete

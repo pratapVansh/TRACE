@@ -64,3 +64,6 @@ logs/
 # backend/.dockerignore already documents this hazard for the image build; the
 # same reasoning belongs here.
 backend/storage/
+
+# Local recovery snapshots created before data imports
+.trace-backups/

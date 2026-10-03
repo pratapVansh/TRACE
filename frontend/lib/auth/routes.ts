@@ -2,7 +2,6 @@ import { PERMISSIONS, type Permission } from "@/types/permissions";
 
 export const AUTH_ROUTES = {
   login: "/login",
-  register: "/register",
   dashboard: "/dashboard",
   accessDenied: "/access-denied",
 } as const;
@@ -19,7 +18,7 @@ export const APP_ROUTES = {
   accessDenied: "/access-denied",
 } as const;
 
-export const PUBLIC_AUTH_PATHS = [AUTH_ROUTES.login, AUTH_ROUTES.register] as const;
+export const PUBLIC_AUTH_PATHS = [AUTH_ROUTES.login] as const;
 
 export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   [APP_ROUTES.dashboard]: PERMISSIONS.DASHBOARD,

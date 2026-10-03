@@ -69,16 +69,15 @@ frontend/
 │   ├── page.tsx                  # Redirect to /dashboard or /login
 │   ├── globals.css               # Industrial theme tokens
 │   ├── login/page.tsx            # Login (GuestGuard)
-│   ├── register/page.tsx         # Register (GuestGuard)
 │   └── dashboard/page.tsx        # Dashboard (AuthGuard)
 ├── components/
-│   ├── auth/                     # login-form, register-form, auth-guard, brand panel
+│   ├── auth/                     # login-form, auth guards, brand panel
 │   ├── layout/                   # auth-shell, dashboard-layout, sidebar, topbar
 │   ├── common/                   # trace-logo, form-field, kpi-card, backend-status
 │   ├── ui/                       # button, input, label, checkbox, skeleton, badge
 │   └── copilot/                  # (placeholder)
 ├── contexts/
-│   └── auth-context.tsx          # AuthProvider, login/register/logout/refresh
+│   └── auth-context.tsx          # AuthProvider, login/logout/refresh
 ├── hooks/
 │   └── use-auth.ts               # Auth context hook
 ├── lib/
@@ -153,7 +152,6 @@ frontend/
 | --- | --- | --- | --- | --- |
 | `/` | Root redirect | Sends authenticated users to `/dashboard`, others to `/login` | — | ✅ |
 | `/login` | Login | Email/password sign-in | `GuestGuard` | ✅ |
-| `/register` | Register | New user registration | `GuestGuard` | ✅ |
 | `/dashboard` | Dashboard | KPI placeholders, profile, backend status | `AuthGuard` | ✅ |
 
 ### Planned routes
@@ -195,10 +193,8 @@ flowchart TB
     Providers["Providers (AuthProvider)"] --> Pages
     subgraph AuthPages["Auth pages"]
         LoginPage --> AuthShell
-        RegisterPage --> AuthShell
         AuthShell --> AuthBrandPanel
         AuthShell --> LoginForm
-        AuthShell --> RegisterForm
     end
     subgraph DashboardPages["Dashboard"]
         DashboardPage --> AuthGuard
@@ -214,7 +210,7 @@ flowchart TB
 
 | Category | Implemented components |
 | --- | --- |
-| Auth | `LoginForm`, `RegisterForm`, `AuthGuard`, `GuestGuard`, `AuthBrandPanel`, `AuthLoadingScreen` |
+| Auth | `LoginForm`, `AuthGuard`, `GuestGuard`, `AuthBrandPanel`, `AuthLoadingScreen` |
 | Layout | `AuthShell`, `DashboardLayout`, `Sidebar`, `Topbar` |
 | Common | `TraceLogo`, `FormField`, `KpiCard`, `BackendStatus` |
 | UI (shadcn) | `Button`, `Input`, `Label`, `Checkbox`, `Skeleton`, `Badge` |
@@ -249,7 +245,7 @@ flowchart TB
 | Layout | Used By | Contents | Status |
 | --- | --- | --- | --- |
 | Root Layout | All routes | `Providers` (AuthProvider), fonts, global CSS | ✅ |
-| Auth Shell | `/login`, `/register` | Split layout: brand panel + form card | ✅ |
+| Auth Shell | `/login` | Split layout: brand panel + form card | ✅ |
 | Dashboard Layout | `/dashboard` | Sidebar, top bar, content slot | ✅ |
 
 > **Note:** Route groups `(auth)` and `(dashboard)` from the original plan are not used yet;
@@ -277,10 +273,10 @@ sequenceDiagram
     participant Store as localStorage
     participant Axios as Axios Client
     participant API as FastAPI /api/auth
-    User->>FE: Submit login/register form
-    FE->>API: POST /auth/login or /auth/register
-    API-->>FE: Tokens (login) or success message (register)
-    FE->>Store: Persist access + refresh tokens
+    User->>FE: Submit login form
+    FE->>API: POST /auth/login
+    API-->>FE: Access token + httpOnly refresh cookie
+    FE->>Store: Keep access token in memory
     User->>FE: Navigate to /dashboard
     FE->>FE: AuthGuard checks isAuthenticated
     FE->>API: GET /auth/me (Bearer access token)
@@ -304,7 +300,7 @@ sequenceDiagram
 
 | Module | Path | Responsibility |
 | --- | --- | --- |
-| Auth context | `contexts/auth-context.tsx` | Session state, login/register/logout, bootstrap from storage |
+| Auth context | `contexts/auth-context.tsx` | Session state, login/logout/refresh, bootstrap from cookie |
 | Axios client | `lib/api/client.ts` | Base URL, Bearer header, 401 refresh interceptor |
 | Auth API | `lib/api/auth.ts` | Typed calls to `/api/auth/*` |
 | Route constants | `lib/auth/routes.ts` | Protected vs guest paths |

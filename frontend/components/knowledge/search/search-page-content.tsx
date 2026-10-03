@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { KnowledgePageHeader } from "@/components/knowledge/knowledge-page-header";
 import { GlobalSearchBar } from "@/components/knowledge/search/global-search-bar";
@@ -19,11 +20,18 @@ import {
 import type { SearchFilter, SearchHistoryItem } from "@/types/knowledge";
 
 export function SearchPageContent() {
-  const [query, setQuery] = useState("");
-  const [activeQuery, setActiveQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q")?.trim() ?? "";
+  return <SearchPageExperience key={initialQuery} initialQuery={initialQuery} />;
+}
+
+function SearchPageExperience({ initialQuery }: { initialQuery: string }) {
+  const router = useRouter();
+  const [query, setQuery] = useState(initialQuery);
+  const [activeQuery, setActiveQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<SearchFilter>({});
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
-  const [hasRecordedHistory, setHasRecordedHistory] = useState(false);
+  const recordedQueryRef = useRef("");
 
   const {
     results,
@@ -44,26 +52,29 @@ export function SearchPageContent() {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setHistory(loadSearchHistory());
+    const frame = window.requestAnimationFrame(() => {
+      setHistory(loadSearchHistory());
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
-    if (activeQuery && !isLoading && !hasRecordedHistory) {
-      setHistory((current) => {
-        const next = upsertSearchHistoryEntry(current, {
-          query: activeQuery,
-          resultCount: results.length,
-          searchedAt: new Date().toISOString(),
+    if (activeQuery && !isLoading && recordedQueryRef.current !== activeQuery) {
+      const frame = window.requestAnimationFrame(() => {
+        recordedQueryRef.current = activeQuery;
+        setHistory((current) => {
+          const next = upsertSearchHistoryEntry(current, {
+            query: activeQuery,
+            resultCount: results.length,
+            searchedAt: new Date().toISOString(),
+          });
+          saveSearchHistory(next);
+          return next;
         });
-        saveSearchHistory(next);
-        return next;
       });
-      setHasRecordedHistory(true);
+      return () => window.cancelAnimationFrame(frame);
     }
-    if (!activeQuery) {
-      setHasRecordedHistory(false);
-    }
-  }, [activeQuery, isLoading, results.length, hasRecordedHistory]);
+  }, [activeQuery, isLoading, results.length]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -87,8 +98,9 @@ export function SearchPageContent() {
   const handleSearch = () => {
     const trimmed = query.trim();
     if (!trimmed) return;
+    recordedQueryRef.current = "";
     setActiveQuery(trimmed);
-    setHasRecordedHistory(false);
+    router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
   };
 
   return (
@@ -202,9 +214,9 @@ export function SearchPageContent() {
             <SearchHistoryPanel
               history={history}
               onSelect={(q) => {
+                recordedQueryRef.current = "";
                 setQuery(q);
                 setActiveQuery(q);
-                setHasRecordedHistory(false);
               }}
             />
           </div>

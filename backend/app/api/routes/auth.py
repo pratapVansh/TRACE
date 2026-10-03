@@ -18,14 +18,10 @@ from app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
     RefreshTokenRequest,
-    RegisterRequest,
-    RegisterResponse,
     UserMeResponse,
 )
 from app.services.auth_service import AuthService
 from app.services.exceptions import (
-    DefaultRoleNotFoundError,
-    EmailAlreadyRegisteredError,
     ExpiredRefreshTokenError,
     InactiveAccountError,
     InvalidCredentialsError,
@@ -34,33 +30,6 @@ from app.services.exceptions import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-@router.post(
-    "/register",
-    response_model=RegisterResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def register(
-    request: Request,
-    payload: RegisterRequest,
-    auth_service: AuthService = Depends(get_auth_service),
-    _rate_limit: None = Depends(auth_rate_limiter),
-) -> RegisterResponse:
-    try:
-        await auth_service.register_user(payload, ip_address=_extract_ip(request))
-    except EmailAlreadyRegisteredError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
-        ) from exc
-    except DefaultRoleNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration is unavailable",
-        ) from exc
-
-    return RegisterResponse()
 
 
 @router.post("/login", response_model=AccessTokenResponse)

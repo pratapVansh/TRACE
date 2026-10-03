@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { semanticSearch } from "@/lib/api/search";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import type {
   SearchFilter,
   SearchResultItem,
@@ -61,14 +62,19 @@ export function useSemanticSearch({
           return;
         }
 
+        if (!append) {
+          setLimit(0);
+        }
         setResults((prev) => (append ? [...prev, ...data] : data));
       } catch (err: unknown) {
         if (controller.signal.aborted) {
           return;
         }
 
-        const message =
-          err instanceof Error ? err.message : "Search failed. Please try again.";
+        const message = await getApiErrorMessage(
+          err,
+          "Search failed. Please try again.",
+        );
         setError(message);
       } finally {
         if (!controller.signal.aborted) {
@@ -81,11 +87,12 @@ export function useSemanticSearch({
   );
 
   useEffect(() => {
-    setLimit(0);
-    setResults([]);
-    fetchResults(0, false);
+    const frame = window.requestAnimationFrame(() => {
+      void fetchResults(0, false);
+    });
 
     return () => {
+      window.cancelAnimationFrame(frame);
       abortRef.current?.abort();
     };
   }, [fetchResults]);

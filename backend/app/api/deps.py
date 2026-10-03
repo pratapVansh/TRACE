@@ -55,7 +55,6 @@ async def get_auth_service(
     return AuthService(
         session=session,
         user_repository=UserRepository(session),
-        role_repository=RoleRepository(session),
         refresh_token_repository=RefreshTokenRepository(session),
         audit_service=audit_service,
     )

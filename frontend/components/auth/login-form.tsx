@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { InlineLoading } from "@/components/auth/auth-loading-screen";
 import { FormField, FormMessage } from "@/components/common/form-field";
-import { AuthLink, AuthShell } from "@/components/layout/auth-shell";
+import { AuthShell } from "@/components/layout/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -91,10 +91,7 @@ export function LoginForm() {
       title="Sign in to TRACE"
       subtitle="Access your industrial knowledge workspace with secure enterprise credentials."
       footer={
-        <>
-          New to TRACE?{" "}
-          <AuthLink href={AUTH_ROUTES.register}>Create an account</AuthLink>
-        </>
+        <>Access is provisioned by your TRACE administrator.</>
       }
     >
       <form onSubmit={onSubmit} className="space-y-6">

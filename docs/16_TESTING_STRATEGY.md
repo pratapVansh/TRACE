@@ -432,7 +432,7 @@ dashboard, audit logs, evaluation metrics/gates, startup degradation, and fronte
 | Area | What was verified | Method |
 | --- | --- | --- |
 | Health API | `GET /api/health` returns `{ status: "ok", service: "TRACE Backend" }` | Manual + Swagger |
-| Registration | New user creation, duplicate email rejection, default Viewer role | Manual + Swagger |
+| Private access | `/api/auth/register` is absent; users are created through protected administration | Automated |
 | Login | Valid credentials issue access + refresh tokens; invalid credentials return 401 | Manual + Swagger |
 | JWT | Access token decodes correctly; protected routes reject missing/invalid tokens | Manual |
 | Refresh token | Rotation revokes old token; new pair issued; expired/invalid tokens rejected | Manual + service calls |
@@ -446,11 +446,10 @@ dashboard, audit logs, evaluation metrics/gates, startup degradation, and fronte
 | Area | What was verified | Method |
 | --- | --- | --- |
 | Login page | Form validation (Zod), error display, successful redirect to dashboard | Manual |
-| Register page | Registration flow, validation, redirect to login | Manual |
 | Auth context | Session bootstrap from localStorage on page reload | Manual |
 | Axios interceptor | 401 triggers refresh; queued requests retry with new token | Manual |
 | Protected routes | `/dashboard` redirects unauthenticated users to `/login` | Manual |
-| Guest routes | `/login` and `/register` redirect authenticated users to `/dashboard` | Manual |
+| Guest routes | `/login` redirects authenticated users to `/dashboard` | Manual |
 | Logout | Clears tokens, redirects to login | Manual |
 | Dashboard shell | Sidebar, topbar, KPI placeholders, role badge, profile display | Manual |
 | Loading states | Skeleton screens during auth bootstrap | Manual |

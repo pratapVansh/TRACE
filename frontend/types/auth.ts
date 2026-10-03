@@ -12,12 +12,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  full_name: string;
-}
-
 /**
  * Auth response body. The refresh token is intentionally absent — it is
  * delivered as an httpOnly cookie and never exposed to JavaScript.

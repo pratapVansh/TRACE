@@ -1,8 +1,5 @@
 import {
   Bot,
-  ClipboardList,
-  FileText,
-  HeartPulse,
   Search,
   Upload,
 } from "lucide-react";
@@ -14,11 +11,7 @@ export const EXECUTIVE_DASHBOARD_DATA: ExecutiveDashboardData = {
   facilityName: "",
   lastUpdated: "",
   kpis: [],
-  recentDocuments: [],
   recentActivity: [],
-  complianceMetrics: [],
-  assetCategories: [],
-  recentSearches: [],
   quickActions: [
     {
       id: "qa-1",

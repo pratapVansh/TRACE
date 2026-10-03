@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 type SourcesPanelProps = {
   /** Citations for the turn currently in view. */
   citations: Citation[];
-  /** Distinct document names cited across the conversation. */
-  sources: string[];
   /** Index into `citations` that is expanded, or null. */
   expandedIndex: number | null;
   onToggle: (index: number | null) => void;
@@ -46,7 +44,7 @@ function OpenSourceButton({
       className="mt-1.5 inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-industrial hover:border-[var(--accent-steel)]/40 hover:text-foreground"
     >
       <ExternalLink className="size-2.5" strokeWidth={2} />
-      Open source document
+      Open document
     </button>
   );
 }
@@ -73,11 +71,6 @@ function CitationBody({
       <p className="max-h-56 overflow-y-auto break-words whitespace-pre-wrap text-[11px] leading-[1.5] text-muted-foreground">
         {citation.chunk_content}
       </p>
-      {citation.chunk_id && (
-        <p className="mt-1 font-mono text-[9px] text-muted-foreground/50">
-          chunk {citation.chunk_id.slice(0, 12)}
-        </p>
-      )}
       <OpenSourceButton citation={citation} onOpenDocument={onOpenDocument} />
     </div>
   );
@@ -141,7 +134,7 @@ function CitationRow({
           </span>
         )}
         <span className="shrink-0 font-mono text-[10px] tabular-nums whitespace-nowrap text-[var(--accent-steel-muted)]">
-          {scorePercent(citation)}%
+          Match {scorePercent(citation)}%
         </span>
       </button>
 
@@ -160,7 +153,6 @@ function CitationRow({
 
 export function SourcesPanel({
   citations,
-  sources,
   expandedIndex,
   onToggle,
   pinned,
@@ -168,13 +160,16 @@ export function SourcesPanel({
   onOpenDocument,
 }: SourcesPanelProps) {
   const hasCitations = citations.length > 0;
+  const documentCount = new Set(citations.map((citation) => citation.document_name)).size;
 
   return (
     <div className="industrial-card flex min-h-0 flex-col overflow-hidden">
       <div className="flex h-8 shrink-0 items-center justify-between border-b border-border px-2.5">
-        <span className="section-label">Sources</span>
+        <span className="section-label">Evidence</span>
         <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70">
-          {hasCitations ? `${citations.length} passages` : "—"}
+          {hasCitations
+            ? `${citations.length} passage${citations.length === 1 ? "" : "s"} · ${documentCount} document${documentCount === 1 ? "" : "s"}`
+            : "—"}
         </span>
       </div>
 
@@ -190,7 +185,7 @@ export function SourcesPanel({
                 {pinned.document_name}
               </span>
               <span className="shrink-0 font-mono text-[9px] tracking-wide text-muted-foreground uppercase">
-                earlier turn
+                Earlier answer
               </span>
               <button
                 type="button"
@@ -221,36 +216,13 @@ export function SourcesPanel({
         ) : (
           !pinned && (
             <p className="px-0.5 py-1 text-[11px] leading-snug text-muted-foreground">
-              Retrieved passages appear here the moment the search returns —
-              before the answer is written.
+              Supporting passages will appear here when Copilot finds relevant
+              information in your documents.
             </p>
           )
         )}
       </div>
 
-      {sources.length > 0 && (
-        <div className="shrink-0 border-t border-border px-2.5 py-1.5">
-          <div className="mb-1 flex items-baseline justify-between">
-            <span className="section-label">Documents drawn on</span>
-            <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70">
-              {sources.length}
-            </span>
-          </div>
-          <ul className="flex max-h-24 flex-col gap-0.5 overflow-y-auto">
-            {sources.map((source) => (
-              <li key={source} className="flex items-center gap-1.5">
-                <FileText
-                  className="size-3 shrink-0 text-[var(--accent-steel-muted)]"
-                  strokeWidth={1.75}
-                />
-                <span className="min-w-0 flex-1 truncate text-[11px] text-foreground/85">
-                  {source}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

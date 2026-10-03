@@ -15,7 +15,6 @@ type ChatMessageProps = {
   content: string;
   citations?: Citation[];
   onCitationSelect?: (index: number) => void;
-  onOpenDocument?: (documentId: string) => void;
   activeCitationIndex?: number | null;
   trace?: RetrievalTraceState;
   notice?: TurnNoticeState;
@@ -49,7 +48,6 @@ export function ChatMessage({
   content,
   citations,
   onCitationSelect,
-  onOpenDocument,
   activeCitationIndex = null,
   trace,
   notice,
@@ -190,7 +188,6 @@ export function ChatMessage({
                   citations={citations}
                   activeCitationIndex={activeCitationIndex}
                   onCitationSelect={onCitationSelect}
-                  onOpenDocument={onOpenDocument}
                 />
               </div>
             ) : null}

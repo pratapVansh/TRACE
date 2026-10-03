@@ -1,7 +1,6 @@
 import type {
   LoginRequest,
   MessageResponse,
-  RegisterRequest,
   TokenResponse,
   User,
 } from "@/types/auth";
@@ -10,16 +9,6 @@ import { apiClient } from "./client";
 
 export async function loginRequest(payload: LoginRequest): Promise<TokenResponse> {
   const { data } = await apiClient.post<TokenResponse>("/api/auth/login", payload);
-  return data;
-}
-
-export async function registerRequest(
-  payload: RegisterRequest,
-): Promise<MessageResponse> {
-  const { data } = await apiClient.post<MessageResponse>(
-    "/api/auth/register",
-    payload,
-  );
   return data;
 }
 

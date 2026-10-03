@@ -115,13 +115,13 @@ gantt
 | Task | Owner | Deliverable | Status |
 | --- | --- | --- | --- |
 | Implement JWT auth (login, refresh, logout, `/auth/me`) | Backend | Auth endpoints working | ✅ |
-| Implement registration endpoint | Backend | `POST /auth/register` | ✅ |
+| Restrict account provisioning to user administration | Backend | No public registration endpoint | ✅ |
 | Password hashing, user model, role-based dependencies | Backend | RBAC middleware | ✅ |
 | Login page UI with form validation | Frontend | `/login` page | ✅ |
-| Register page UI | Frontend | `/register` page | ✅ |
+| Private-access login guidance | Frontend | Administrator-provisioned accounts only | ✅ |
 | Auth middleware (route protection, token refresh) | Frontend | Protected routes | ✅ |
 | Session persistence (httpOnly cookies or secure storage) | Frontend | Login persists across refresh | ✅ (localStorage) |
-| Seed demo users (admin, engineer) | Backend | Test accounts ready | ☐ (self-registration available) |
+| Seed demo users (admin, engineer) | Backend | Test accounts ready | ☐ (use administration or fixtures) |
 
 **Exit criteria:** User can log in, access protected routes, and log out. ✅
 

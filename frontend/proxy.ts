@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const publicRoutes = new Set(["/login", "/register", "/maintenance"]);
+const publicRoutes = new Set(["/login", "/maintenance"]);
 
 /**
  * Route gating.

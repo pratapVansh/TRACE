@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -78,14 +78,6 @@ export function EditUserDialog({
     resolver: zodResolver(passwordSchema),
     defaultValues: { new_password: "", confirm_password: "" },
   });
-
-  useEffect(() => {
-    if (user) {
-      roleForm.reset({ role: user.role });
-      passwordForm.reset({ new_password: "", confirm_password: "" });
-      setActionError(null);
-    }
-  }, [user, roleForm, passwordForm]);
 
   if (!user) {
     return null;

@@ -9,7 +9,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const AUTH_SKIP_REFRESH_PATHS = [
   "/api/auth/login",
-  "/api/auth/register",
   "/api/auth/refresh",
 ];
 

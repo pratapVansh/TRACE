@@ -51,7 +51,7 @@ export function CopilotBar({
         </h1>
         <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70 tabular-nums">
           {turnCount > 0 ? `${turnCount} turn${turnCount === 1 ? "" : "s"}` : "no turns"}
-          {sourceCount > 0 ? ` · ${sourceCount} src` : ""}
+          {sourceCount > 0 ? ` · ${sourceCount} doc${sourceCount === 1 ? "" : "s"}` : ""}
         </span>
       </div>
 
@@ -104,7 +104,7 @@ export function CopilotBar({
           type="button"
           onClick={onOpenSources}
           className={cn(barButton, "lg:hidden")}
-          aria-label="Open sources"
+          aria-label="Open evidence"
         >
           <PanelRight className="size-3.5" strokeWidth={1.75} />
         </button>

@@ -3,15 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Database, FileText, Layers, MessageSquare, RefreshCw } from "lucide-react";
 
-import { AssetDistributionWidget } from "@/components/dashboard/asset-distribution-widget";
-import { ComplianceOverviewWidget } from "@/components/dashboard/compliance-overview-widget";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardKpiGrid } from "@/components/dashboard/dashboard-kpi-grid";
 import { NotificationsWidget } from "@/components/dashboard/notifications-widget";
 import { QuickActionsWidget } from "@/components/dashboard/quick-actions-widget";
 import { RecentActivityWidget } from "@/components/dashboard/recent-activity-widget";
 import { RecentDocumentsWidget } from "@/components/dashboard/recent-documents-widget";
-import { RecentSearchesWidget } from "@/components/dashboard/recent-searches-widget";
 import { fetchDashboard, type DashboardApiResponse } from "@/lib/api/dashboard";
 import { EXECUTIVE_DASHBOARD_DATA } from "@/lib/dashboard/mock-data";
 import { useRecentDocuments } from "@/hooks/use-documents";
@@ -77,7 +74,6 @@ export function ExecutiveDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetchDashboard()
       .then((data) => {
         if (!cancelled) {
@@ -206,22 +202,11 @@ export function ExecutiveDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <RecentActivityWidget activities={displayData.recentActivity} />
-        <ComplianceOverviewWidget metrics={displayData.complianceMetrics} />
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-12">
-        <div className="xl:col-span-5">
-          <AssetDistributionWidget
-            categories={displayData.assetCategories}
-            totalAssets={0}
-          />
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RecentActivityWidget activities={displayData.recentActivity} />
         </div>
-        <div className="xl:col-span-4">
-          <RecentSearchesWidget searches={displayData.recentSearches} />
-        </div>
-        <div className="xl:col-span-3">
+        <div>
           <QuickActionsWidget actions={displayData.quickActions} />
         </div>
       </div>

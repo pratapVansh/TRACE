@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { CreateUserButton } from "@/components/administration/users/create-user-button";
 import { EditUserDialog } from "@/components/administration/users/edit-user-dialog";
@@ -71,10 +71,6 @@ export function UsersPageContent() {
       }),
     [visibleUsers, query, roleFilter, statusFilter],
   );
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, roleFilter, statusFilter]);
 
   const paginatedUsers = useMemo(
     () => paginateUsers(filteredUsers, page, PAGE_SIZE),
@@ -196,7 +192,10 @@ export function UsersPageContent() {
 
       <KnowledgeSearchBar
         value={query}
-        onChange={setQuery}
+        onChange={(value) => {
+          setQuery(value);
+          setPage(1);
+        }}
         placeholder="Search by name, email, or role…"
       />
 
@@ -205,11 +204,18 @@ export function UsersPageContent() {
         status={statusFilter}
         roleOptions={roleOptions}
         statusOptions={STATUS_OPTIONS}
-        onRoleChange={setRoleFilter}
-        onStatusChange={setStatusFilter}
+        onRoleChange={(value) => {
+          setRoleFilter(value);
+          setPage(1);
+        }}
+        onStatusChange={(value) => {
+          setStatusFilter(value);
+          setPage(1);
+        }}
         onClear={() => {
           setRoleFilter("all");
           setStatusFilter("all");
+          setPage(1);
         }}
       />
 
@@ -235,6 +241,7 @@ export function UsersPageContent() {
       </p>
 
       <EditUserDialog
+        key={selectedUser?.id ?? "no-user"}
         user={selectedUser}
         open={selectedUser !== null}
         onClose={() => setSelectedUser(null)}

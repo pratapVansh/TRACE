@@ -3,11 +3,7 @@ class AuthServiceError(Exception):
 
 
 class EmailAlreadyRegisteredError(AuthServiceError):
-    """Raised when registration is attempted with an existing email."""
-
-
-class DefaultRoleNotFoundError(AuthServiceError):
-    """Raised when the default Viewer role is missing from the database."""
+    """Raised when an administrator creates a user with an existing email."""
 
 
 class InvalidCredentialsError(AuthServiceError):

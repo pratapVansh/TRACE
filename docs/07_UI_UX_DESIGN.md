@@ -3,7 +3,7 @@
 ### Technical Records & Asset Compliance Engine · Problem Statement 8
 
 > **Current UI scope (2 October 2026).** The implemented dark industrial UI covers login,
-> registration, dashboard, documents/upload, search, Copilot, knowledge graph, audit logs,
+> login, dashboard, documents/upload, search, Copilot, knowledge graph, audit logs,
 > and user administration. Asset, maintenance, compliance, notification, and settings
 > screens in this document are design proposals, not live pages.
 
@@ -101,7 +101,6 @@ flowchart LR
 | Page | Layout | Elements |
 | --- | --- | --- |
 | `/login` | Split auth shell | Brand panel (logo, tagline, geometric accents) + login form card |
-| `/register` | Split auth shell | Same brand panel + registration form (name, email, password) |
 
 | Form element | Style |
 | --- | --- |

@@ -2,11 +2,12 @@
 
 import { ChevronRight, LogOut, Menu, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { isNavItemActive, NAV_SECTIONS } from "@/lib/auth/navigation";
-import { AUTH_ROUTES } from "@/lib/auth/routes";
+import { APP_ROUTES, AUTH_ROUTES } from "@/lib/auth/routes";
 
 type TopbarProps = {
   onMenuClick?: () => void;
@@ -29,10 +30,18 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const crumb = useBreadcrumb(pathname ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogout = async () => {
     await logout();
     router.replace(AUTH_ROUTES.login);
+  };
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    router.push(`${APP_ROUTES.search}?q=${encodeURIComponent(query)}`);
   };
 
   return (
@@ -65,16 +74,21 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           ) : null}
         </nav>
 
-        <div className="relative mx-auto hidden w-full max-w-sm lg:block">
+        <form
+          className="relative mx-auto hidden w-full max-w-sm lg:block"
+          onSubmit={handleSearch}
+          role="search"
+        >
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/60" />
           <input
             type="search"
-            placeholder="Search documents, assets, tags…"
-            disabled
-            className="h-7 w-full rounded border border-border bg-[var(--surface-secondary)] pr-3 pl-8 text-[12px] text-foreground placeholder:text-muted-foreground/70 transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none disabled:opacity-60"
-            aria-label="Search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search indexed documents…"
+            className="h-7 w-full rounded border border-border bg-[var(--surface-secondary)] pr-3 pl-8 text-[12px] text-foreground placeholder:text-muted-foreground/70 transition-industrial focus-visible:border-[var(--accent-steel)]/40 focus-visible:outline-none"
+            aria-label="Search indexed documents"
           />
-        </div>
+        </form>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <ThemeToggle />

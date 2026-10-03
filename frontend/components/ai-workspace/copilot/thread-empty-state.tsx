@@ -73,7 +73,7 @@ export function ThreadEmptyState({
       <p className="mt-1.5 max-w-xl text-[12px] leading-[1.6] text-muted-foreground">
         Answers are drawn only from indexed technical records — maintenance logs,
         inspection reports, SOPs and OEM manuals. Retrieved passages appear in
-        the sources panel before the answer is written, and every claim traces
+        the evidence panel before the answer is written, and every claim traces
         back to the passage it came from.
       </p>
 

@@ -77,7 +77,6 @@ function restoreConversationState(
   msgData: import("@/types/chat").ConversationMessagesResponse,
   setters: {
     setMessages: (msgs: import("@/components/ai-workspace/copilot/conversation-area").Message[]) => void;
-    setAllSources: (sources: string[]) => void;
     setLastCitations: (citations: import("@/types/chat").Citation[]) => void;
     turnIndexRef: { current: number };
   },
@@ -92,7 +91,6 @@ function restoreConversationState(
 
   setters.setMessages(messages);
 
-  const allDocNames = new Set<string>();
   let lastAssistantCitations: import("@/types/chat").Citation[] = [];
   let assistantCount = 0;
 
@@ -101,14 +99,10 @@ function restoreConversationState(
       assistantCount += 1;
       if (m.citations && m.citations.length > 0) {
         lastAssistantCitations = m.citations as import("@/types/chat").Citation[];
-        for (const c of m.citations) {
-          if (c.document_name) allDocNames.add(c.document_name);
-        }
       }
     }
   }
 
-  setters.setAllSources(Array.from(allDocNames));
   setters.setLastCitations(lastAssistantCitations);
   setters.turnIndexRef.current = assistantCount;
 }
@@ -148,7 +142,6 @@ export function CopilotPageContent() {
   const [draft, setDraft] = useState("");
   const [isWaiting, setIsWaiting] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [allSources, setAllSources] = useState<string[]>([]);
   const [lastCitations, setLastCitations] = useState<Citation[]>([]);
   // Which inline reference is lit up, scoped to the turn that owns it.
   const [activeCitation, setActiveCitation] = useState<
@@ -201,7 +194,7 @@ export function CopilotPageContent() {
         if (!cancelled && sessionConv && sessionConv.messages.length > 0) {
           setConversationId(sessionConv.conversation_id);
           restoreConversationState(sessionConv, {
-            setMessages, setAllSources, setLastCitations, turnIndexRef,
+            setMessages, setLastCitations, turnIndexRef,
           });
           const lastMsg = sessionConv.messages[sessionConv.messages.length - 1];
           const endsAbruptly = lastMsg.content.endsWith("...") || lastMsg.content.endsWith("…");
@@ -246,7 +239,6 @@ export function CopilotPageContent() {
           if (msgData.messages.length > 0) {
             restoreConversationState(msgData, {
               setMessages,
-              setAllSources,
               setLastCitations,
               turnIndexRef,
             });
@@ -263,7 +255,6 @@ export function CopilotPageContent() {
           if (cancelled) return;
           restoreConversationState(msgData, {
             setMessages,
-            setAllSources,
             setLastCitations,
             turnIndexRef,
           });
@@ -392,7 +383,6 @@ export function CopilotPageContent() {
             accumulatedCitations = data.citations;
             accumulatedSources = data.sources;
             setLastCitations(data.citations);
-            setAllSources(data.sources);
             // Sources land before the first answer token — show them arriving.
             setActiveCitation(null);
             setPinnedCitation(null);
@@ -542,7 +532,7 @@ export function CopilotPageContent() {
       traceRef.current = null;
       streamingIdRef.current = null;
     }
-  }, [draft, isWaiting, conversationId]);
+  }, [draft, isWaiting, conversationId, messages]);
 
   const handleRetryMessage = useCallback(
     (assistantMessageId: string) => {
@@ -592,7 +582,6 @@ export function CopilotPageContent() {
       if (convId === conversationId) {
         setMessages([]);
         setConversationId(null);
-        setAllSources([]);
         setLastCitations([]);
       }
       const data = await listConversations();
@@ -603,7 +592,6 @@ export function CopilotPageContent() {
         const msgData = await fetchMessages(latest.id);
         restoreConversationState(msgData, {
           setMessages,
-          setAllSources,
           setLastCitations,
           turnIndexRef,
         });
@@ -670,7 +658,6 @@ export function CopilotPageContent() {
     handleCancel();
     setMessages([]);
     setConversationId(null);
-    setAllSources([]);
     setLastCitations([]);
     setDraft("");
     setActiveCitation(null);
@@ -692,13 +679,11 @@ export function CopilotPageContent() {
       const msgData = await fetchMessages(convId);
       restoreConversationState(msgData, {
         setMessages,
-        setAllSources,
         setLastCitations,
         turnIndexRef,
       });
     } catch {
       setMessages([]);
-      setAllSources([]);
       setLastCitations([]);
       turnIndexRef.current = 0;
     }
@@ -776,7 +761,6 @@ export function CopilotPageContent() {
     return (
       <SourcesPanel
         citations={lastCitations}
-        sources={allSources}
         expandedIndex={expandedSourceIndex}
         onToggle={setExpandedSourceIndex}
         pinned={pinnedCitation}
@@ -791,7 +775,7 @@ export function CopilotPageContent() {
       <CopilotBar
         title={activeConversation?.title ?? null}
         turnCount={turnCount}
-        sourceCount={allSources.length}
+        sourceCount={new Set(lastCitations.map((citation) => citation.document_name)).size}
         hasConversation={conversationId !== null}
         deleteConfirmOpen={deleteConfirmId === "__all__"}
         onNewConversation={handleNewConversation}
@@ -834,7 +818,7 @@ export function CopilotPageContent() {
         </div>
       )}
 
-      {/* Sources sheet — narrow viewports */}
+      {/* Evidence sheet — narrow viewports */}
       {sourcesOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
@@ -844,12 +828,12 @@ export function CopilotPageContent() {
           />
           <div className="fixed inset-y-0 right-0 z-50 flex w-96 max-w-[90vw] flex-col border-l border-border bg-[var(--surface)] shadow-2xl">
             <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
-              <span className="section-label">Sources</span>
+              <span className="section-label">Evidence</span>
               <button
                 type="button"
                 onClick={() => setSourcesOpen(false)}
                 className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-industrial hover:text-foreground"
-                aria-label="Close sources"
+                aria-label="Close evidence"
               >
                 <X className="size-3.5" strokeWidth={1.75} />
               </button>
@@ -890,7 +874,6 @@ export function CopilotPageContent() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             onCitationSelect={handleCitationSelect}
-            onOpenDocument={handlePreviewById}
             activeCitation={activeCitation}
             streamingMessageId={streamingMessageId}
             restoreNotice={restoreNotice}

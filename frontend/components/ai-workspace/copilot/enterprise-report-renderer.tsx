@@ -4,21 +4,19 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { 
-  AlertTriangle, FileText, ChevronRight 
-} from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { cleanAnswerContent } from "@/lib/copilot/answer-content";
 import { segmentText } from "@/lib/copilot/citations";
 import type { Citation } from "@/types/chat";
 import { InlineCitation } from "./inline-citation";
 import { AssetCard } from "./AssetCard";
-import { DocumentPreview } from "./DocumentPreview";
 import { KnowledgeGraphVis } from "./KnowledgeGraphVis";
 
 // Helper to parse GitHub-style alerts in blockquotes
 // e.g., > [!WARNING] or > [!RISK]
 function parseAlert(text: string) {
-  const match = text.match(/^\[!(WARNING|RISK|MAINTENANCE|RCA|EVIDENCE|TIMELINE|DOCUMENT|SOURCE|ASSUMPTION|ASSET|GRAPH)\]\s*([\s\S]*)$/i);
+  const match = text.match(/^\[!(WARNING|RISK|MAINTENANCE|RCA|TIMELINE|ASSUMPTION|ASSET|GRAPH)\]\s*([\s\S]*)$/i);
   if (match) {
     return { type: match[1].toLowerCase(), content: match[2] };
   }
@@ -31,8 +29,6 @@ type EnterpriseReportRendererProps = {
   citations?: Citation[];
   activeCitationIndex?: number | null;
   onCitationSelect?: (index: number) => void;
-  /** Open a source document by id. See SourcesPanel's `onOpenDocument`. */
-  onOpenDocument?: (documentId: string) => void;
 };
 
 export function EnterpriseReportRenderer({
@@ -40,8 +36,8 @@ export function EnterpriseReportRenderer({
   citations = [],
   activeCitationIndex = null,
   onCitationSelect,
-  onOpenDocument,
 }: EnterpriseReportRendererProps) {
+  const cleanedContent = React.useMemo(() => cleanAnswerContent(content), [content]);
   const documentNames = React.useMemo(
     () => citations.map((c) => c.document_name),
     [citations],
@@ -143,13 +139,6 @@ export function EnterpriseReportRenderer({
                   borderColor = "border-amber-500/30";
                   textColor = "text-amber-400";
                   break;
-                case "document":
-                case "source":
-                  Icon = FileText;
-                  textColor = "text-sky-400";
-                  borderColor = "border-sky-500/30";
-                  bgColor = "bg-sky-500/10";
-                  break;
                 case "asset":
                   return <AssetCard data={alert.content} />;
                 case "graph":
@@ -162,19 +151,6 @@ export function EnterpriseReportRenderer({
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{alert.content}</ReactMarkdown>
                     </div>
                   );
-              }
-
-              if (alert.type === "document" || alert.type === "source") {
-                // The model writes these cards, so they carry a document name
-                // and no id. Resolve the id from this turn's citations, which
-                // is the only place the real one exists.
-                return (
-                  <DocumentPreview
-                    data={alert.content}
-                    citations={citations}
-                    onOpenDocument={onOpenDocument}
-                  />
-                );
               }
 
               return (
@@ -209,7 +185,7 @@ export function EnterpriseReportRenderer({
           ),
         }}
       >
-        {content}
+        {cleanedContent}
       </ReactMarkdown>
     </div>
   );

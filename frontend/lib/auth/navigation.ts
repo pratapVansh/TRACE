@@ -1,16 +1,11 @@
 import {
-  BookOpen,
   Bot,
   ClipboardList,
-  Cog,
   LayoutDashboard,
   Network,
   ScrollText,
   Search,
-  Settings,
-  Shield,
   Upload,
-  UserCog,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";

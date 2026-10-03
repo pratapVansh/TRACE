@@ -26,7 +26,7 @@
 
 ## 1. Overview
 
-TRACE exposes a **REST API** via FastAPI. All endpoints (except auth login/refresh/register
+TRACE exposes a **REST API** via FastAPI. All endpoints (except auth login/refresh
 and health) require a valid JWT access token. Copilot chat additionally supports **Server-Sent Events (SSE)**
 for streaming responses.
 
@@ -35,7 +35,7 @@ for streaming responses.
 | Endpoint family | Status |
 | --- | --- |
 | `GET /api/health` | ✅ Implemented |
-| `/api/auth/*` | ✅ Register, login, refresh rotation, logout, current user |
+| `/api/auth/*` | ✅ Login, refresh rotation, logout, current user |
 | `/api/documents/*`, `/api/processing/*`, `/api/chunks/*` | ✅ Document CRUD, download, ingestion status/control and chunk reads |
 | `/api/search`, `/api/rag/*`, `/api/chat/*` | ✅ Search, retrieval/query, SSE chat, conversations and snapshots |
 | `/api/graph/*` | ✅ Health, entities, search, neighbors, path, schema and statistics |
@@ -115,7 +115,7 @@ Error responses use a consistent envelope (see [Error Reference](#14-error-refer
 | `Admin` | Administrative access subject to the server permission matrix |
 | `Engineer` | Document, search, graph, and Copilot capabilities granted by the permission matrix |
 | `Operator` | Operational read/search/chat capabilities granted by the permission matrix |
-| `Viewer` | Read-only; default role for self-registration |
+| `Viewer` | Read-only role assigned by a SuperAdmin or Admin |
 
 ---
 
@@ -124,39 +124,6 @@ Error responses use a consistent envelope (see [Error Reference](#14-error-refer
 Base path: `/api/auth`
 
 > ✅ **Implemented** — All auth endpoints below are live except where noted as target-only.
-
-### POST `/auth/register` ✅
-
-Register a new user. New accounts receive the default **Viewer** role.
-
-**Auth:** Public
-
-**Request**
-
-```json
-{
-  "email": "user@example.com",
-  "password": "securePassword123",
-  "full_name": "Jane Operator"
-}
-```
-
-**Response `201 Created`**
-
-```json
-{
-  "message": "Registration successful"
-}
-```
-
-**Errors**
-
-| Status | Condition |
-| --- | --- |
-| 409 | Email already registered |
-| 422 | Validation error (password min 8 chars, invalid email) |
-
----
 
 ### POST `/auth/login` ✅
 

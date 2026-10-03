@@ -15,10 +15,9 @@ import {
   loginRequest,
   logoutRequest,
   refreshRequest,
-  registerRequest,
 } from "@/lib/api/auth";
 import { authStorage } from "@/lib/auth/storage";
-import type { LoginRequest, RegisterRequest, User } from "@/types/auth";
+import type { LoginRequest, User } from "@/types/auth";
 
 interface AuthContextValue {
   user: User | null;
@@ -26,7 +25,6 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (payload: LoginRequest) => Promise<void>;
-  register: (payload: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -112,10 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAccessToken],
   );
 
-  const register = useCallback(async (payload: RegisterRequest) => {
-    await registerRequest(payload);
-  }, []);
-
   const logout = useCallback(async () => {
     try {
       // The httpOnly cookie identifies the session; the server revokes it
@@ -135,11 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: Boolean(user && accessToken),
       login,
-      register,
       logout,
       refresh,
     }),
-    [user, accessToken, isLoading, login, register, logout, refresh],
+    [user, accessToken, isLoading, login, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

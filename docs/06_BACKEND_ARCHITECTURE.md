@@ -91,10 +91,10 @@ backend/
 │   ├── api/
 │   │   ├── routes/
 │   │   │   ├── health.py        # GET /api/health
-│   │   │   └── auth.py          # POST register/login/refresh/logout, GET me
+│   │   │   └── auth.py          # POST login/refresh/logout, GET me
 │   │   └── deps.py              # get_auth_service, get_current_user
 │   ├── services/
-│   │   ├── auth_service.py      # register, login, refresh, logout, get user
+│   │   ├── auth_service.py      # login, refresh, logout, get user
 │   │   └── exceptions.py
 │   ├── repositories/
 │   │   ├── user_repository.py
@@ -174,7 +174,6 @@ backend/
 | Route | Method | Purpose | Auth | Status |
 | --- | --- | --- | --- | --- |
 | `/health` | GET | Liveness check | Public | ✅ |
-| `/auth/register` | POST | Create user (default Viewer role) | Public | ✅ |
 | `/auth/login` | POST | Authenticate, issue tokens | Public | ✅ |
 | `/auth/refresh` | POST | Rotate refresh token, issue new pair | Public (refresh) | ✅ |
 | `/auth/logout` | POST | Revoke refresh token | User | ✅ |
@@ -241,7 +240,7 @@ sequenceDiagram
 
 | Service | Responsibility | Status |
 | --- | --- | --- |
-| `AuthService` | Register, login, refresh (rotation), logout, current user | ✅ Implemented |
+| `AuthService` | Login, refresh (rotation), logout, current user | ✅ Implemented |
 | Document processing services | OCR → parse → extract → chunk → embed → Qdrant/Neo4j indexing | ✅ Implemented |
 | Retrieval/RAG services | Qdrant + Neo4j retrieval, reranking, prompting, generation, grounding | ✅ Implemented |
 | ChatService | Conversation-aware answers, SSE streaming, citations and snapshots | ✅ Implemented |
@@ -253,7 +252,6 @@ sequenceDiagram
 
 | Method | Description |
 | --- | --- |
-| `register_user` | Hash password, assign default Viewer role, persist user |
 | `login_user` | Verify credentials, issue access + refresh JWTs, store refresh token hash |
 | `refresh_tokens` | Validate refresh token, rotate (revoke old, issue new pair) |
 | `get_current_user` | Load user + role for `/auth/me` |

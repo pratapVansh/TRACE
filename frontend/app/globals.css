@@ -8,9 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-sans: "Segoe UI", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+  --font-heading: "Segoe UI", Arial, sans-serif;
 
   /* Product surfaces — usable as bg-surface, border-surface-tertiary, … */
   --color-surface: var(--surface);

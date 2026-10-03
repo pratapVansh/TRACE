@@ -13,6 +13,10 @@ from app.core.authorization import (
     get_permissions_for_role,
     has_permission,
 )
+from app.core.authorization.user_management_policy import (
+    can_assign_role,
+    creatable_roles_for,
+)
 from app.schemas.auth import UserMeResponse
 
 
@@ -72,6 +76,30 @@ def test_unknown_and_case_mismatched_roles_have_no_permissions():
 )
 def test_high_value_permission_boundaries(role, permission, allowed):
     assert has_permission(role, permission) is allowed
+
+
+def test_viewer_remains_a_private_admin_assigned_read_only_role():
+    assert can_assign_role("Admin", "Viewer") is True
+    assert can_assign_role("SuperAdmin", "Viewer") is True
+    assert get_permissions_for_role("Viewer") == frozenset(
+        {
+            PERMISSIONS.DASHBOARD,
+            PERMISSIONS.DOCUMENTS_READ,
+            PERMISSIONS.SEARCH,
+        }
+    )
+
+
+def test_only_administrative_roles_can_create_users():
+    assert creatable_roles_for("Viewer") == frozenset()
+    assert creatable_roles_for("Operator") == frozenset()
+    assert creatable_roles_for("Engineer") == frozenset()
+    assert creatable_roles_for("Admin") == frozenset(
+        {"Engineer", "Operator", "Viewer"}
+    )
+    assert creatable_roles_for("SuperAdmin") == frozenset(
+        {"SuperAdmin", "Admin", "Engineer", "Operator", "Viewer"}
+    )
 
 
 def _user(role: str) -> UserMeResponse:

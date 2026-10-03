@@ -9,24 +9,19 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_refresh_token,
-    hash_password,
     verify_password,
 )
 from app.core.security.jwt import REFRESH_TOKEN_EXPIRE_DAYS
 from app.repositories.refresh_token_repository import RefreshTokenRepository
-from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
-    RegisterRequest,
     UserMeResponse,
 )
 from app.services.audit_service import AuditService
 from app.services.exceptions import (
-    DefaultRoleNotFoundError,
-    EmailAlreadyRegisteredError,
     ExpiredRefreshTokenError,
     InactiveAccountError,
     InvalidCredentialsError,
@@ -35,56 +30,18 @@ from app.services.exceptions import (
     UserNotFoundError,
 )
 
-VIEWER_ROLE_NAME = "Viewer"
-
-
 class AuthService:
     def __init__(
         self,
         session: AsyncSession,
         user_repository: UserRepository,
-        role_repository: RoleRepository,
         refresh_token_repository: RefreshTokenRepository,
         audit_service: AuditService,
     ) -> None:
         self._session = session
         self._user_repository = user_repository
-        self._role_repository = role_repository
         self._refresh_token_repository = refresh_token_repository
         self._audit_service = audit_service
-
-    async def register_user(
-        self,
-        data: RegisterRequest,
-        ip_address: str | None = None,
-    ) -> None:
-        existing_user = await self._user_repository.get_user_by_email(data.email)
-        if existing_user is not None:
-            raise EmailAlreadyRegisteredError()
-
-        viewer_role = await self._role_repository.get_role_by_name(VIEWER_ROLE_NAME)
-        if viewer_role is None:
-            raise DefaultRoleNotFoundError()
-
-        password_hash = hash_password(data.password)
-        user = await self._user_repository.create_user(
-            full_name=data.full_name,
-            email=data.email,
-            password_hash=password_hash,
-            role_id=viewer_role.id,
-        )
-        await self._session.commit()
-
-        await self._audit_service.log(
-            user_id=user.id,
-            username=data.full_name,
-            action="user_registered",
-            entity_type="user",
-            entity_id=user.id,
-            ip_address=ip_address,
-        )
-        await self._audit_service.flush()
-        await self._session.commit()
 
     async def login_user(
         self,
