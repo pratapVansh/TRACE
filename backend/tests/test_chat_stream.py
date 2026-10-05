@@ -380,7 +380,7 @@ class TestChatStreamAPI:
             total=1,
         )
 
-        mock_llm = MockLLM(tokens=["Hello", " world"])
+        mock_llm = MockLLM(tokens=["test", " content"])
 
         rag = RagService(
             retriever=mock_retriever,
@@ -411,8 +411,7 @@ class TestChatStreamAPI:
         assert "event: meta" in response.text
         assert "event: citations" in response.text
         assert "event: token" in response.text
-        assert '"token": "Hello"' in response.text
-        assert '"token": " world"' in response.text
+        assert '"token": "test content"' in response.text
         assert "event: done" in response.text
 
         app.dependency_overrides.clear()

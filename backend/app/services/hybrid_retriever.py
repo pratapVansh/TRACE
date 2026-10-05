@@ -7,10 +7,11 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.graph.graph_query import GraphQueryService
 from app.schemas.hybrid import GraphFact, UnifiedContext, UnifiedContextItem
-from app.schemas.retrieval import RetrievedChunk
+from app.schemas.retrieval import RetrievalFilter, RetrievedChunk
+from app.services.retriever_service import _build_qdrant_filter
 from app.services.embedding_service import _encode_batch_async
 from app.services.reranker_service import candidate_count, rerank
-from app.services.retrieval_dedup import dedup_by_document
+from app.services.retrieval_dedup import dedup_by_document, passage_budget_for_query
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 
@@ -27,17 +28,25 @@ class VectorRetriever:
     def __init__(self, vector_store: VectorStore) -> None:
         self._vector_store = vector_store
 
-    async def retrieve(self, query: str, top_k: int = 10) -> list[RetrievedChunk]:
+    async def retrieve(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: RetrievalFilter | None = None,
+    ) -> list[RetrievedChunk]:
         query_vector = (await _encode_batch_async([query]))[0]
         # Over-fetch: the reranker can only reorder what retrieval returned.
         fetch_k = candidate_count(top_k)
 
         try:
-            results = await self._vector_store.hybrid_search(
-                query_vector=query_vector,
-                query_text=query,
-                top_k=fetch_k,
-            )
+            search_args = {
+                "query_vector": query_vector,
+                "query_text": query,
+                "top_k": fetch_k,
+            }
+            if filters:
+                search_args["query_filter"] = _build_qdrant_filter(filters)
+            results = await self._vector_store.hybrid_search(**search_args)
         except VectorStoreOperationError as exc:
             logger.error("VectorRetriever search failed: %s", exc)
             raise
@@ -78,7 +87,11 @@ class VectorRetriever:
         if not settings.retrieval_dedup_documents:
             return reranked[:top_k]
         return dedup_by_document(
-            reranked, top_k=top_k, per_document=settings.retrieval_chunks_per_document
+            reranked,
+            top_k=top_k,
+            per_document=passage_budget_for_query(
+                query, settings.retrieval_chunks_per_document
+            ),
         )
 
 
@@ -165,6 +178,27 @@ class GraphRetriever:
                 ))
 
             for nbr in nbrs:
+                # Legacy graph rows were keyed globally by entity name. A
+                # later document could overwrite an endpoint's provenance,
+                # leaving relationships whose endpoints belong to different
+                # documents. Never surface those as evidence. New rows have
+                # all three ids and are document-scoped by construction.
+                provenance_ids = {
+                    value
+                    for value in (
+                        entity.document_id,
+                        nbr.entity.document_id,
+                        nbr.relationship.document_id,
+                    )
+                    if value
+                }
+                if len(provenance_ids) > 1:
+                    logger.warning(
+                        "Discarding cross-document graph relationship id=%s ids=%s",
+                        nbr.relationship.id,
+                        sorted(provenance_ids),
+                    )
+                    continue
                 nkey = f"r:{entity.name}:{nbr.relationship.type}:{nbr.entity.name}"
                 if nkey in seen:
                     continue
@@ -290,15 +324,13 @@ class ContextMerger:
         all_facts: list[GraphFact],
         content_lower: str,
     ) -> list[GraphFact]:
-        """Facts about this chunk's document, plus any entity it names."""
-        matched = list(doc_facts)
-        for fact in all_facts:
-            if fact in matched:
-                continue
-            names = (fact.entity_name, fact.related_entity)
-            if any(name and name.lower() in content_lower for name in names):
-                matched.append(fact)
-        return matched
+        """Return only facts whose recorded provenance is this document.
+
+        Matching an entity name is not evidence provenance: the same asset is
+        often mentioned by unrelated documents. Cross-document attachment made
+        those chunks appear to substantiate relationships they never stated.
+        """
+        return list(doc_facts)
 
     def _find_duplicate(
         self,
@@ -402,15 +434,38 @@ class HybridRetriever:
         top_k: int = 10,
         vector_top_k: int = 10,
         graph_top_k: int = 5,
+        filters: RetrievalFilter | None = None,
     ) -> UnifiedContext:
+        async def retrieve_vectors() -> list[RetrievedChunk]:
+            if filters:
+                return await self._vector_retriever.retrieve(
+                    query, vector_top_k, filters
+                )
+            return await self._vector_retriever.retrieve(query, vector_top_k)
+
         if self._graph_retriever is None:
-            vector_results = await self._vector_retriever.retrieve(query, vector_top_k)
+            vector_results = await retrieve_vectors()
             graph_results: list[GraphFact] = []
         else:
             vector_results, graph_results = await asyncio.gather(
-                self._vector_retriever.retrieve(query, vector_top_k),
+                retrieve_vectors(),
                 self._graph_retriever.retrieve(query, graph_top_k),
             )
+
+        # Graph search is global, while vector filters may deliberately scope
+        # a RAG request to one document/type/user. Keep graph facts only when
+        # their recorded source belongs to the filtered vector result set;
+        # otherwise a document_id filter can still receive another document's
+        # graph facts or graph-only context.
+        if filters:
+            allowed_documents = {
+                (chunk.document_name or "").casefold() for chunk in vector_results
+            }
+            graph_results = [
+                fact
+                for fact in graph_results
+                if (fact.source_document or "").casefold() in allowed_documents
+            ]
 
         logger.info(
             "HybridRetriever: %d vector chunks, %d graph facts for query=%r",

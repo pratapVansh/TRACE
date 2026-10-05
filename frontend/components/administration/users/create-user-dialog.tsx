@@ -8,6 +8,7 @@ import { z } from "zod";
 import { AdminDialog } from "@/components/administration/users/admin-dialog";
 import { FormField, FormMessage } from "@/components/common/form-field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { getCreatableRoles } from "@/lib/administration/user-management-policy";
 
 const createUserSchema = z.object({
@@ -114,9 +115,9 @@ export function CreateUserDialog({
         </FormField>
 
         <FormField label="Password" htmlFor="create-password" error={errors.password?.message}>
-          <Input
+          <PasswordInput
             id="create-password"
-            type="password"
+            autoComplete="new-password"
             placeholder="Minimum 8 characters"
             {...register("password")}
           />

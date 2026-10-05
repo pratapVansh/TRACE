@@ -201,6 +201,27 @@ class TestCollectionManagement:
         await store.delete_collection()
         mock_qdrant_client.delete_collection.assert_called_once()
 
+    async def test_create_fulltext_index_creates_all_filter_indexes(
+        self,
+        store: QdrantVectorStore,
+        mock_qdrant_client: MagicMock,
+    ):
+        await store.create_fulltext_index()
+
+        fields = {
+            call.kwargs["field_name"]
+            for call in mock_qdrant_client.create_payload_index.call_args_list
+        }
+        assert fields == {
+            "content",
+            "document_id",
+            "document_type",
+            "filename",
+            "uploaded_by",
+            "metadata.language",
+            "upload_date",
+        }
+
     async def test_collection_exists_true(
         self,
         store: QdrantVectorStore,

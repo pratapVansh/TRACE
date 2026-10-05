@@ -13,10 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSemanticSearch } from "@/hooks/use-semantic-search";
 import { useRecentDocuments } from "@/hooks/use-documents";
 import {
-  loadSearchHistory,
-  saveSearchHistory,
-  upsertSearchHistoryEntry,
-} from "@/lib/knowledge/search-history";
+  clearSearchHistory,
+  deleteSearchHistory,
+  fetchSearchHistory,
+  recordSearchHistory,
+} from "@/lib/api/search";
 import type { SearchFilter, SearchHistoryItem } from "@/types/knowledge";
 
 export function SearchPageContent() {
@@ -52,29 +53,23 @@ function SearchPageExperience({ initialQuery }: { initialQuery: string }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setHistory(loadSearchHistory());
+    let cancelled = false;
+    void fetchSearchHistory().then((items) => {
+      if (!cancelled) setHistory(items);
     });
-    return () => window.cancelAnimationFrame(frame);
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (activeQuery && !isLoading && recordedQueryRef.current !== activeQuery) {
-      const frame = window.requestAnimationFrame(() => {
-        recordedQueryRef.current = activeQuery;
-        setHistory((current) => {
-          const next = upsertSearchHistoryEntry(current, {
-            query: activeQuery,
-            resultCount: results.length,
-            searchedAt: new Date().toISOString(),
-          });
-          saveSearchHistory(next);
-          return next;
-        });
-      });
-      return () => window.cancelAnimationFrame(frame);
+    if (activeQuery && !isLoading && !error && recordedQueryRef.current !== activeQuery) {
+      recordedQueryRef.current = activeQuery;
+      void recordSearchHistory({
+        query: activeQuery,
+        resultCount: results.length,
+        filters,
+      }).then(() => fetchSearchHistory()).then(setHistory);
     }
-  }, [activeQuery, isLoading, results.length]);
+  }, [activeQuery, error, filters, isLoading, results.length]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -217,6 +212,14 @@ function SearchPageExperience({ initialQuery }: { initialQuery: string }) {
                 recordedQueryRef.current = "";
                 setQuery(q);
                 setActiveQuery(q);
+              }}
+              onDelete={(id) => {
+                void deleteSearchHistory(id).then(() =>
+                  setHistory((items) => items.filter((item) => item.id !== id)),
+                );
+              }}
+              onClear={() => {
+                void clearSearchHistory().then(() => setHistory([]));
               }}
             />
           </div>

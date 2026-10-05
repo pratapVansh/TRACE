@@ -142,7 +142,10 @@ class TestPageCap:
         assert result.is_partial is True
         # page_count still reports the real document, not what was read.
         assert result.page_count == 5
-        assert len(result.pages) == 2
+        # The OCR cap limits OCR work, not page provenance. Later pages remain
+        # represented so their page numbers cannot silently shift.
+        assert len(result.pages) == 5
+        assert result.pages[2].text == ""
 
     @patch("app.services.scanned_pdf_ocr_extraction.extract_image_text")
     def test_documents_within_the_cap_are_untouched(self, mock_ocr, monkeypatch) -> None:

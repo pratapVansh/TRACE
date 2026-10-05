@@ -11,6 +11,8 @@ const DOC_TYPE_OPTIONS = [
   { value: "sop", label: "SOP" },
   { value: "spreadsheet", label: "Spreadsheet" },
   { value: "document", label: "Document" },
+  { value: "resume", label: "Resume" },
+  { value: "presentation", label: "Presentation" },
   { value: "image", label: "Image" },
   { value: "incident_report", label: "Incident Report" },
   { value: "inspection_report", label: "Inspection Report" },

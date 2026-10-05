@@ -54,7 +54,8 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
     """
     OCR a scanned PDF by rendering each page to an image and reusing image OCR.
 
-    Returns ``None`` when the PDF already has selectable text.
+    Returns ``None`` when every PDF page already has selectable text. Native
+    text is preserved page-by-page and OCR is used only for incomplete pages.
     """
     try:
         pdf_result = extract_pdf_text(content)
@@ -80,16 +81,25 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
         # at the configured 300 DPI: ~9.4 s per page end to end (~1.2 s of it
         # preprocessing, the rest Tesseract). See ``ocr_max_pages``.
         limit = max(settings.ocr_max_pages, 1)
-        pages_to_read = min(document.page_count, limit)
-        skipped = document.page_count - pages_to_read
+        ocr_pages = set(pdf_result.ocr_page_numbers)
+        ocr_targets = set(sorted(ocr_pages)[:limit])
+        skipped = len(ocr_pages) - len(ocr_targets)
         if skipped > 0:
             logger.warning(
-                "Scanned PDF has %d pages; OCR limited to the first %d "
-                "(ocr_max_pages). %d page(s) will not be indexed.",
-                document.page_count, pages_to_read, skipped,
+                "PDF has %d incomplete page(s); OCR limited to %d "
+                "(ocr_max_pages). %d page(s) will retain only native text.",
+                len(ocr_pages), limit, skipped,
             )
 
-        for page_index in range(pages_to_read):
+        native_pages = {page.page_number: page.text for page in pdf_result.pages}
+
+        for page_index in range(document.page_count):
+            page_number = page_index + 1
+            native_text = native_pages.get(page_number, "")
+            if page_number not in ocr_targets:
+                pages.append(ExtractedPage(page_number=page_number, text=native_text))
+                continue
+
             page = document[page_index]
             try:
                 image_bytes = _render_page_to_png(page)
@@ -106,8 +116,8 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
                     "OCR failed on scanned PDF page %d, skipping it: %s",
                     page_index + 1, exc,
                 )
-                failed.append(page_index + 1)
-                pages.append(ExtractedPage(page_number=page_index + 1, text=""))
+                failed.append(page_number)
+                pages.append(ExtractedPage(page_number=page_number, text=native_text))
                 continue
 
             if ocr_result.confidence is not None:
@@ -115,16 +125,16 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
 
             pages.append(
                 ExtractedPage(
-                    page_number=page_index + 1,
-                    text=ocr_result.full_text,
+                    page_number=page_number,
+                    text=_prefer_more_complete_text(native_text, ocr_result.full_text),
                 ),
             )
 
         # Every attempted page failing is an outage, not a partial read: there
         # is nothing to index and the retry is worth taking.
-        if failed and len(failed) == pages_to_read:
+        if failed and len(failed) == len(ocr_targets):
             raise ScannedPdfOcrExtractionError(
-                f"OCR failed on all {pages_to_read} page(s) of the scanned PDF",
+                f"OCR failed on all {len(ocr_targets)} incomplete page(s) of the PDF",
             )
 
         full_text = _join_page_text(pages)
@@ -143,6 +153,19 @@ def extract_scanned_pdf_text(content: bytes) -> ScannedPdfOcrResult | None:
 
 def _join_page_text(pages: list[ExtractedPage]) -> str:
     return "\n\n".join(page.text for page in pages if page.text)
+
+
+def _prefer_more_complete_text(native_text: str, ocr_text: str) -> str:
+    """Keep native text unless OCR recovered materially more page content."""
+    native = native_text.strip()
+    ocr = ocr_text.strip()
+    if not native:
+        return ocr
+    if not ocr:
+        return native
+    native_words = len(native.split())
+    ocr_words = len(ocr.split())
+    return ocr if ocr_words > native_words else native
 
 
 def _render_page_to_png(page: fitz.Page) -> bytes:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import mimetypes
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.core.storage.base import StorageBackend
 from app.core.storage.exceptions import StorageError
+from app.graph.graph_builder import GraphBuilderService
 from app.models.document import Document
 from app.repositories.document_repository import DocumentRepository
 from app.schemas.auth import UserMeResponse
@@ -29,6 +31,7 @@ from app.schemas.documents import (
 )
 from app.services.document_exceptions import (
     DocumentNotFoundError,
+    DocumentCleanupError,
     DocumentProcessingActiveError,
     DocumentStorageError,
     DuplicateDocumentError,
@@ -96,6 +99,7 @@ class DocumentService:
         audit_service: AuditService,
         processing_queue: DocumentProcessingQueueService | None = None,
         indexing_service: QdrantIndexingService | None = None,
+        graph_builder: GraphBuilderService | None = None,
     ) -> None:
         self._session = session
         self._document_repository = document_repository
@@ -103,6 +107,7 @@ class DocumentService:
         self._audit_service = audit_service
         self._processing_queue = processing_queue
         self._indexing_service = indexing_service
+        self._graph_builder = graph_builder
 
     async def upload_document(
         self,
@@ -120,13 +125,13 @@ class DocumentService:
             raise DuplicateDocumentError()
 
         title = data.title or Path(data.filename).stem or data.filename
-        doc_type = data.doc_type or self._infer_doc_type(extension)
         extra_metadata = self._build_metadata(source=data.source)
 
         classification = classify_document(
             filename=data.filename,
             content_text=try_decode_text(data.content, extension),
         )
+        doc_type = data.doc_type or classification.document_type
 
         document = await self._document_repository.create_document(
             title=title,
@@ -147,7 +152,9 @@ class DocumentService:
         )
 
         try:
-            stored_uri = self._storage.save(storage_uri, data.content)
+            stored_uri = await asyncio.to_thread(
+                self._storage.save, storage_uri, data.content,
+            )
         except StorageError as exc:
             await self._session.rollback()
             raise DocumentStorageError("Failed to store uploaded file") from exc
@@ -192,7 +199,7 @@ class DocumentService:
             # Nothing here reached the database, so the stored file has no row
             # referring to it and would otherwise be orphaned on disk.
             await self._session.rollback()
-            self._storage.delete(stored_uri)
+            await asyncio.to_thread(self._storage.delete, stored_uri)
             raise
 
         # Past this point the document row is durable, so the file must never
@@ -354,7 +361,9 @@ class DocumentService:
         latest_version = get_latest_version(document)
 
         try:
-            content = self._storage.read(latest_version.storage_uri)
+            content = await asyncio.to_thread(
+                self._storage.read, latest_version.storage_uri,
+            )
         except StorageError as exc:
             raise DocumentStorageError("Failed to read stored document") from exc
 
@@ -395,10 +404,48 @@ class DocumentService:
             raise DocumentProcessingActiveError()
 
         storage_uris = [version.storage_uri for version in document.versions]
+        original_filename = document.original_filename
+
+        # Cross-service deletion cannot be one ACID transaction. Keep every
+        # external operation idempotent and verify it before recording the
+        # PostgreSQL soft-delete. A failed request can then be retried safely,
+        # and TRACE never returns 204 while cloud artifacts are known to remain.
+        if self._indexing_service is None:
+            raise DocumentCleanupError("Qdrant cleanup service is unavailable")
+        try:
+            await self._indexing_service.delete_document_vectors(document_id)
+            remaining_vectors = await self._indexing_service.count_document_vectors(
+                document_id
+            )
+        except Exception as exc:
+            raise DocumentCleanupError("Failed to clean Qdrant vectors") from exc
+        if remaining_vectors:
+            raise DocumentCleanupError(
+                f"Qdrant still contains {remaining_vectors} vector(s)"
+            )
+
+        if self._graph_builder is None:
+            raise DocumentCleanupError("Neo4j cleanup service is unavailable")
+        try:
+            await self._graph_builder.delete_document(str(document_id))
+            remaining_nodes, remaining_relationships = (
+                await self._graph_builder.count_document_records(str(document_id))
+            )
+        except Exception as exc:
+            raise DocumentCleanupError("Failed to clean Neo4j graph data") from exc
+        if remaining_nodes or remaining_relationships:
+            raise DocumentCleanupError(
+                "Neo4j cleanup verification failed "
+                f"({remaining_nodes} nodes, {remaining_relationships} relationships)"
+            )
 
         try:
             for storage_uri in storage_uris:
-                self._storage.delete(storage_uri)
+                await asyncio.to_thread(self._storage.delete, storage_uri)
+                if await asyncio.to_thread(self._storage.exists, storage_uri):
+                    raise DocumentStorageError(
+                        f"Stored object still exists after deletion: {storage_uri}"
+                    )
         except StorageError as exc:
             raise DocumentStorageError("Failed to delete stored document files") from exc
 
@@ -406,16 +453,6 @@ class DocumentService:
             document_id=document_id,
             deleted_at=datetime.now(UTC),
         )
-        await self._session.commit()
-
-        if self._indexing_service is not None:
-            try:
-                await self._indexing_service.delete_document_vectors(document_id)
-            except Exception:
-                logger.warning(
-                    "Failed to delete Qdrant vectors for document_id=%s",
-                    document_id,
-                )
 
         if actor is not None:
             await self._audit_service.log(
@@ -425,10 +462,10 @@ class DocumentService:
                 entity_type="document",
                 entity_id=document_id,
                 ip_address=ip_address,
-                error_message=document.original_filename,
+                error_message=original_filename,
             )
             await self._audit_service.flush()
-            await self._session.commit()
+        await self._session.commit()
 
     def _validate_upload(self, filename: str, content: bytes) -> tuple[str, str]:
         if not content:

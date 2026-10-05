@@ -13,6 +13,7 @@ from app.repositories.audit_repository import AuditRepository
 from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
+from app.repositories.search_history_repository import SearchHistoryRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserMeResponse
@@ -24,6 +25,7 @@ from app.services.chat_service import ChatService
 from app.services.rag_service import RagService
 from app.services.retriever_service import RetrieverService
 from app.graph.base import GraphStore
+from app.graph.graph_builder import GraphBuilderService
 from app.graph.neo4j_graph_store import Neo4jGraphStore
 from app.services.vector_store import QdrantVectorStore, VectorStore
 from app.services.auth_service import AuthService
@@ -159,11 +161,18 @@ def get_vector_store(request: Request) -> VectorStore:
     )
 
 
+async def get_search_history_repository(
+    session: AsyncSession = Depends(get_db),
+) -> SearchHistoryRepository:
+    return SearchHistoryRepository(session)
+
+
 async def get_document_service(
     session: AsyncSession = Depends(get_db),
     processing_queue: DocumentProcessingQueueService = Depends(get_document_processing_queue),
     audit_service: AuditService = Depends(get_audit_service),
     vector_store: VectorStore = Depends(get_vector_store),
+    graph_store: GraphStore | None = Depends(get_graph_store_optional),
 ) -> DocumentService:
     indexing_service = QdrantIndexingService(vector_store=vector_store)
     return DocumentService(
@@ -173,6 +182,9 @@ async def get_document_service(
         audit_service=audit_service,
         processing_queue=processing_queue,
         indexing_service=indexing_service,
+        graph_builder=(
+            GraphBuilderService(graph_store) if graph_store is not None else None
+        ),
     )
 
 

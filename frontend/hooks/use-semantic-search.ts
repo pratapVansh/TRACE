@@ -47,6 +47,9 @@ export function useSemanticSearch({
         setIsLoadingMore(true);
       } else {
         setIsLoading(true);
+        // A failed replacement query must not leave the previous query's
+        // results on screen beside the new error.
+        setResults([]);
       }
       setError(null);
 
@@ -75,6 +78,9 @@ export function useSemanticSearch({
           err,
           "Search failed. Please try again.",
         );
+        if (!append) {
+          setResults([]);
+        }
         setError(message);
       } finally {
         if (!controller.signal.aborted) {

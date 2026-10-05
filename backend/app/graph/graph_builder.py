@@ -201,9 +201,16 @@ class GraphBuilderService:
     async def delete_document(self, document_id: str) -> int:
         """Delete all nodes and relationships associated with a document.
 
-        Uses DETACH DELETE to remove nodes and all their relationships.
+        Delete document-scoped relationships first because their endpoint
+        nodes may be shared with another document and therefore carry a
+        different ``document_id``. Then remove this document's own nodes.
         Returns the number of nodes deleted.
         """
+        await self._graph.execute_write(
+            "MATCH ()-[r]->() WHERE r.document_id = $document_id "
+            "DELETE r",
+            {"document_id": document_id},
+        )
         result = await self._graph.execute_write(
             "MATCH (n:Entity) WHERE n.document_id = $document_id "
             "WITH n, n.id AS node_id "
@@ -212,6 +219,23 @@ class GraphBuilderService:
             {"document_id": document_id},
         )
         return result[0]["deleted"] if result else 0
+
+    async def count_document_records(self, document_id: str) -> tuple[int, int]:
+        """Return document-scoped node and relationship counts."""
+        nodes = await self._graph.execute_read(
+            "MATCH (n:Entity) WHERE n.document_id = $document_id "
+            "RETURN count(n) AS total",
+            {"document_id": document_id},
+        )
+        relationships = await self._graph.execute_read(
+            "MATCH ()-[r]->() WHERE r.document_id = $document_id "
+            "RETURN count(r) AS total",
+            {"document_id": document_id},
+        )
+        return (
+            int(nodes[0]["total"]) if nodes else 0,
+            int(relationships[0]["total"]) if relationships else 0,
+        )
 
     async def validate_graph_integrity(
         self,
@@ -300,7 +324,7 @@ def _merge_nodes_batch(
     params = {
         "entities": [
             {
-                "id": entity.id,
+                "id": _entity_id(entity.name, entity.type, document_id),
                 "name": entity.name,
                 "type": entity.type.value,
                 "confidence": entity.confidence,
@@ -333,10 +357,12 @@ def _merge_rels_batch(
     UNWIND $rels AS r
     MATCH (src:Entity)
     WHERE (r.source_id IS NOT NULL AND src.id = r.source_id)
-       OR (r.source_id IS NULL AND src.name = r.source_name)
+       OR (r.source_id IS NULL AND src.name = r.source_name
+           AND src.document_id = r.document_id)
     MATCH (tgt:Entity)
     WHERE (r.target_id IS NOT NULL AND tgt.id = r.target_id)
-       OR (r.target_id IS NULL AND tgt.name = r.target_name)
+       OR (r.target_id IS NULL AND tgt.name = r.target_name
+           AND tgt.document_id = r.document_id)
     MERGE (src)-[rel:{label} {{id: r.id}}]->(tgt)
     SET rel.confidence = r.confidence,
         rel.document_id = r.document_id,
@@ -350,9 +376,9 @@ def _merge_rels_batch(
         "rels": [
             {
                 "id": rel.id,
-                "source_id": _entity_id(rel.source, rel.source_type) if rel.source_type else None,
+                "source_id": _entity_id(rel.source, rel.source_type, document_id) if rel.source_type else None,
                 "source_name": rel.source,
-                "target_id": _entity_id(rel.target, rel.target_type) if rel.target_type else None,
+                "target_id": _entity_id(rel.target, rel.target_type, document_id) if rel.target_type else None,
                 "target_name": rel.target,
                 "confidence": rel.confidence,
                 "document_id": document_id,
@@ -390,7 +416,7 @@ def _merge_node_query(
         "    n.created_at = COALESCE(n.created_at, $created_at)"
     )
     params = {
-        "id": entity.id,
+        "id": _entity_id(entity.name, entity.type, document_id),
         "name": entity.name,
         "type": entity.type.value,
         "confidence": entity.confidence,
@@ -419,16 +445,18 @@ def _merge_rel_query(
         logger.warning("Unknown relationship type: %s", rel.type)
         return None, {}
 
-    source_id = _entity_id(rel.source, rel.source_type) if rel.source_type else None
-    target_id = _entity_id(rel.target, rel.target_type) if rel.target_type else None
+    source_id = _entity_id(rel.source, rel.source_type, document_id) if rel.source_type else None
+    target_id = _entity_id(rel.target, rel.target_type, document_id) if rel.target_type else None
 
     query = (
         "MATCH (src:Entity) "
         "WHERE ($source_id IS NOT NULL AND src.id = $source_id) "
-        "   OR ($source_id IS NULL AND src.name = $source_name) "
+        "   OR ($source_id IS NULL AND src.name = $source_name "
+        "       AND src.document_id = $document_id) "
         "MATCH (tgt:Entity) "
         "WHERE ($target_id IS NOT NULL AND tgt.id = $target_id) "
-        "   OR ($target_id IS NULL AND tgt.name = $target_name) "
+        "   OR ($target_id IS NULL AND tgt.name = $target_name "
+        "       AND tgt.document_id = $document_id) "
         f"MERGE (src)-[r:{label} {{id: $id}}]->(tgt) "
         "SET r.confidence = $confidence, "
         "    r.document_id = $document_id, "

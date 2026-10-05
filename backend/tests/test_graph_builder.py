@@ -54,7 +54,7 @@ class TestMergeNodeQuery:
     def test_entity_id_used_as_merge_key(self):
         entity = Entity(name="P-101", type=EntityType.PUMP)
         q, p = _merge_node_query(entity, "d1", "", _NOW)
-        assert p["id"] == entity.id
+        assert p["id"] == _entity_id("P-101", EntityType.PUMP, "d1")
 
     def test_updated_at_set(self):
         entity = Entity(name="V-202", type=EntityType.VALVE)
@@ -89,8 +89,8 @@ class TestMergeRelQuery:
         assert "MERGE (src)-[r:CONNECTED_TO {id: $id}]->(tgt)" in q
         assert "COALESCE(r.source_document, $source_document)" in q
         assert "COALESCE(r.created_at, $created_at)" in q
-        assert p["source_id"] == _entity_id("P-101", EntityType.PUMP)
-        assert p["target_id"] == _entity_id("TK-305", EntityType.TANK)
+        assert p["source_id"] == _entity_id("P-101", EntityType.PUMP, "d1")
+        assert p["target_id"] == _entity_id("TK-305", EntityType.TANK, "d1")
         assert p["confidence"] == 0.95
         assert p["document_id"] == "d1"
         assert p["source_document"] == "proc.pdf"
@@ -392,16 +392,26 @@ class TestDeleteDocument:
     async def test_deletes_nodes_and_relationships(self, builder, mock_store):
         deleted = await builder.delete_document(document_id="d1")
         assert deleted == 3
-        mock_store.execute_write.assert_called_once()
+        assert mock_store.execute_write.await_count == 2
 
     async def test_delete_query_uses_document_id(self, builder, mock_store):
         await builder.delete_document(document_id="doc-123")
-        call_args = mock_store.execute_write.call_args
-        assert call_args[0][1] == {"document_id": "doc-123"}
+        for call_args in mock_store.execute_write.call_args_list:
+            assert call_args[0][1] == {"document_id": "doc-123"}
+
+    async def test_delete_removes_scoped_relationships_before_nodes(
+        self, builder, mock_store,
+    ):
+        await builder.delete_document(document_id="d1")
+        relationship_query = mock_store.execute_write.call_args_list[0][0][0]
+        node_query = mock_store.execute_write.call_args_list[1][0][0]
+        assert "r.document_id = $document_id" in relationship_query
+        assert "DELETE r" in relationship_query
+        assert "n.document_id = $document_id" in node_query
 
     async def test_delete_query_uses_detach(self, builder, mock_store):
         await builder.delete_document(document_id="d1")
-        query = mock_store.execute_write.call_args[0][0]
+        query = mock_store.execute_write.call_args_list[1][0][0]
         assert "DETACH DELETE" in query
 
     async def test_delete_returns_zero_when_no_nodes(self, builder, mock_store):
@@ -523,12 +533,12 @@ class TestEndToEndFlow:
 
         # Remaining calls: rel batches
         expected_source_ids = {
-            _entity_id("SOP-1234", EntityType.PROCEDURE),
-            _entity_id("P-101", EntityType.PUMP),
+            _entity_id("SOP-1234", EntityType.PROCEDURE, "d1"),
+            _entity_id("P-101", EntityType.PUMP, "d1"),
         }
         expected_target_ids = {
-            _entity_id("P-101", EntityType.PUMP),
-            _entity_id("TK-305", EntityType.TANK),
+            _entity_id("P-101", EntityType.PUMP, "d1"),
+            _entity_id("TK-305", EntityType.TANK, "d1"),
         }
         for call in calls[1:]:
             rels_params = call[0][1]
@@ -580,6 +590,11 @@ class TestIdempotency:
         entity = Entity(name="P-101", type=EntityType.PUMP)
 
         await builder.process_document("doc-a", [entity], [])
+        first_id = mock_tx.run.call_args_list[0][0][1]["entities"][0]["id"]
         await builder.process_document("doc-b", [entity], [])
+        second_id = mock_tx.run.call_args_list[1][0][1]["entities"][0]["id"]
 
         assert mock_tx.run.call_count == 2
+        assert first_id != second_id
+        assert first_id == _entity_id("P-101", EntityType.PUMP, "doc-a")
+        assert second_id == _entity_id("P-101", EntityType.PUMP, "doc-b")

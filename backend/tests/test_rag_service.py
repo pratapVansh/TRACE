@@ -542,7 +542,7 @@ class TestGraphRagServiceFallback:
         )
 
         mock_llm = AsyncMock()
-        mock_llm.generate.return_value = "Answer from semantic fallback."
+        mock_llm.generate.return_value = "P-101 is a centrifugal pump."
 
         svc = GraphRagService(
             hybrid_retriever=mock_hybrid,
@@ -555,7 +555,7 @@ class TestGraphRagServiceFallback:
         assert result.retrieval_source == "semantic_fallback"
         assert len(result.graph_facts) == 0
         assert len(result.citations) == 2
-        assert "semantic fallback" in result.answer
+        assert "centrifugal pump" in result.answer
 
     async def test_fallback_on_non_graph_error(self, sample_chunks):
         mock_hybrid = AsyncMock(spec=HybridRetriever)

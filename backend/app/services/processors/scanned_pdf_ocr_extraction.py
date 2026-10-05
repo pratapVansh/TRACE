@@ -81,6 +81,7 @@ class ScannedPdfOcrProcessor:
         document = await self._document_repository.get_document_by_id(context.document.id)
         metadata = dict(document.extra_metadata if document else context.document.extra_metadata)
         metadata.pop("requires_ocr", None)
+        metadata.pop("ocr_page_numbers", None)
 
         if result.has_text:
             metadata.pop("ocr_no_text", None)

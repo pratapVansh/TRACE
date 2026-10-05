@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -63,3 +64,23 @@ class SearchResultItem(BaseModel):
 
 class SearchResponse(BaseModel):
     results: list[SearchResultItem]
+
+
+class SearchHistoryCreate(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
+    result_count: int = Field(default=0, ge=0)
+    filters: SearchFilter | None = None
+
+
+class SearchHistoryItem(BaseModel):
+    id: UUID
+    query: str
+    result_count: int
+    filters: dict = Field(default_factory=dict)
+    searched_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SearchHistoryClearResponse(BaseModel):
+    deleted: int

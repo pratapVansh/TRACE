@@ -4,8 +4,17 @@ from hashlib import sha256
 from app.extraction.types import EntityType
 
 
-def _entity_id(name: str, type_: EntityType) -> str:
-    raw = f"{type_.value}:{name.lower()}"
+def _entity_id(name: str, type_: EntityType, document_id: str = "") -> str:
+    """Return a stable entity id, scoped to a source document when known.
+
+    Graph entities carry a single ``document_id`` and are deleted by that
+    value. A global name/type id therefore lets a later document overwrite
+    the first document's provenance and makes either document's deletion
+    unsafe. The empty default preserves legacy/direct-call compatibility;
+    ingestion always supplies a document id.
+    """
+    scope = f":{document_id}" if document_id else ""
+    raw = f"{type_.value}:{name.lower()}{scope}"
     return sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -21,7 +30,7 @@ class Entity:
 
     @property
     def id(self) -> str:
-        return _entity_id(self.name, self.type)
+        return _entity_id(self.name, self.type, self.document_id)
 
     def with_confidence(self, value: float) -> "Entity":
         return Entity(

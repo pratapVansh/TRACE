@@ -31,6 +31,7 @@ from app.schemas.rag import Citation
 from app.schemas.retrieval import RetrievalFilter
 from app.services.evidence_classification import (
     classify_statements,
+    enforce_grounded_answer,
     summarize_statements,
 )
 from app.services.rag_service import GraphRagService, RagService
@@ -378,20 +379,40 @@ class ChatService:
             additional_system_context=combined_context or None,
         ):  # GraphRagService.query_stream (falls back to semantic if hybrid fails)
             if event.startswith("event: citations"):
-                yield event
                 for line in event.split("\n"):
                     if line.startswith("data: "):
                         payload = json.loads(line[6:])
                         citations_data = payload.get("citations")
                         break
             elif event.startswith("event: token"):
-                yield event
                 for line in event.split("\n"):
                     if line.startswith("data: "):
                         payload = json.loads(line[6:])
                         full_answer += payload.get("token", "")
                         break
             elif event.startswith("event: done"):
+                citations = [Citation(**c) for c in (citations_data or [])]
+                full_answer, grounded_citations, removed = enforce_grounded_answer(
+                    full_answer, citations
+                )
+                if removed:
+                    logger.warning(
+                        "Grounding guard omitted %d unsupported streamed claim(s)",
+                        removed,
+                    )
+                citations_data = [citation.model_dump() for citation in grounded_citations]
+                sources = sorted({citation.document_name for citation in grounded_citations})
+                yield (
+                    "event: citations\ndata: "
+                    + json.dumps({"citations": citations_data, "sources": sources})
+                    + "\n\n"
+                )
+                if full_answer:
+                    yield (
+                        "event: token\ndata: "
+                        + json.dumps({"token": full_answer})
+                        + "\n\n"
+                    )
                 # Emitted before `done` on purpose: `done` is the terminal
                 # event, and clients stop reading once they see it.
                 yield self._evidence_event(full_answer, citations_data)

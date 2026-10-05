@@ -25,6 +25,7 @@ from app.schemas.documents import (
 )
 from app.services.document_exceptions import (
     DocumentNotFoundError,
+    DocumentCleanupError,
     DocumentProcessingActiveError,
     DocumentStorageError,
     DuplicateDocumentError,
@@ -275,4 +276,9 @@ async def delete_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete stored document files",
+        ) from exc
+    except DocumentCleanupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document cleanup could not be fully verified; retry deletion",
         ) from exc

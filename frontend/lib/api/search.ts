@@ -4,6 +4,7 @@ import type {
   SearchResultItem,
   SearchFilter,
 } from "@/types/knowledge";
+import type { SearchHistoryItem } from "@/types/knowledge";
 
 export interface SemanticSearchParams {
   query: string;
@@ -40,6 +41,48 @@ export async function semanticSearch(
     mode: params.mode ?? "ranked",
   });
   return data.results;
+}
+
+type SearchHistoryApiItem = {
+  id: string;
+  query: string;
+  result_count: number;
+  searched_at: string;
+};
+
+function mapHistory(item: SearchHistoryApiItem): SearchHistoryItem {
+  return {
+    id: item.id,
+    query: item.query,
+    resultCount: item.result_count,
+    searchedAt: item.searched_at,
+  };
+}
+
+export async function fetchSearchHistory(): Promise<SearchHistoryItem[]> {
+  const { data } = await apiClient.get<SearchHistoryApiItem[]>("/api/search/history");
+  return data.map(mapHistory);
+}
+
+export async function recordSearchHistory(params: {
+  query: string;
+  resultCount: number;
+  filters?: SearchFilter;
+}): Promise<SearchHistoryItem> {
+  const { data } = await apiClient.post<SearchHistoryApiItem>("/api/search/history", {
+    query: params.query,
+    result_count: params.resultCount,
+    filters: params.filters,
+  });
+  return mapHistory(data);
+}
+
+export async function deleteSearchHistory(id: string): Promise<void> {
+  await apiClient.delete(`/api/search/history/${id}`);
+}
+
+export async function clearSearchHistory(): Promise<void> {
+  await apiClient.delete("/api/search/history");
 }
 
 export type { SearchFilter, SearchResultItem };

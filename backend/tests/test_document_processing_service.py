@@ -273,11 +273,18 @@ async def test_process_document_marks_failed_when_processor_raises(
         async def process(self, context) -> None:
             raise RuntimeError("processor failed")
 
+    failing_processor = FailingProcessor()
+    failing_processor.cleanup = AsyncMock()
+    later_processor = MagicMock(name="later_processor")
+    later_processor.name = "later"
+    later_processor.process = AsyncMock()
+    later_processor.cleanup = AsyncMock()
+
     service = DocumentProcessingService(
         session=mock_session,
         document_repository=mock_repository,
         audit_service=AsyncMock(spec=AuditService),
-        processors=[FailingProcessor()],
+        processors=[failing_processor, later_processor],
     )
 
     processing_job = IngestionJob(
@@ -295,6 +302,9 @@ async def test_process_document_marks_failed_when_processor_raises(
         await service.process_document(job_id)
 
     mock_session.rollback.assert_awaited_once()
+    failing_processor.cleanup.assert_awaited_once()
+    later_processor.process.assert_not_awaited()
+    later_processor.cleanup.assert_not_awaited()
     failed_call = mock_repository.update_ingestion_job.await_args_list[-1]
     assert failed_call.kwargs["status"] == ProcessingStatus.FAILED.value
     assert mock_repository.update_document.await_args_list[-1].kwargs["status"] == "failed"

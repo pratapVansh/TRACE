@@ -1,0 +1,13 @@
+{
+  "summary": {
+    "neo4j_total_findings": 0,
+    "neo4j_nodes": {},
+    "neo4j_relationships": {},
+    "supabase_findings": 0,
+    "active_documents_requiring_graph_preservation": []
+  },
+  "neo4j_by_document": {},
+  "node_findings": [],
+  "relationship_findings": [],
+  "supabase_findings": []
+}

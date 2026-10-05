@@ -5,7 +5,7 @@ from app.core.logging import logger
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk, RetrievalResult
 from app.services.embedding_service import _encode_batch_async
 from app.services.reranker_service import candidate_count, rerank
-from app.services.retrieval_dedup import dedup_by_document
+from app.services.retrieval_dedup import dedup_by_document, passage_budget_for_query
 from app.services.vector_store import VectorStore, VectorStoreOperationError
 
 # Lazy import for qdrant types that may not be available in all environments
@@ -129,7 +129,11 @@ class RetrieverService:
 
         chunks = (
             dedup_by_document(
-                chunks, top_k=top_k, per_document=settings.retrieval_chunks_per_document
+                chunks,
+                top_k=top_k,
+                per_document=passage_budget_for_query(
+                    query, settings.retrieval_chunks_per_document
+                ),
             )
             if dedup_documents
             else chunks[:top_k]

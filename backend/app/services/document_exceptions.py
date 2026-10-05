@@ -30,5 +30,9 @@ class DocumentStorageError(DocumentServiceError):
     """Raised when persisting or reading document bytes fails."""
 
 
+class DocumentCleanupError(DocumentServiceError):
+    """Raised when a cloud artifact could not be removed and verified."""
+
+
 class DocumentProcessingActiveError(DocumentServiceError):
     """Raised when attempting to delete a document that is being processed."""

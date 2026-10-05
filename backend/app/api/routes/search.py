@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 try:
     from qdrant_client.models import FieldCondition, Filter, MatchValue, Range  # noqa: PLC0415
     _QD_SEARCH_AVAILABLE = True
@@ -10,7 +12,12 @@ except ImportError:
     _QD_SEARCH_AVAILABLE = False
 
 from app.api.authorization import require_permission
-from app.api.deps import get_graph_query_optional, get_ranking_service, get_vector_store
+from app.api.deps import (
+    get_graph_query_optional,
+    get_ranking_service,
+    get_search_history_repository,
+    get_vector_store,
+)
 from app.core.authorization import PERMISSIONS
 from app.core.config import settings
 from app.core.logging import logger
@@ -23,7 +30,11 @@ from app.schemas.vector import (
     SearchRequest,
     SearchResponse,
     SearchResultItem,
+    SearchHistoryClearResponse,
+    SearchHistoryCreate,
+    SearchHistoryItem,
 )
+from app.repositories.search_history_repository import SearchHistoryRepository
 from app.services.embedding_service import _encode_batch_async
 from app.services.ranking_service import RankingService
 from app.services.vector_store import VectorStore, VectorStoreOperationError
@@ -34,6 +45,51 @@ search_rate_limiter = RateLimiter(
     max_requests=settings.search_rate_limit_max,
     window_seconds=settings.search_rate_limit_window_seconds,
 )
+
+
+@router.get("/history", response_model=list[SearchHistoryItem])
+async def list_search_history(
+    current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.SEARCH)),
+    repository: SearchHistoryRepository = Depends(get_search_history_repository),
+) -> list[SearchHistoryItem]:
+    rows = await repository.list_for_user(current_user.id)
+    return [SearchHistoryItem.model_validate(row) for row in rows]
+
+
+@router.post("/history", response_model=SearchHistoryItem, status_code=status.HTTP_201_CREATED)
+async def record_search_history(
+    payload: SearchHistoryCreate,
+    current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.SEARCH)),
+    repository: SearchHistoryRepository = Depends(get_search_history_repository),
+) -> SearchHistoryItem:
+    row = await repository.record(
+        user_id=current_user.id,
+        query=payload.query,
+        result_count=payload.result_count,
+        filters=payload.filters.model_dump(exclude_none=True) if payload.filters else {},
+    )
+    return SearchHistoryItem.model_validate(row)
+
+
+@router.delete("/history/{history_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_search_history_item(
+    history_id: UUID,
+    current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.SEARCH)),
+    repository: SearchHistoryRepository = Depends(get_search_history_repository),
+) -> Response:
+    if not await repository.delete_one(history_id, current_user.id):
+        raise HTTPException(status_code=404, detail="Search history item not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/history", response_model=SearchHistoryClearResponse)
+async def clear_search_history(
+    current_user: UserMeResponse = Depends(require_permission(PERMISSIONS.SEARCH)),
+    repository: SearchHistoryRepository = Depends(get_search_history_repository),
+) -> SearchHistoryClearResponse:
+    return SearchHistoryClearResponse(
+        deleted=await repository.clear_for_user(current_user.id)
+    )
 
 
 def _build_qdrant_filter(filters: SearchFilter) -> Filter | None:

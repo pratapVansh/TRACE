@@ -2,6 +2,10 @@ class StorageError(Exception):
     """Base class for storage backend failures."""
 
 
+class StorageConfigurationError(StorageError):
+    """Raised when a storage backend is missing required safe configuration."""
+
+
 class StoragePathError(StorageError):
     """Raised when a storage path is invalid or escapes the storage root."""
 

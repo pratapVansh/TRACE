@@ -107,6 +107,8 @@ class AuthService:
         )
 
     async def refresh_tokens(self, data: RefreshTokenRequest) -> LoginResponse:
+        if not data.refresh_token:
+            raise InvalidRefreshTokenError()
         try:
             claims = decode_refresh_token(data.refresh_token)
         except TokenExpiredError as exc:
@@ -178,6 +180,8 @@ class AuthService:
         data: RefreshTokenRequest,
         ip_address: str | None = None,
     ) -> None:
+        if not data.refresh_token:
+            raise InvalidRefreshTokenError()
         stored_token = await self._refresh_token_repository.get_refresh_token(data.refresh_token)
         if stored_token is None:
             raise RevokedRefreshTokenError()

@@ -9,7 +9,7 @@ cannot drift apart again.
 import pytest
 
 from app.schemas.retrieval import RetrievedChunk
-from app.services.retrieval_dedup import dedup_by_document
+from app.services.retrieval_dedup import dedup_by_document, passage_budget_for_query
 
 
 def _chunk(doc: str, score: float, chunk_id: str = "") -> RetrievedChunk:
@@ -127,6 +127,16 @@ def test_fewer_documents_than_top_k_is_not_padded():
 
 def test_empty_input():
     assert dedup_by_document([], top_k=5) == []
+
+
+def test_resume_overview_queries_keep_four_sections_per_document():
+    assert passage_budget_for_query(
+        "Summarize education, projects, and experience from this resume", 2
+    ) == 4
+
+
+def test_narrow_asset_query_keeps_configured_passage_budget():
+    assert passage_budget_for_query("What is the seal pressure for P-101?", 2) == 2
 
 
 @pytest.mark.asyncio

@@ -10,6 +10,7 @@ from app.schemas.hybrid import GraphFact, UnifiedContext, UnifiedContextItem
 from app.schemas.rag import Citation, GraphCitation, GraphRagResponse, RagQueryResponse
 from app.schemas.retrieval import RetrievalFilter, RetrievedChunk
 from app.services.hybrid_retriever import HybridRetriever
+from app.services.evidence_classification import enforce_grounded_answer
 from app.services.prompt_builder import PromptBuilder
 from app.services.query_understanding import (
     QueryUnderstanding,
@@ -186,6 +187,13 @@ class RagService:
             for chunk in retrieval.results
         ]
 
+        answer, citations, removed_claims = enforce_grounded_answer(answer, citations)
+        if removed_claims:
+            logger.warning(
+                "Grounding guard omitted %d unsupported RAG claim(s)",
+                removed_claims,
+            )
+
         confidence = retrieval.results[0].score
 
         logger.info(
@@ -307,6 +315,10 @@ def _extract_all_graph_facts(unified: UnifiedContext) -> list[GraphFact]:
     seen: set[str] = set()
     facts: list[GraphFact] = []
     for item in unified.items:
+        if item.source == "graph":
+            # Graph-only items have no retrieved passage to substantiate them.
+            # They may influence ranking but cannot become answer evidence.
+            continue
         for gf in item.graph_facts:
             key = f"{gf.entity_name}:{gf.relationship_type}:{gf.related_entity}"
             if key not in seen:
@@ -410,6 +422,7 @@ class GraphRagService:
                 top_k=top_k,
                 vector_top_k=vector_top_k,
                 graph_top_k=graph_top_k,
+                filters=filters,
             )
             chunks = _extract_chunks_from_unified(unified)
             graph_facts = _extract_all_graph_facts(unified)
@@ -469,6 +482,13 @@ class GraphRagService:
             for chunk in chunks
         ]
 
+        answer, citations, removed_claims = enforce_grounded_answer(answer, citations)
+        if removed_claims:
+            logger.warning(
+                "Grounding guard omitted %d unsupported GraphRAG claim(s)",
+                removed_claims,
+            )
+
         # M33: combined confidence
         confidence = _compute_combined_confidence(chunks, graph_facts)
 
@@ -525,6 +545,7 @@ class GraphRagService:
                 top_k=top_k,
                 vector_top_k=vector_top_k,
                 graph_top_k=graph_top_k,
+                filters=filters,
             )
             chunks = _extract_chunks_from_unified(unified)
             graph_facts = _extract_all_graph_facts(unified)

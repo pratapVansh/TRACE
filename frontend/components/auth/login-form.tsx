@@ -13,6 +13,7 @@ import { AuthShell } from "@/components/layout/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/hooks/use-auth";
 import { AUTH_ROUTES } from "@/lib/auth/routes";
 import { authStorage } from "@/lib/auth/storage";
@@ -115,9 +116,8 @@ export function LoginForm() {
           htmlFor="password"
           error={errors.password?.message}
         >
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             placeholder="Enter your password"
             aria-invalid={Boolean(errors.password)}

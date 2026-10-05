@@ -185,4 +185,82 @@ def summarize_statements(
     )
 
 
-__all__ = ["classify_statements", "summarize_statements", "split_sentences"]
+def enforce_grounded_answer(
+    answer: str,
+    citations: list[Citation],
+) -> tuple[str, list[Citation], int]:
+    """Remove claim-bearing lines that retrieved passages do not support.
+
+    This is a response safety guard, separate from evaluation scoring. The
+    existing classifier and thresholds remain unchanged; the guard consumes
+    its classifications after generation. Headings and short non-claim UI
+    text are preserved, while hypotheses and unknown recommendations are not
+    presented as part of the answer.
+    """
+    statements = classify_statements(answer, citations)
+    if not statements:
+        return answer, citations, 0
+
+    by_text = {statement.text: statement for statement in statements}
+    kept_lines: list[str] = []
+    referenced_documents: list[str] = []
+    removed = 0
+    kept_facts = 0
+
+    for line in answer.splitlines():
+        candidates = split_sentences(line)
+        classified = [by_text[text] for text in candidates if text in by_text]
+        if not classified:
+            kept_lines.append(line)
+            continue
+
+        supported = [s for s in classified if s.classification == "FACT"]
+        removed += len(classified) - len(supported)
+        if not supported:
+            continue
+
+        kept_facts += len(supported)
+        for statement in supported:
+            for name in statement.evidence_refs:
+                if name not in referenced_documents:
+                    referenced_documents.append(name)
+
+        # Preserve the original line only when every claim on it is supported.
+        # Mixed lines are rebuilt from supported sentences so an unsupported
+        # recommendation cannot ride alongside a grounded fact.
+        if len(supported) == len(classified):
+            kept_lines.append(line)
+        else:
+            kept_lines.append(" ".join(statement.text for statement in supported))
+
+    if kept_facts == 0:
+        return (
+            "I could not find enough cited evidence to answer this reliably.",
+            [],
+            removed,
+        )
+
+    grounded_citations = [
+        citation
+        for citation in citations
+        if citation.document_name in referenced_documents
+    ]
+    if not grounded_citations:
+        grounded_citations = citations[:1]
+
+    grounded_answer = "\n".join(kept_lines).strip()
+    if removed:
+        grounded_answer += (
+            "\n\n> [!EVIDENCE]\n"
+            "> Unsupported inferences or recommendations were omitted because "
+            "the retrieved passages did not substantiate them."
+        )
+    return grounded_answer, grounded_citations, removed
+
+
+__all__ = [
+    "classify_statements",
+    "enforce_grounded_answer",
+    "summarize_statements",
+    "split_sentences",
+]

@@ -17,13 +17,13 @@ export async function loginRequest(payload: LoginRequest): Promise<TokenResponse
  * httpOnly cookie, so no argument (and no request body) is needed.
  */
 export async function refreshRequest(): Promise<TokenResponse> {
-  const { data } = await apiClient.post<TokenResponse>("/api/auth/refresh", {});
+  const { data } = await apiClient.post<TokenResponse>("/api/auth/refresh");
   return data;
 }
 
 /** Revokes the refresh token server-side and expires the cookie. */
 export async function logoutRequest(): Promise<MessageResponse> {
-  const { data } = await apiClient.post<MessageResponse>("/api/auth/logout", {});
+  const { data } = await apiClient.post<MessageResponse>("/api/auth/logout");
   return data;
 }
 

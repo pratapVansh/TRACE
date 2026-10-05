@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     # Document storage (Milestone 4+)
     storage_backend: str = "local"
     storage_root: str = "./storage"
+    # Supabase Storage is opt-in. The service-role key is a backend credential
+    # and must never be exposed through NEXT_PUBLIC_* or sent to the browser.
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = ""
+    supabase_storage_timeout_seconds: float = 30.0
+    supabase_storage_max_retries: int = 3
+    supabase_storage_retry_base_delay_seconds: float = 0.5
+    supabase_storage_retry_max_delay_seconds: float = 5.0
     max_upload_size_mb: int = 100
     allowed_upload_extensions: str = "pdf,docx,pptx,xlsx,txt,png,jpg,jpeg"
 
@@ -132,6 +141,11 @@ class Settings(BaseSettings):
     # Qdrant vector store (Milestone 7+)
     qdrant_url: str = ""
     qdrant_api_key: str = ""
+    # Parked managed-service credentials used by read-only readiness tooling.
+    # The running application continues to use QDRANT_URL/QDRANT_API_KEY, so
+    # defining these does not switch traffic away from local Docker Qdrant.
+    qdrant_cloud_url: str = ""
+    qdrant_cloud_api_key: str = ""
     qdrant_collection_name: str = "document_chunks"
     qdrant_timeout_seconds: int = 30
     qdrant_max_retries: int = 3

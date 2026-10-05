@@ -176,11 +176,16 @@ class MemoryRepository:
             await self._session.flush()
         return count
 
-    async def touch(self, memory_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    async def touch(
+        self, memory_id: uuid.UUID, user_id: uuid.UUID
+    ) -> datetime | None:
         mem = await self.get(memory_id, user_id)
         if mem is not None:
-            mem.last_accessed = datetime.now(timezone.utc)
+            accessed_at = datetime.now(timezone.utc)
+            mem.last_accessed = accessed_at
             await self._session.flush()
+            return accessed_at
+        return None
 
     async def search_by_embedding(
         self,

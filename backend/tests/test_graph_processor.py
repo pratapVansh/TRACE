@@ -375,6 +375,9 @@ class TestGraphProcessorRelationships:
             def __init__(self, graph_store: object) -> None:
                 self._graph_store = graph_store
 
+            async def delete_document(self, document_id: str) -> int:
+                return 0
+
             async def process_document(
                 self,
                 document_id: str,
@@ -486,6 +489,9 @@ class TestGraphProcessorRelationships:
         class RecordingBuilder:
             def __init__(self, graph_store: object) -> None:
                 self._graph_store = graph_store
+
+            async def delete_document(self, document_id: str) -> int:
+                return 0
 
             async def process_document(
                 self,

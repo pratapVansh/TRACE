@@ -11,6 +11,7 @@ from app.models.document_version import DocumentVersion
 from app.models.ingestion_job import IngestionJob
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
+from app.models.search_history import SearchHistory
 from app.models.user import User
 
 # Register ProcessingJob model with Base.metadata for Alembic detection.
@@ -30,5 +31,6 @@ __all__ = [
     "ProcessingJob",
     "RefreshToken",
     "Role",
+    "SearchHistory",
     "User",
 ]

@@ -66,3 +66,7 @@ class IndexingProcessor:
             len(chunks),
             indexed,
         )
+
+    async def cleanup(self, context: ProcessingContext) -> None:
+        """Remove complete or partial vector batches from a failed attempt."""
+        await self._indexing_service.delete_document_vectors(context.document.id)

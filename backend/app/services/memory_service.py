@@ -49,8 +49,15 @@ class MemoryService:
         mem = await self._repo.get(memory_uuid, user_uuid)
         if mem is None:
             return None
-        await self._repo.touch(memory_uuid, user_uuid)
-        return self._to_response(mem)
+        # Serialize before ``touch`` flushes. PostgreSQL's server-side
+        # ``updated_at`` can expire ORM attributes during that flush, and
+        # reading an expired attribute here would trigger async lazy IO from a
+        # synchronous serializer (MissingGreenlet).
+        response = self._to_response(mem)
+        accessed_at = await self._repo.touch(memory_uuid, user_uuid)
+        if accessed_at is not None:
+            response.last_accessed = accessed_at
+        return response
 
     async def update_memory(
         self,

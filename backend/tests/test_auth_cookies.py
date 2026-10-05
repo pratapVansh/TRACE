@@ -124,6 +124,14 @@ class TestRefresh:
         assert response.status_code == 401
         assert "Missing refresh token" in response.json()["detail"]
 
+    def test_empty_json_body_uses_cookie(self, client, mock_auth_service):
+        client.cookies.set(COOKIE, REFRESH_TOKEN, path=settings.refresh_cookie_path)
+        response = client.post("/api/auth/refresh", json={})
+
+        assert response.status_code == 200
+        forwarded = mock_auth_service.refresh_tokens.call_args.args[0]
+        assert forwarded.refresh_token == REFRESH_TOKEN
+
     def test_invalid_token_is_unauthorized(self, client, mock_auth_service):
         mock_auth_service.refresh_tokens.side_effect = InvalidRefreshTokenError()
         client.cookies.set(COOKIE, "bad", path=settings.refresh_cookie_path)

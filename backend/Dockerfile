@@ -85,7 +85,8 @@ RUN pip install -r requirements.lock.txt
 # ---------------------------------------------------------------------------
 FROM builder AS models
 
-ENV HF_HOME=/opt/models
+ENV HF_HOME=/opt/models \
+    TIKTOKEN_CACHE_DIR=/opt/tiktoken
 
 # Defaults track app/core/config.py (embedding_model_name, rerank_model_name).
 # Override both together with the config if the models ever change.
@@ -101,10 +102,17 @@ COPY scripts/bake_models.py /tmp/bake_models.py
 # First pass downloads and exercises both models.
 RUN python /tmp/bake_models.py
 
+# Chunk boundaries use cl100k_base token counts. tiktoken otherwise downloads
+# this vocabulary on the first uploaded document, making ingestion depend on
+# outbound network access even though the ML models are already baked.
+RUN mkdir -p /opt/tiktoken \
+ && python -c "import tiktoken; e=tiktoken.get_encoding('cl100k_base'); print(e.name, len(e.encode('offline tokenizer probe')))"
+
 # Second pass with the hub forced offline. This is the actual guarantee: if
 # anything still reaches for huggingface.co, the build fails here instead of
 # the first user request timing out in production.
-RUN HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python /tmp/bake_models.py
+RUN HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python /tmp/bake_models.py \
+ && python -c "import tiktoken; print(tiktoken.get_encoding('cl100k_base').name)"
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +181,7 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     HF_HOME=/opt/models \
+    TIKTOKEN_CACHE_DIR=/opt/tiktoken \
     HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1 \
     STORAGE_ROOT=/app/storage \
@@ -180,6 +189,7 @@ ENV PATH="/opt/venv/bin:${PATH}" \
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=models --chown=trace:trace /opt/models /opt/models
+COPY --from=models --chown=trace:trace /opt/tiktoken /opt/tiktoken
 
 WORKDIR /app
 

@@ -109,6 +109,10 @@ class GraphProcessor:
                     all_relationships.append(rel)
 
             builder = GraphBuilderService(graph_store=self._graph_store)
+            # Reprocessing must replace this document's graph, not only MERGE
+            # the entities that still happen to be present. Otherwise removed
+            # facts survive forever and can be retrieved as stale evidence.
+            await builder.delete_document(doc_id_str)
             result = await builder.process_document(
                 document_id=doc_id_str,
                 entities=all_entities,
@@ -131,3 +135,11 @@ class GraphProcessor:
             raise
         except Exception as exc:
             raise GraphExtractionError(f"Graph extraction failed: {exc}") from exc
+
+    async def cleanup(self, context: ProcessingContext) -> None:
+        """Remove graph writes made by an ingestion attempt that later failed."""
+        if self._graph_store is None:
+            return
+        await GraphBuilderService(self._graph_store).delete_document(
+            str(context.document.id)
+        )

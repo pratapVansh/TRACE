@@ -57,6 +57,10 @@ class QdrantIndexingService:
         """Delete all Qdrant vectors for a document."""
         return await self._vector_store.delete_vectors_by_document(document_id)
 
+    async def count_document_vectors(self, document_id: UUID) -> int:
+        """Return the exact vector count for lifecycle verification."""
+        return await self._vector_store.count_vectors_by_document(document_id)
+
     def _build_point(
         self,
         chunk: DocumentChunk,

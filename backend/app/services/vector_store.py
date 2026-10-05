@@ -658,6 +658,11 @@ class QdrantVectorStore(VectorStore):
                 max_token_len=20,
             )),
             ("document_id", PayloadSchemaType.KEYWORD),
+            ("document_type", PayloadSchemaType.KEYWORD),
+            ("filename", PayloadSchemaType.KEYWORD),
+            ("uploaded_by", PayloadSchemaType.KEYWORD),
+            ("metadata.language", PayloadSchemaType.KEYWORD),
+            ("upload_date", PayloadSchemaType.FLOAT),
         ):
             try:
                 client.create_payload_index(

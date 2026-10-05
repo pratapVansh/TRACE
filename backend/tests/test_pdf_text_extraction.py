@@ -68,6 +68,22 @@ def test_extract_pdf_text_flags_scanned_pdf_without_text_layer() -> None:
     assert result.full_text == ""
     assert result.pages[0].text == ""
     assert result.pages[1].text == ""
+    assert result.ocr_page_numbers == (1, 2)
+
+
+def test_extract_pdf_text_flags_only_pages_missing_native_text() -> None:
+    document = fitz.open()
+    first_page = document.new_page()
+    first_page.insert_text((72, 72), "Native resume header and contact details")
+    document.new_page()
+    content = document.tobytes()
+    document.close()
+
+    result = extract_pdf_text(content)
+
+    assert result.requires_ocr is True
+    assert result.ocr_page_numbers == (2,)
+    assert "Native resume header" in result.full_text
 
 
 def test_extract_pdf_text_rejects_empty_bytes() -> None:

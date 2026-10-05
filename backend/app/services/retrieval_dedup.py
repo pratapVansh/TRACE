@@ -10,6 +10,7 @@ same document two or three times, once per matching passage.
 from collections import OrderedDict
 from collections.abc import Iterable, Sequence
 from typing import Protocol, TypeVar
+import re
 
 
 class _Deduplicable(Protocol):
@@ -18,6 +19,18 @@ class _Deduplicable(Protocol):
 
 
 T = TypeVar("T", bound=_Deduplicable)
+
+_MULTI_SECTION_QUERY_RE = re.compile(
+    r"\b(?:resume|cv|education|experience|projects?|qualifications|background|"
+    r"summari[sz]e|overview)\b",
+    re.IGNORECASE,
+)
+
+
+def passage_budget_for_query(query: str, configured: int) -> int:
+    """Widen same-document coverage for explicitly multi-section questions."""
+    base = max(configured, 1)
+    return max(base, 4) if _MULTI_SECTION_QUERY_RE.search(query) else base
 
 
 def dedup_by_document(

@@ -12,6 +12,7 @@ import {
 import { AdminDialog } from "@/components/administration/users/admin-dialog";
 import { FormField, FormMessage } from "@/components/common/form-field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { formatDateTime } from "@/lib/dashboard/format";
 import {
   canAssignRole,
@@ -249,9 +250,9 @@ export function EditUserDialog({
               htmlFor="edit-new-password"
               error={passwordForm.formState.errors.new_password?.message}
             >
-              <Input
+              <PasswordInput
                 id="edit-new-password"
-                type="password"
+                autoComplete="new-password"
                 disabled={!manageable || isResettingPassword}
                 {...passwordForm.register("new_password")}
               />
@@ -261,9 +262,9 @@ export function EditUserDialog({
               htmlFor="edit-confirm-password"
               error={passwordForm.formState.errors.confirm_password?.message}
             >
-              <Input
+              <PasswordInput
                 id="edit-confirm-password"
-                type="password"
+                autoComplete="new-password"
                 disabled={!manageable || isResettingPassword}
                 {...passwordForm.register("confirm_password")}
               />

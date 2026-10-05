@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -130,6 +131,8 @@ class DocumentProcessingService:
         await self._audit_service.flush()
         await self._session.commit()
 
+        context: ProcessingContext | None = None
+        attempted_processors: list[DocumentProcessor] = []
         try:
             try:
                 latest_version = get_latest_version(document)
@@ -155,6 +158,12 @@ class DocumentProcessingService:
                         document_id,
                         job_id,
                     )
+                    # Include the current processor before entering it: a
+                    # cloud writer may fail after a partial write and still
+                    # needs compensation. Processors not yet attempted are
+                    # excluded so a pre-indexing failure cannot erase the
+                    # previous good Qdrant/Neo4j state during reprocessing.
+                    attempted_processors.append(processor)
                     await processor.process(context)
 
             finished_at = datetime.now(UTC)
@@ -188,8 +197,19 @@ class DocumentProcessingService:
             await self._session.commit()
 
             return completed
+        except asyncio.CancelledError:
+            await self._session.rollback()
+            if context is not None:
+                await asyncio.shield(
+                    self._cleanup_external_artifacts(context, attempted_processors)
+                )
+            raise
         except Exception as exc:
             await self._session.rollback()
+            if context is not None:
+                await self._cleanup_external_artifacts(
+                    context, attempted_processors
+                )
             await self._mark_failed(job_id, str(exc))
             await self._sync_document_status(document_id, ProcessingStatus.FAILED.value)
             await self._session.commit()
@@ -207,6 +227,36 @@ class DocumentProcessingService:
             await self._session.commit()
 
             raise
+
+    async def _cleanup_external_artifacts(
+        self,
+        context: ProcessingContext,
+        attempted_processors: list[DocumentProcessor],
+    ) -> None:
+        """Compensate cloud writes if the database ingestion transaction fails."""
+        failures: list[str] = []
+        for processor in reversed(attempted_processors):
+            cleanup = getattr(processor, "cleanup", None)
+            if cleanup is None:
+                continue
+            try:
+                await cleanup(context)
+            except Exception as cleanup_exc:
+                failures.append(f"{processor.name}: {cleanup_exc}")
+                logger.exception(
+                    "Failed to clean external ingestion artifacts processor=%s "
+                    "document_id=%s",
+                    processor.name,
+                    context.document.id,
+                )
+        if failures:
+            # Do not mask the original ingestion error, but leave an explicit
+            # durable/loggable signal instead of silently claiming cleanup.
+            logger.error(
+                "External ingestion cleanup incomplete document_id=%s failures=%s",
+                context.document.id,
+                "; ".join(failures),
+            )
 
     async def _mark_processing(
         self,
@@ -254,5 +304,3 @@ class DocumentProcessingService:
             return
 
         await self._sync_document_status(document_id, ProcessingStatus.COMPLETED.value)
-
-

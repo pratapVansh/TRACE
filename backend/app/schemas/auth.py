@@ -35,7 +35,11 @@ class AccessTokenResponse(BaseModel):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str = Field(min_length=1)
+    # Browser clients authenticate refresh/logout with the httpOnly cookie and
+    # may send either no body or an empty JSON object.  Keep the body token
+    # optional for non-browser clients; routes still reject the request when
+    # neither source supplies a token.
+    refresh_token: str | None = Field(default=None, min_length=1)
 
 
 class UserMeResponse(BaseModel):

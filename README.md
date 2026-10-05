@@ -276,11 +276,30 @@ NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
 
+# Document storage (local remains the default)
+STORAGE_BACKEND=local
+STORAGE_ROOT=./storage
+
+# Supabase Storage (only required when STORAGE_BACKEND=supabase)
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=
+SUPABASE_STORAGE_TIMEOUT_SECONDS=30
+SUPABASE_STORAGE_MAX_RETRIES=3
+SUPABASE_STORAGE_RETRY_BASE_DELAY_SECONDS=0.5
+SUPABASE_STORAGE_RETRY_MAX_DELAY_SECONDS=5
+
 # Bootstrap SuperAdmin
 SUPER_ADMIN_EMAIL=admin@company.com
 SUPER_ADMIN_PASSWORD=secure-password
 SUPER_ADMIN_FULL_NAME=Admin User
 ```
+
+The Supabase bucket must already exist and be private. Keep the service-role
+key on the backend only; never expose it through a `NEXT_PUBLIC_*` variable.
+Selecting `supabase` does not migrate existing local objects. To inspect the
+current local migration set without writing to PostgreSQL or storage, run
+`cd backend && python scripts/storage_inventory.py` (or add `--json`).
 
 Also create the frontend env file:
 

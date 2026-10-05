@@ -64,11 +64,14 @@ services:
     image: trace-backend:dev
     env_file:
       - .env.docker
+    environment:
+      # PostgreSQL remains the existing native/local Windows service. Using
+      # the Compose-only database here split durable document IDs from the
+      # already-populated Qdrant Cloud, Aura, and Supabase records.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
     command: ["alembic", "upgrade", "head"]
     working_dir: /app
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: "no"
 
   # One-shot, idempotent first-user bootstrap. The values are read by Compose
@@ -80,6 +83,8 @@ services:
     env_file:
       - .env.docker
     environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:?Set SUPER_ADMIN_EMAIL in the project .env}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:?Set SUPER_ADMIN_PASSWORD in the project .env}
       SUPER_ADMIN_FULL_NAME: ${SUPER_ADMIN_FULL_NAME:?Set SUPER_ADMIN_FULL_NAME in the project .env}
@@ -95,6 +100,28 @@ services:
     image: trace-backend:dev
     env_file:
       - .env.docker
+    environment:
+      # Cloud retrieval stores are sourced from the project .env at Compose
+      # interpolation time. PostgreSQL remains the existing native/local
+      # service; host.docker.internal makes that endpoint deterministic from
+      # the container and avoids the unrelated Compose-only PostgreSQL data.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-trace}:${POSTGRES_PASSWORD:-trace}@host.docker.internal:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-trace}
+      QDRANT_URL: ${QDRANT_URL:?Set the cloud QDRANT_URL in the project .env}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:?Set QDRANT_API_KEY in the project .env}
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-document_chunks}
+      NEO4J_URI: ${NEO4J_URI:?Set the Aura NEO4J_URI in the project .env}
+      NEO4J_USERNAME: ${NEO4J_USERNAME:?Set NEO4J_USERNAME in the project .env}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in the project .env}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:?Set the Aura NEO4J_DATABASE in the project .env}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:?Set STORAGE_BACKEND=supabase in the project .env}
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in the project .env}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY in the project .env}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-trace}
+      SUPABASE_STORAGE_TIMEOUT_SECONDS: ${SUPABASE_STORAGE_TIMEOUT_SECONDS:-30}
+      SUPABASE_STORAGE_MAX_RETRIES: ${SUPABASE_STORAGE_MAX_RETRIES:-3}
+      SUPABASE_STORAGE_RETRY_BASE_DELAY_SECONDS: ${SUPABASE_STORAGE_RETRY_BASE_DELAY_SECONDS:-0.5}
+      SUPABASE_STORAGE_RETRY_MAX_DELAY_SECONDS: ${SUPABASE_STORAGE_RETRY_MAX_DELAY_SECONDS:-5}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -105,8 +132,6 @@ services:
       # database full of documents whose bytes are gone.
       - backend_storage:/app/storage
     depends_on:
-      postgres:
-        condition: service_healthy
       migrate:
         # Start only after `alembic upgrade head` has exited 0. A non-zero exit
         # keeps the API down instead of serving against a stale schema.

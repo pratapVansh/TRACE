@@ -20,6 +20,7 @@ class PdfTextExtractionResult:
     full_text: str
     page_count: int
     requires_ocr: bool
+    ocr_page_numbers: tuple[int, ...] = ()
 
 
 def extract_pdf_text(content: bytes) -> PdfTextExtractionResult:
@@ -58,14 +59,23 @@ def extract_pdf_text(content: bytes) -> PdfTextExtractionResult:
             )
 
         full_text = _join_page_text(pages)
-        meaningful_chars = len(full_text.strip())
-        requires_ocr = meaningful_chars < MIN_MEANINGFUL_TEXT_CHARS
+        # Decide per page, not from the document total. A PDF can contain a
+        # small selectable header/contact layer while later pages are scans;
+        # the old document-wide check saw the header and skipped OCR for every
+        # empty page that followed.
+        ocr_page_numbers = tuple(
+            page.page_number
+            for page in pages
+            if len(page.text.strip()) < MIN_MEANINGFUL_TEXT_CHARS
+        )
+        requires_ocr = bool(ocr_page_numbers)
 
         return PdfTextExtractionResult(
             pages=tuple(pages),
             full_text=full_text,
             page_count=document.page_count,
             requires_ocr=requires_ocr,
+            ocr_page_numbers=ocr_page_numbers,
         )
     finally:
         document.close()

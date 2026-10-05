@@ -6,7 +6,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.schemas.documents import DocumentDetailResponse, DocumentListResponse
-from app.services.document_exceptions import DocumentProcessingActiveError
+from app.services.document_exceptions import (
+    DocumentCleanupError,
+    DocumentProcessingActiveError,
+)
 
 
 def test_list_documents_supports_search_and_pagination(
@@ -105,3 +108,18 @@ def test_delete_document_rejects_during_active_processing(
     assert response.status_code == 409
     assert "being processed" in response.json()["detail"]
     mock_document_service.delete_document.assert_awaited_once()
+
+
+def test_delete_document_reports_unverified_cloud_cleanup(
+    api_client: TestClient,
+    mock_document_service: AsyncMock,
+) -> None:
+    document_id = uuid.uuid4()
+    mock_document_service.delete_document.side_effect = DocumentCleanupError(
+        "Qdrant still contains one vector"
+    )
+
+    response = api_client.delete(f"/api/documents/{document_id}")
+
+    assert response.status_code == 503
+    assert "retry deletion" in response.json()["detail"]

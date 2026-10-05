@@ -74,11 +74,13 @@ class PdfTextExtractionProcessor:
         metadata = dict(context.document.extra_metadata)
         if result.requires_ocr:
             metadata["requires_ocr"] = True
+            metadata["ocr_page_numbers"] = list(result.ocr_page_numbers)
             metadata["extraction_note"] = (
-                "No text layer detected; OCR is required for this PDF"
+                "One or more PDF pages have no meaningful text layer and require OCR"
             )
         else:
             metadata.pop("requires_ocr", None)
+            metadata.pop("ocr_page_numbers", None)
             metadata.pop("extraction_note", None)
 
         await self._document_repository.update_document(

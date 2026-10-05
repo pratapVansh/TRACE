@@ -1,163 +1,199 @@
 name: CI
-
-# Stage 6. Two jobs, both blocking except where noted:
-#   backend  - the full pytest suite against real Postgres, Qdrant and Neo4j
-#   frontend - typecheck (blocking), vitest (blocking), eslint (non-blocking)
-#
-# The backend suite is only meaningful with its datastores up. Measured with
-# them down: 5 failures in test_health_degradation.py and ~18 tests in 15
-# minutes, because every Qdrant call burns QDRANT_TIMEOUT_SECONDS x
-# QDRANT_MAX_RETRIES. Hence service containers rather than skips.
-
 on:
   pull_request:
   push:
     branches: [main]
-
+  workflow_dispatch:
+permissions:
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   backend:
-    name: Backend tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    name: Backend tests and integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # Configure environment approval rules before adding isolated CI secrets.
+    environment: ci
+    # The dedicated cloud test resources are shared; serialize their use.
+    concurrency:
+      group: trace-ci-cloud-resources
+      cancel-in-progress: false
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: trace
-          POSTGRES_PASSWORD: trace
-          POSTGRES_DB: trace
+          POSTGRES_USER: trace_ci
+          POSTGRES_PASSWORD: ephemeral-ci-password
+          POSTGRES_DB: trace_ci
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U trace -d trace"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-      qdrant:
-        # Matched to qdrant-client==1.18.0. A client meaningfully newer than
-        # its server is how the fulltext-index calls that
-        # test_rag_integration.py exists to guard start failing again.
-        image: qdrant/qdrant:v1.18.3
-        ports: ["6333:6333"]
-        # The image ships no curl or wget, so readiness is checked through
-        # bash's /dev/tcp — the same probe docker-compose.local.yml uses.
-        options: >-
-          --health-cmd "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 30
-
-      neo4j:
-        image: neo4j:5.26-community
-        env:
-          NEO4J_AUTH: neo4j/tracedevpassword
-        ports: ["7687:7687"]
-        options: >-
-          --health-cmd "cypher-shell -u neo4j -p tracedevpassword 'RETURN 1'"
-          --health-interval 10s
-          --health-timeout 10s
-          --health-retries 30
-          --health-start-period 30s
-
+          --health-cmd "pg_isready -U trace_ci -d trace_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      # 127.0.0.1 rather than localhost throughout: localhost resolves to ::1
-      # first and Qdrant listens on IPv4 only, which cost ~2s per call.
-      DATABASE_URL: postgresql+asyncpg://trace:trace@127.0.0.1:5432/trace
-      DATABASE_URL_SYNC: postgresql+psycopg2://trace:trace@127.0.0.1:5432/trace
-      # Not a secret: a throwaway value for a throwaway database. It only has
-      # to clear validate_jwt_secret's 32-character minimum and avoid the
-      # known-placeholder list, or the app refuses to start.
+      DATABASE_URL: postgresql+asyncpg://trace_ci:ephemeral-ci-password@127.0.0.1:5432/trace_ci
+      DATABASE_URL_SYNC: postgresql+psycopg2://trace_ci:ephemeral-ci-password@127.0.0.1:5432/trace_ci
       JWT_SECRET_KEY: ci-only-not-a-secret-2f6a1c9d4b8e0357a1c9d4b8
-      QDRANT_URL: http://127.0.0.1:6333
-      TRACE_TEST_QDRANT_URL: http://127.0.0.1:6333
-      NEO4J_URI: bolt://127.0.0.1:7687
-      NEO4J_USERNAME: neo4j
-      NEO4J_PASSWORD: tracedevpassword
-      # The ingestion worker polls a queue; nothing in the suite wants it.
       PROCESSING_QUEUE_WORKER_ENABLED: "false"
-      # No GROQ_API_KEY. The suite needs none: test_health_degradation.py pins
-      # the LLM component, and every other Groq call is mocked.
-
+      MEMORY_CLEANUP_ENABLED: "false"
+      STORAGE_BACKEND: supabase
+      CI_CLOUD_RESOURCES_ISOLATED: ${{ vars.CI_CLOUD_RESOURCES_ISOLATED }}
+      QDRANT_URL: ${{ secrets.CI_QDRANT_URL }}
+      TRACE_TEST_QDRANT_URL: ${{ secrets.CI_QDRANT_URL }}
+      QDRANT_API_KEY: ${{ secrets.CI_QDRANT_API_KEY }}
+      QDRANT_COLLECTION_NAME: trace_ci_base
+      NEO4J_URI: ${{ secrets.CI_NEO4J_URI }}
+      NEO4J_USERNAME: ${{ secrets.CI_NEO4J_USERNAME }}
+      NEO4J_PASSWORD: ${{ secrets.CI_NEO4J_PASSWORD }}
+      NEO4J_DATABASE: ${{ vars.CI_NEO4J_DATABASE || 'neo4j' }}
+      SUPABASE_URL: ${{ secrets.CI_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.CI_SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_STORAGE_BUCKET: ${{ vars.CI_SUPABASE_STORAGE_BUCKET }}
+      GROQ_API_KEY: ${{ secrets.CI_GROQ_API_KEY }}
+      TRACE_ALLOW_HOST_INTEGRITY_AUDIT: "1"
     defaults:
       run:
         working-directory: backend
-
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          python-version: "3.14"
+          persist-credentials: false
+      - name: Require isolated cloud configuration
+        run: python ../.github/scripts/backend_ci.py configuration
+      - name: Configure runner temporary directories
+        run: |
+          printf 'STORAGE_ROOT=%s/trace-storage\nWORKSPACE_ROOT=%s/trace-workspace\nHF_HOME=%s/huggingface\nTIKTOKEN_CACHE_DIR=%s/tiktoken\n' \
+            "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14.5"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Cache Hugging Face models
-        # all-MiniLM-L6-v2 and the ms-marco cross-encoder are downloaded on
-        # first use by the reranker warmup that runs in app startup. Without
-        # this, every job pays the download and the slowest test setup grows
-        # from ~11s to whatever the Hub gives us.
-        uses: actions/cache@v6
+          cache-dependency-path: |
+            backend/requirements.lock.txt
+            backend/requirements.txt
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
-          path: ~/.cache/huggingface
-          key: hf-${{ runner.os }}-${{ hashFiles('backend/requirements.txt') }}
-
-      - name: Install dependencies
+          path: |
+            ${{ runner.temp }}/huggingface
+            ${{ runner.temp }}/tiktoken
+          key: models-${{ runner.os }}-${{ hashFiles('backend/requirements.lock.txt', 'backend/scripts/bake_models.py', 'backend/app/core/config.py') }}
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libglib2.0-0t64 libgomp1 libpq5
+      - name: Install locked dependencies and existing test tools
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Apply migrations
-        # test_document_pipeline_integration.py uses real tables inside a
-        # rolled-back transaction, and skips itself when Postgres is
-        # unreachable. Without this step it would skip silently.
-        run: alembic upgrade head
-
-      - name: Run tests
-        # --timeout bounds a hang: the slowest item measured locally is 10.9s,
-        # so 120s leaves room for a cold model cache on a runner while still
-        # failing a stuck test long before the job timeout.
-        # -rs reports skips, so a silently skipped integration test is visible.
-        # Coverage is reported and never gated.
+          TORCH_PIN="$(sed -n '/^torch==/p' requirements.lock.txt)"
+          test -n "$TORCH_PIN"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu "$TORCH_PIN"
+          python -m pip install -r requirements.lock.txt
+          python -m pip install -r requirements.txt -c requirements.lock.txt
+          python -m pip check
+      - name: Cache and verify local models
         run: |
-          pytest -q -rs \
-            --timeout=120 \
-            --cov=app --cov-report=term-missing:skip-covered
+          python scripts/bake_models.py
+          HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python scripts/bake_models.py
+          python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+      - name: Verify CI credential scoping and required test policy
+        run: python -m unittest discover -s ../.github/scripts -p 'test_*.py'
+      - name: Apply migrations to fresh PostgreSQL and verify head
+        run: |
+          python -m alembic upgrade head
+          python -m alembic current --check-heads
+          python -m alembic upgrade head
+      - name: Entire existing backend suite with cloud authentication
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: python ../.github/scripts/backend_ci.py tests -- -q -rs --timeout=120 --junitxml=ci-tests.xml --cov=app --cov-report=term-missing:skip-covered
+      - name: Read-only cross-store integrity audit
+        run: python scripts/audit_rag_integrity.py --fail-on-issues
+      - name: Backend test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: backend-test-report
+          path: backend/ci-tests.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  evaluation:
+    name: Evaluation
+    uses: ./.github/workflows/eval.yml
 
   frontend:
     name: Frontend checks
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
     defaults:
       run:
         working-directory: frontend
-
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Existing frontend tests
+        run: npm test
+      - name: TypeScript checks
+        run: npx --no-install tsc --noEmit
+      - name: Production build
+        run: npm run build
 
-      - run: npm ci
+  docker:
+    name: Backend Docker image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build complete existing runtime image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64
+          target: runtime
+          push: false
+          load: true
+          tags: trace-backend:ci
+          cache-from: type=gha,scope=trace-backend
+          cache-to: type=gha,mode=max,scope=trace-backend
+      - name: Verify imports and inference without network
+        run: |
+          docker run --rm --network none --entrypoint python trace-backend:ci scripts/bake_models.py
+          docker run --rm --network none --entrypoint python \
+            -e DATABASE_URL=postgresql+asyncpg://build:build@127.0.0.1:5432/build \
+            trace-backend:ci -c "import app.main, tiktoken; assert tiktoken.get_encoding('cl100k_base').encode('offline probe'); print('Offline imports and tokenizer passed')"
 
-      - name: Typecheck
-        # Blocking from day one: tsc --noEmit is already clean.
-        run: npx tsc --noEmit
-
-      - name: Tests
-        run: npx vitest run
-
-      - name: Lint
-        # Non-blocking until the count reaches zero: 42 problems today
-        # (23 errors, 19 warnings). Flip continue-on-error off in the same
-        # change that clears the last one.
-        continue-on-error: true
-        run: npx eslint .
+  quality-gate:
+    name: CI quality gate
+    if: ${{ always() }}
+    needs: [backend, evaluation, frontend, docker]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CHECK_RESULTS: ${{ toJSON(needs) }}
+    steps:
+      - name: Require every validation job to succeed
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          results = json.loads(os.environ['CHECK_RESULTS'])
+          failed = [name for name, job in results.items() if job['result'] != 'success']
+          if failed:
+              print('::error::Required checks did not succeed: ' + ', '.join(failed))
+              sys.exit(1)
+          print('All required CI checks passed.')
+          PY

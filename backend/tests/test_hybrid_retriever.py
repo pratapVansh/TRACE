@@ -502,10 +502,10 @@ class TestContextMerger:
 
     # ── H12: content-based cross-referencing ────────────────
 
-    def test_merge_cross_references_by_content(
+    def test_does_not_merge_cross_document_facts_by_content(
         self,
     ) -> None:
-        """H12: facts should attach to chunks when entity name appears in content."""
+        """Entity-name overlap alone must not attach another document's facts."""
         chunks = [
             RetrievedChunk(score=0.80, document_id="d1", document_name="report.pdf",
                            content="The P-101 pump was overhauled.", metadata={}),
@@ -518,8 +518,7 @@ class TestContextMerger:
         merger = ContextMerger()
         result = merger.merge("pump", chunks, facts, top_k=10)
 
-        assert len(result.items[0].graph_facts) == 1
-        assert result.items[0].graph_facts[0].entity_name == "P-101"
+        assert result.items[0].graph_facts == []
 
     def test_merge_cross_references_by_related_entity(
         self,

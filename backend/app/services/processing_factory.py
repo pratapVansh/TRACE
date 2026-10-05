@@ -9,6 +9,7 @@ from app.services.document_processing_service import DocumentProcessingService
 from app.services.embedding_service import EmbeddingService
 from app.services.processors.chunking_processor import ChunkingProcessor
 from app.services.processors.docx_text_extraction import DocxTextExtractionProcessor
+from app.services.processors.document_classification import DocumentClassificationProcessor
 from app.services.processors.embedding_processor import EmbeddingProcessor
 from app.services.processors.graph_processor import GraphProcessor
 from app.services.processors.image_ocr_extraction import ImageOcrExtractionProcessor
@@ -74,6 +75,9 @@ def create_document_processing_service(
         ),
         MetadataExtractionProcessor(
             storage=storage,
+            document_repository=document_repository,
+        ),
+        DocumentClassificationProcessor(
             document_repository=document_repository,
         ),
         ChunkingProcessor(

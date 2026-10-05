@@ -51,7 +51,7 @@ async function refreshAccessToken(): Promise<string> {
   // sends it explicitly, so this request carries no body.
   const { data } = await axios.post<{ access_token: string }>(
     `${API_URL}/api/auth/refresh`,
-    {},
+    undefined,
     { withCredentials: true },
   );
 
