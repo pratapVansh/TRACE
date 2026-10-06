@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.api.deps import get_vector_store
+from app.core.config import settings
 from app.services.vector_store import (
     EMBEDDING_MODEL_METADATA_KEY,
     VECTOR_DIMENSION,
@@ -122,7 +123,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock()
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )
@@ -136,7 +137,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock(name="collection")
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )
@@ -151,7 +152,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock(name="collection")
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )
@@ -168,7 +169,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock(name="collection")
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )
@@ -194,7 +195,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock()
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )
@@ -228,7 +229,7 @@ class TestCollectionManagement:
         mock_qdrant_client: MagicMock,
     ):
         existing = MagicMock()
-        existing.name = "document_chunks"
+        existing.name = settings.qdrant_collection_name
         mock_qdrant_client.get_collections.return_value = MagicMock(
             collections=[existing],
         )

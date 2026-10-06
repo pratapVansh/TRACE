@@ -10,12 +10,13 @@ from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import httpx
+from neo4j.exceptions import ClientError
 from qdrant_client import QdrantClient
 
 from backend_ci import (
     ConfigurationError, RequiredTests, authenticated_qdrant, base_collection,
     ci_collection, cleanup, current_run_collection, guarded_cloud_writes,
-    preflight, require_configuration, storage_prefix,
+    neo4j_diagnostic, neo4j_result, preflight, require_configuration, storage_prefix,
 )
 
 
@@ -101,6 +102,34 @@ class BackendCISafetyTests(unittest.TestCase):
             qdrant.count.return_value.count = 1
             with self.assertRaises(ConfigurationError):
                 preflight()
+
+    def test_neo4j_diagnostic_identifies_operation_and_redacts_secrets(self):
+        config = self.isolated_configuration()
+        error = ClientError._hydrate_neo4j(
+            code="Neo.ClientError.Statement.SyntaxError",
+            message=("Invalid input in CI query; password=ci-test-password "
+                     "api-key=ci-test-key Bearer unconfigured-token "
+                     "neo4j+s://user:password@ci.example.neo4j.io"),
+        )
+        with patch.dict(os.environ, config, clear=True):
+            with self.assertRaises(ConfigurationError) as raised:
+                with neo4j_diagnostic("CI node ownership check"):
+                    raise error
+        diagnostic = str(raised.exception)
+        self.assertIn("CI node ownership check", diagnostic)
+        self.assertIn("Neo.ClientError.Statement.SyntaxError", diagnostic)
+        self.assertIn("Invalid input in CI query", diagnostic)
+        for secret in (config["NEO4J_PASSWORD"], config["QDRANT_API_KEY"],
+                       "unconfigured-token", "user:password@"):
+            self.assertNotIn(secret, diagnostic)
+
+    def test_neo4j_result_reports_lazy_consume_failure(self):
+        session = Mock()
+        session.run.return_value.consume.side_effect = ClientError._hydrate_neo4j(
+            code="Neo.ClientError.Statement.SyntaxError", message="Invalid input 'DELETE'"
+        )
+        with self.assertRaisesRegex(ConfigurationError, "probe node cleanup"):
+            neo4j_result(session, "probe node cleanup", "DELETE n", consume=True)
 
     def test_qdrant_write_guard_rejects_production_and_other_runs(self):
         with patch.dict(os.environ, self.isolated_configuration(), clear=True), \

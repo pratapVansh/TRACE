@@ -35,6 +35,42 @@ class ConfigurationError(RuntimeError):
     pass
 
 
+@contextmanager
+def neo4j_diagnostic(operation: str):
+    """Expose the failing Aura operation without leaking configured credentials."""
+    from neo4j.exceptions import ClientError
+
+    try:
+        yield
+    except ClientError as exc:
+        code = str(getattr(exc, "code", ""))
+        if not re.fullmatch(r"Neo\.[A-Za-z0-9_.]+", code):
+            code = "unavailable"
+        message = str(getattr(exc, "message", "") or exc)
+        sensitive = re.compile(r"PASSWORD|SECRET|TOKEN|KEY|URI|URL|CREDENTIAL", re.I)
+        for name, value in sorted(os.environ.items(), key=lambda item: len(item[1]), reverse=True):
+            if value and sensitive.search(name):
+                message = message.replace(value, "[REDACTED]")
+        message = re.sub(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s<>]+", "[REDACTED_URL]", message)
+        message = re.sub(
+            r"(?i)\b(?:password|api[-_ ]?key|token|secret|authorization)\s*[:=]\s*"
+            r"(?:'[^']*'|\"[^\"]*\"|[^\s,;]+)",
+            "[REDACTED_CREDENTIAL]", message,
+        )
+        message = re.sub(r"(?i)\b(?:bearer|basic)\s+[A-Za-z0-9._~+/-]+",
+                         "[REDACTED_AUTH]", message)
+        message = re.sub(r"[\x00-\x1f\x7f]+", " ", message).strip()[:400]
+        raise ConfigurationError(
+            f"Neo4j {operation} failed (type={type(exc).__name__}, code={code}): {message}"
+        ) from None
+
+
+def neo4j_result(session, operation: str, query: str, *, consume: bool = False, **parameters):
+    with neo4j_diagnostic(operation):
+        result = session.run(query, **parameters)
+        return result.consume() if consume else result.single()
+
+
 def require_configuration() -> None:
     missing = [name for name in REQUIRED if not os.environ.get(name, "").strip()]
     if missing:
@@ -105,17 +141,18 @@ def preflight() -> None:
     with GraphDatabase.driver(os.environ["NEO4J_URI"], auth=(
         os.environ["NEO4J_USERNAME"], os.environ["NEO4J_PASSWORD"]
     )) as driver:
-        driver.verify_connectivity()
+        with neo4j_diagnostic("connectivity check"):
+            driver.verify_connectivity()
         with driver.session(database=os.environ["NEO4J_DATABASE"]) as session:
-            if session.run(
+            if neo4j_result(session, "CI node ownership check",
                 "MATCH (n) WHERE n.trace_ci_run_id = $run_id RETURN count(n) AS count",
                 run_id=os.environ["TRACE_CI_RUN_ID"],
-            ).single()["count"]:
+            )["count"]:
                 raise ConfigurationError("This CI run already owns graph nodes; refusing tests")
-            if session.run(
+            if neo4j_result(session, "CI relationship ownership check",
                 "MATCH ()-[r]->() WHERE r.trace_ci_run_id = $run_id RETURN count(r) AS count",
                 run_id=os.environ["TRACE_CI_RUN_ID"],
-            ).single()["count"]:
+            )["count"]:
                 raise ConfigurationError("This CI run already owns graph relationships; refusing tests")
     headers = {"apikey": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
                "Authorization": "Bearer " + os.environ["SUPABASE_SERVICE_ROLE_KEY"]}
@@ -151,35 +188,35 @@ def graph_probe() -> None:
     )) as driver:
         with driver.session(database=os.environ["NEO4J_DATABASE"]) as session:
             try:
-                record = session.run(
+                record = neo4j_result(session, "probe creation",
                     "CREATE (a:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
                     "CREATE (b:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
                     "CREATE (a)-[r:TRACE_CI_LINK {trace_ci_run_id: $run_id, "
                     "trace_ci_probe_id: $probe_id}]->(b) "
                     "RETURN count(r) AS count",
                     run_id=run_id, probe_id=probe_id,
-                ).single()
+                )
                 if record["count"] != 1:
                     raise ConfigurationError("Aura CI-owned graph probe failed")
             finally:
-                session.run(
+                neo4j_result(session, "probe relationship cleanup",
                     "MATCH (a:TraceCI)-[r:TRACE_CI_LINK]->(b:TraceCI) "
                     "WHERE a.trace_ci_run_id = $run_id AND b.trace_ci_run_id = $run_id "
                     "AND r.trace_ci_run_id = $run_id "
                     "AND a.trace_ci_probe_id = $probe_id AND b.trace_ci_probe_id = $probe_id "
                     "AND r.trace_ci_probe_id = $probe_id DELETE r",
-                    run_id=run_id, probe_id=probe_id,
-                ).consume()
-                session.run(
+                    run_id=run_id, probe_id=probe_id, consume=True,
+                )
+                neo4j_result(session, "probe node cleanup",
                     "MATCH (n:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
                     "WHERE NOT (n)--() DELETE n",
-                    run_id=run_id, probe_id=probe_id,
-                ).consume()
-                remaining = session.run(
+                    run_id=run_id, probe_id=probe_id, consume=True,
+                )
+                remaining = neo4j_result(session, "probe cleanup verification",
                     "MATCH (n:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
                     "RETURN count(n) AS count",
                     run_id=run_id, probe_id=probe_id,
-                ).single()["count"]
+                )["count"]
                 if remaining:
                     raise ConfigurationError("Aura CI probe cleanup could not safely remove its nodes")
 

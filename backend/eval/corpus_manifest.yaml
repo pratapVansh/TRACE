@@ -88,7 +88,7 @@ documents:
     chunk_fingerprint: 192af9109f7ece646535c19b8eae28a610bb429dff2278b3190145527c6ff10f
   - filename: "LOG-001_Morning_Shift_15-Jul-2026.txt"
     source_path: "demo_dataset/ShiftLogs/LOG-001_Morning_Shift_15-Jul-2026.txt"
-    sha256: 731667a2361e1ab9ea709e01f295844dddc750729b0fed8e863bc37cd4fbca6c
+    sha256: 318472f151c220fa09acec51e573e00045d2aca416bfe26ac8f51dc74bf12d61
     doc_type: document
     extraction_method: plain_text
     chunk_count: 4
@@ -96,7 +96,7 @@ documents:
     chunk_fingerprint: 04acd30d2a7f683ccc14322ceae2b8ed69d60e9901678d9d6ff181ed95ec1f04
   - filename: "LOG-002_Night_Shift_15-16-Jul-2026.txt"
     source_path: "demo_dataset/ShiftLogs/LOG-002_Night_Shift_15-16-Jul-2026.txt"
-    sha256: 26596018cca0b26cbb620282a2f16201338ac884e38a2b7e6d3de4c7a00d6551
+    sha256: 6091a971161113611fdd6b5b455f31336fbe720dc0d929150b4c130c9a48ba1d
     doc_type: document
     extraction_method: plain_text
     chunk_count: 5
