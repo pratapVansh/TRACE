@@ -114,6 +114,9 @@ def _qdrant_snapshot() -> tuple[dict, list[dict]]:
 
 
 def _neo4j_snapshot() -> tuple[list[dict], list[dict]]:
+    # CI's PostgreSQL is disposable while Aura is shared. Audit the run-owned
+    # graph only; the production path retains the existing full graph audit.
+    ci_run_id = os.getenv("TRACE_CI_RUN_ID") if os.getenv("GITHUB_ACTIONS") == "true" else None
     driver = GraphDatabase.driver(
         os.environ["NEO4J_URI"],
         auth=(os.environ["NEO4J_USERNAME"], os.environ["NEO4J_PASSWORD"]),
@@ -123,19 +126,24 @@ def _neo4j_snapshot() -> tuple[list[dict], list[dict]]:
             nodes = [
                 dict(record)
                 for record in session.run(
-                    "MATCH (n:Entity) RETURN n.id AS id, n.document_id AS document_id, "
+                    "MATCH (n:Entity) "
+                    "WHERE $ci_run_id IS NULL OR n.trace_ci_run_id = $ci_run_id "
+                    "RETURN n.id AS id, n.document_id AS document_id, "
                     "n.name AS name, n.type AS type, n.user_id AS user_id, "
-                    "n.source_document AS source_document"
+                    "n.source_document AS source_document",
+                    ci_run_id=ci_run_id,
                 )
             ]
             relationships = [
                 dict(record)
                 for record in session.run(
                     "MATCH (s:Entity)-[r]->(t:Entity) "
+                    "WHERE $ci_run_id IS NULL OR r.trace_ci_run_id = $ci_run_id "
                     "RETURN r.id AS id, r.document_id AS document_id, "
                     "r.chunk_id AS chunk_id, r.source_document AS source_document, "
                     "s.document_id AS source_document_id, "
-                    "t.document_id AS target_document_id"
+                    "t.document_id AS target_document_id",
+                    ci_run_id=ci_run_id,
                 )
             ]
     finally:

@@ -62,7 +62,9 @@ async def indexed_store(monkeypatch):
     from app.services.embedding_service import _encode_batch_async
     from app.services.vector_store import QdrantVectorStore
 
-    collection = f"trace_itest_{uuid.uuid4().hex[:8]}"
+    run_id = os.getenv("TRACE_CI_RUN_ID")
+    collection = (f"trace_ci_{run_id}_itest_{uuid.uuid4().hex[:8]}"
+                  if run_id else f"trace_itest_{uuid.uuid4().hex[:8]}")
     monkeypatch.setattr(settings, "qdrant_url", QDRANT_URL)
     monkeypatch.setattr(settings, "qdrant_api_key", "")
     monkeypatch.setattr(settings, "qdrant_collection_name", collection)
@@ -179,7 +181,9 @@ class TestDegradation:
         from app.services.hybrid_retriever import VectorRetriever
         from app.services.vector_store import QdrantVectorStore
 
-        collection = f"trace_itest_{uuid.uuid4().hex[:8]}"
+        run_id = os.getenv("TRACE_CI_RUN_ID")
+        collection = (f"trace_ci_{run_id}_itest_{uuid.uuid4().hex[:8]}"
+                      if run_id else f"trace_itest_{uuid.uuid4().hex[:8]}")
         monkeypatch.setattr(settings, "qdrant_url", QDRANT_URL)
         monkeypatch.setattr(settings, "qdrant_api_key", "")
         monkeypatch.setattr(settings, "qdrant_collection_name", collection)

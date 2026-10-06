@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import functools
 import inspect
+import json
 import os
+import re
 from contextlib import contextmanager
 from pathlib import Path
 import sys
 from urllib.parse import quote, urlsplit
 from unittest.mock import patch
+from uuid import uuid4
 
 
 BACKEND = Path(__file__).resolve().parents[2] / "backend"
@@ -22,8 +25,10 @@ REQUIRED = (
     "QDRANT_URL", "QDRANT_API_KEY", "TRACE_TEST_QDRANT_URL",
     "NEO4J_URI", "NEO4J_USERNAME", "NEO4J_PASSWORD", "NEO4J_DATABASE",
     "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET",
-    "GROQ_API_KEY", "DATABASE_URL", "DATABASE_URL_SYNC",
+    "GROQ_API_KEY", "DATABASE_URL", "DATABASE_URL_SYNC", "TRACE_CI_RUN_ID",
 )
+CI_COLLECTION = re.compile(r"^trace_ci_[a-z0-9_]+$")
+RUN_ID = re.compile(r"^[0-9]+_[0-9]+$")
 
 
 class ConfigurationError(RuntimeError):
@@ -34,8 +39,8 @@ def require_configuration() -> None:
     missing = [name for name in REQUIRED if not os.environ.get(name, "").strip()]
     if missing:
         raise ConfigurationError("Missing CI configuration: " + ", ".join(missing))
-    if os.environ.get("CI_CLOUD_RESOURCES_ISOLATED") != "true":
-        raise ConfigurationError("CI_CLOUD_RESOURCES_ISOLATED must attest dedicated CI resources")
+    if os.environ.get("GITHUB_ACTIONS") != "true" or not RUN_ID.fullmatch(os.environ["TRACE_CI_RUN_ID"]):
+        raise ConfigurationError("TRACE_CI_RUN_ID must be a GitHub Actions run_id_run_attempt")
     for name, scheme, suffix in (
         ("QDRANT_URL", "https", ".qdrant.io"),
         ("NEO4J_URI", "neo4j+s", ".neo4j.io"),
@@ -49,8 +54,10 @@ def require_configuration() -> None:
             raise ConfigurationError(f"{name} must use the expected cloud host and verified TLS")
     if os.environ["TRACE_TEST_QDRANT_URL"] != os.environ["QDRANT_URL"]:
         raise ConfigurationError("Both Qdrant URLs must identify the same CI cluster")
-    if os.environ.get("QDRANT_COLLECTION_NAME") != "trace_ci_base":
-        raise ConfigurationError("QDRANT_COLLECTION_NAME must be trace_ci_base")
+    if os.environ.get("QDRANT_COLLECTION_NAME") != base_collection():
+        raise ConfigurationError("QDRANT_COLLECTION_NAME must name this run's CI collection")
+    if os.environ.get("SUPABASE_STORAGE_BUCKET") != "trace":
+        raise ConfigurationError("CI must use the existing private trace bucket")
     if os.environ.get("STORAGE_BACKEND") != "supabase":
         raise ConfigurationError("CI storage must use Supabase")
     for name, scheme in (("DATABASE_URL", "postgresql+asyncpg"),
@@ -62,8 +69,24 @@ def require_configuration() -> None:
             raise ConfigurationError(f"{name} must target the ephemeral CI PostgreSQL service")
 
 
+def base_collection() -> str:
+    return f"trace_ci_{os.environ['TRACE_CI_RUN_ID']}_base"
+
+
+def ci_collection(name: str) -> bool:
+    return isinstance(name, str) and CI_COLLECTION.fullmatch(name) is not None
+
+
+def current_run_collection(name: str) -> bool:
+    return ci_collection(name) and name.startswith(f"trace_ci_{os.environ['TRACE_CI_RUN_ID']}_")
+
+
+def storage_prefix() -> str:
+    return f"ci/{os.environ['TRACE_CI_RUN_ID']}/"
+
+
 def preflight() -> None:
-    """Read-only checks; refuse populated cloud stores before test startup."""
+    """Read-only namespace checks, then a run-owned Aura write probe."""
     import httpx
     from neo4j import GraphDatabase
     from qdrant_client import QdrantClient
@@ -73,8 +96,10 @@ def preflight() -> None:
                           api_key=os.environ["QDRANT_API_KEY"], timeout=30)
     try:
         for collection in client.get_collections().collections:
-            if client.count(collection.name, exact=True).count:
-                raise ConfigurationError("Qdrant CI cluster contains data; refusing tests")
+            if ci_collection(collection.name) and client.count(collection.name, exact=True).count:
+                raise ConfigurationError("A CI-owned Qdrant collection contains data; refusing tests")
+            if current_run_collection(collection.name):
+                raise ConfigurationError("This CI run's Qdrant collection already exists; refusing tests")
     finally:
         client.close()
     with GraphDatabase.driver(os.environ["NEO4J_URI"], auth=(
@@ -82,8 +107,16 @@ def preflight() -> None:
     )) as driver:
         driver.verify_connectivity()
         with driver.session(database=os.environ["NEO4J_DATABASE"]) as session:
-            if session.run("MATCH (n) RETURN count(n) AS count").single()["count"]:
-                raise ConfigurationError("Aura CI database contains data; refusing tests")
+            if session.run(
+                "MATCH (n) WHERE n.trace_ci_run_id = $run_id RETURN count(n) AS count",
+                run_id=os.environ["TRACE_CI_RUN_ID"],
+            ).single()["count"]:
+                raise ConfigurationError("This CI run already owns graph nodes; refusing tests")
+            if session.run(
+                "MATCH ()-[r]->() WHERE r.trace_ci_run_id = $run_id RETURN count(r) AS count",
+                run_id=os.environ["TRACE_CI_RUN_ID"],
+            ).single()["count"]:
+                raise ConfigurationError("This CI run already owns graph relationships; refusing tests")
     headers = {"apikey": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
                "Authorization": "Bearer " + os.environ["SUPABASE_SERVICE_ROLE_KEY"]}
     bucket = quote(os.environ["SUPABASE_STORAGE_BUCKET"], safe="")
@@ -94,16 +127,86 @@ def preflight() -> None:
         if response.json().get("public") is not False:
             raise ConfigurationError("Supabase CI bucket must be private")
         response = client.post(f"/storage/v1/object/list/{bucket}",
-                               json={"prefix": "", "limit": 1})
+                               json={"prefix": storage_prefix(), "limit": 1})
         response.raise_for_status()
         if response.json():
-            raise ConfigurationError("Supabase CI bucket contains data; refusing tests")
+            raise ConfigurationError("This CI run's Supabase prefix contains data; refusing tests")
     # Existing tests mock generation. Verify credentials without generating answers.
     response = httpx.get("https://api.groq.com/openai/v1/models", headers={
         "Authorization": "Bearer " + os.environ["GROQ_API_KEY"]
     }, timeout=30)
     response.raise_for_status()
-    print("Isolated cloud preflight passed (read-only).")
+    graph_probe()
+    print("Shared-cloud namespace preflight and Aura probe passed.")
+
+
+def graph_probe() -> None:
+    """Exercise Aura writes with ownership on every node and relationship."""
+    from neo4j import GraphDatabase
+
+    run_id = os.environ["TRACE_CI_RUN_ID"]
+    probe_id = uuid4().hex
+    with GraphDatabase.driver(os.environ["NEO4J_URI"], auth=(
+        os.environ["NEO4J_USERNAME"], os.environ["NEO4J_PASSWORD"]
+    )) as driver:
+        with driver.session(database=os.environ["NEO4J_DATABASE"]) as session:
+            try:
+                record = session.run(
+                    "CREATE (a:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
+                    "CREATE (b:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
+                    "CREATE (a)-[r:TRACE_CI_LINK {trace_ci_run_id: $run_id, "
+                    "trace_ci_probe_id: $probe_id}]->(b) "
+                    "RETURN count(r) AS count",
+                    run_id=run_id, probe_id=probe_id,
+                ).single()
+                if record["count"] != 1:
+                    raise ConfigurationError("Aura CI-owned graph probe failed")
+            finally:
+                session.run(
+                    "MATCH (a:TraceCI)-[r:TRACE_CI_LINK]->(b:TraceCI) "
+                    "WHERE a.trace_ci_run_id = $run_id AND b.trace_ci_run_id = $run_id "
+                    "AND r.trace_ci_run_id = $run_id "
+                    "AND a.trace_ci_probe_id = $probe_id AND b.trace_ci_probe_id = $probe_id "
+                    "AND r.trace_ci_probe_id = $probe_id DELETE r",
+                    run_id=run_id, probe_id=probe_id,
+                ).consume()
+                session.run(
+                    "MATCH (n:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
+                    "WHERE NOT (n)--() DELETE n",
+                    run_id=run_id, probe_id=probe_id,
+                ).consume()
+                remaining = session.run(
+                    "MATCH (n:TraceCI {trace_ci_run_id: $run_id, trace_ci_probe_id: $probe_id}) "
+                    "RETURN count(n) AS count",
+                    run_id=run_id, probe_id=probe_id,
+                ).single()["count"]
+                if remaining:
+                    raise ConfigurationError("Aura CI probe cleanup could not safely remove its nodes")
+
+
+def cleanup() -> None:
+    """Remove only resources created beneath this run's namespace."""
+    sys.path.insert(0, str(BACKEND))
+    from qdrant_client import QdrantClient
+    from app.core.storage.supabase_storage import SupabaseStorageBackend
+
+    require_configuration()
+    client = QdrantClient(url=os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"], timeout=30)
+    try:
+        for collection in client.get_collections().collections:
+            if current_run_collection(collection.name):
+                client.delete_collection(collection_name=collection.name)
+    finally:
+        client.close()
+    storage = SupabaseStorageBackend(
+        url=os.environ["SUPABASE_URL"],
+        service_role_key=os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+        bucket=os.environ["SUPABASE_STORAGE_BUCKET"],
+    )
+    for path in _created_objects():
+        if not path.startswith(storage_prefix()):
+            raise ConfigurationError("Supabase cleanup manifest contains an unowned path")
+        storage.delete(path)
 
 
 class RequiredTests:
@@ -132,8 +235,117 @@ def run_tests(args: list[str]) -> int:
     endpoint = os.environ["QDRANT_URL"].rstrip("/")
     key = os.environ["QDRANT_API_KEY"]
     sys.path.insert(0, str(BACKEND))
-    with authenticated_qdrant(endpoint, key):
+    with authenticated_qdrant(endpoint, key), guarded_cloud_writes():
         return int(pytest.main(args, plugins=[RequiredTests()]))
+
+
+@contextmanager
+def guarded_cloud_writes():
+    """Fail closed if the suite attempts a write outside this CI run."""
+    from contextlib import ExitStack
+    from qdrant_client import QdrantClient
+    from app.core.storage.supabase_storage import SupabaseStorageBackend, _SupabaseRestProvider
+    from app.graph.neo4j_graph_store import Neo4jGraphStore
+
+    mutations = (
+        "create_collection", "recreate_collection", "delete_collection",
+        "update_collection", "create_payload_index", "delete_payload_index",
+        "upsert", "delete", "set_payload", "overwrite_payload",
+        "delete_payload", "clear_payload", "upload_points", "upload_records",
+        "batch_update_points", "update_vectors", "delete_vectors",
+    )
+    original_path = SupabaseStorageBackend.build_document_path
+    original_save = SupabaseStorageBackend.save
+    original_delete = SupabaseStorageBackend.delete
+    original_read = SupabaseStorageBackend.read
+    original_exists = SupabaseStorageBackend.exists
+    original_graph_write = Neo4jGraphStore.execute_write
+    original_graph_transaction = Neo4jGraphStore.begin_transaction
+    original_indexes = Neo4jGraphStore._ensure_indexes
+
+    def scoped_path(self, *args, **kwargs):
+        path = original_path(self, *args, **kwargs)
+        return storage_prefix() + path if isinstance(self._provider, _SupabaseRestProvider) else path
+
+    def check_storage(self, path):
+        if isinstance(self._provider, _SupabaseRestProvider) and not (
+            isinstance(path, str) and path.startswith(storage_prefix())
+        ):
+            raise ConfigurationError("Supabase access outside this CI run is forbidden")
+
+    def scoped_save(self, path, content):
+        check_storage(self, path)
+        if isinstance(self._provider, _SupabaseRestProvider):
+            # The provider upserts. Refuse a path not first created by this run.
+            if path not in _created_objects() and original_exists(self, path):
+                raise ConfigurationError("Refusing to overwrite an existing Supabase object")
+            _record_object(path)
+        return original_save(self, path, content)
+
+    def scoped_delete(self, path):
+        check_storage(self, path)
+        if isinstance(self._provider, _SupabaseRestProvider) and path not in _created_objects():
+            raise ConfigurationError("Refusing to delete a Supabase object not created by this run")
+        return original_delete(self, path)
+
+    def scoped_read(self, path):
+        check_storage(self, path)
+        return original_read(self, path)
+
+    def scoped_exists(self, path):
+        check_storage(self, path)
+        return original_exists(self, path)
+
+    async def deny_graph_write(self, *args, **kwargs):
+        if self._uri == os.environ["NEO4J_URI"]:
+            raise ConfigurationError("Application graph writes are disabled on shared Aura in CI")
+        return await original_graph_write(self, *args, **kwargs)
+
+    async def deny_graph_transaction(self, *args, **kwargs):
+        if self._uri == os.environ["NEO4J_URI"]:
+            raise ConfigurationError("Application graph transactions are disabled on shared Aura in CI")
+        return await original_graph_transaction(self, *args, **kwargs)
+
+    async def no_shared_indexes(self):
+        if self._uri == os.environ["NEO4J_URI"]:
+            return None
+        return await original_indexes(self)
+
+    with ExitStack() as stack:
+        for method in mutations:
+            original = getattr(QdrantClient, method, None)
+            if original is None:
+                continue
+            def guard(self, *args, _original=original, **kwargs):
+                collection = kwargs.get("collection_name", args[0] if args else None)
+                if not current_run_collection(collection):
+                    raise ConfigurationError("Qdrant write outside this CI run is forbidden")
+                return _original(self, *args, **kwargs)
+            stack.enter_context(patch.object(QdrantClient, method, guard))
+        for name, method in (
+            ("build_document_path", scoped_path), ("save", scoped_save),
+            ("delete", scoped_delete), ("read", scoped_read), ("exists", scoped_exists),
+        ):
+            stack.enter_context(patch.object(SupabaseStorageBackend, name, method))
+        stack.enter_context(patch.object(Neo4jGraphStore, "execute_write", deny_graph_write))
+        stack.enter_context(patch.object(Neo4jGraphStore, "begin_transaction", deny_graph_transaction))
+        stack.enter_context(patch.object(Neo4jGraphStore, "_ensure_indexes", no_shared_indexes))
+        yield
+
+
+def _object_manifest() -> Path:
+    return Path(os.environ["RUNNER_TEMP"]) / f"trace-ci-{os.environ['TRACE_CI_RUN_ID']}-objects.json"
+
+
+def _created_objects() -> set[str]:
+    path = _object_manifest()
+    return set(json.loads(path.read_text())) if path.exists() else set()
+
+
+def _record_object(path: str) -> None:
+    objects = _created_objects()
+    objects.add(path)
+    _object_manifest().write_text(json.dumps(sorted(objects)))
 
 
 @contextmanager
@@ -170,11 +382,14 @@ def authenticated_qdrant(endpoint: str, key: str):
 
 def main() -> int:
     try:
-        if len(sys.argv) < 2 or sys.argv[1] not in ("configuration", "tests"):
-            raise ConfigurationError("Usage: backend_ci.py configuration | tests -- [pytest arguments]")
+        if len(sys.argv) < 2 or sys.argv[1] not in ("configuration", "tests", "cleanup"):
+            raise ConfigurationError("Usage: backend_ci.py configuration | tests | cleanup")
         require_configuration()
         if sys.argv[1] == "configuration":
-            print("Required isolated CI configuration is present.")
+            print("Required shared-cloud CI configuration is present.")
+            return 0
+        if sys.argv[1] == "cleanup":
+            cleanup()
             return 0
         args = sys.argv[2:]
         if args[:1] == ["--"]:
@@ -186,7 +401,7 @@ def main() -> int:
     except Exception as exc:
         # Cloud client exception text can contain URLs/auth details. Do not echo it.
         print(f"::error::CI cloud preflight/runner failed ({type(exc).__name__}); "
-              "check isolated resource credentials and availability.", file=sys.stderr)
+              "check shared resource credentials and availability.", file=sys.stderr)
         return 1
 
 

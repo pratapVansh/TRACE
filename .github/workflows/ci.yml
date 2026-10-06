@@ -14,9 +14,9 @@ jobs:
     name: Backend tests and integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    # Configure environment approval rules before adding isolated CI secrets.
+    # Shared cloud resources; the adapter enforces a per-run namespace.
     environment: ci
-    # The dedicated cloud test resources are shared; serialize their use.
+    # Serialize CI runs using these shared cloud resources.
     concurrency:
       group: trace-ci-cloud-resources
       cancel-in-progress: false
@@ -38,18 +38,18 @@ jobs:
       PROCESSING_QUEUE_WORKER_ENABLED: "false"
       MEMORY_CLEANUP_ENABLED: "false"
       STORAGE_BACKEND: supabase
-      CI_CLOUD_RESOURCES_ISOLATED: ${{ vars.CI_CLOUD_RESOURCES_ISOLATED }}
+      TRACE_CI_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
       QDRANT_URL: ${{ secrets.CI_QDRANT_URL }}
       TRACE_TEST_QDRANT_URL: ${{ secrets.CI_QDRANT_URL }}
       QDRANT_API_KEY: ${{ secrets.CI_QDRANT_API_KEY }}
-      QDRANT_COLLECTION_NAME: trace_ci_base
+      QDRANT_COLLECTION_NAME: trace_ci_${{ github.run_id }}_${{ github.run_attempt }}_base
       NEO4J_URI: ${{ secrets.CI_NEO4J_URI }}
       NEO4J_USERNAME: ${{ secrets.CI_NEO4J_USERNAME }}
       NEO4J_PASSWORD: ${{ secrets.CI_NEO4J_PASSWORD }}
       NEO4J_DATABASE: ${{ vars.CI_NEO4J_DATABASE || 'neo4j' }}
       SUPABASE_URL: ${{ secrets.CI_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.CI_SUPABASE_SERVICE_ROLE_KEY }}
-      SUPABASE_STORAGE_BUCKET: ${{ vars.CI_SUPABASE_STORAGE_BUCKET }}
+      SUPABASE_STORAGE_BUCKET: trace
       GROQ_API_KEY: ${{ secrets.CI_GROQ_API_KEY }}
       TRACE_ALLOW_HOST_INTEGRITY_AUDIT: "1"
     defaults:
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Require isolated cloud configuration
+      - name: Require namespace-scoped cloud configuration
         run: python ../.github/scripts/backend_ci.py configuration
       - name: Configure runner temporary directories
         run: |
@@ -108,6 +108,9 @@ jobs:
         run: python ../.github/scripts/backend_ci.py tests -- -q -rs --timeout=120 --junitxml=ci-tests.xml --cov=app --cov-report=term-missing:skip-covered
       - name: Read-only cross-store integrity audit
         run: python scripts/audit_rag_integrity.py --fail-on-issues
+      - name: Clean up this CI run's cloud resources
+        if: ${{ always() }}
+        run: python ../.github/scripts/backend_ci.py cleanup
       - name: Backend test report
         if: ${{ always() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
